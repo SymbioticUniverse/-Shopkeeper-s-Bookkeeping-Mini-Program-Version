@@ -1,0 +1,395 @@
+page {
+  background: linear-gradient(to bottom, #BEDAFF 0%, #DBEAFF 37%, #DDF4FF 62%, #CEE9FB 100%);
+  height: 100vh;
+  overflow: hidden;
+}
+
+.page {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  padding: 60rpx 26rpx 0;
+  box-sizing: border-box;
+}
+
+/* ---- 标题栏 ---- */
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-top: 30rpx;
+  margin-bottom: -40rpx;
+  flex-shrink: 0;
+  position: relative;
+}
+.header-left {
+  position: relative;
+  flex-shrink: 0;
+}
+.year-text {
+  font-size: 26rpx;
+  color: #aeaeae;
+  font-weight: 500;
+  position: absolute;
+  top: 0;
+  left: 4rpx;
+}
+.date-badge {
+  display: flex;
+  align-items: center;
+  margin-top: 16rpx;
+  margin-bottom: 12rpx;
+}
+.date-month-num {
+  font-size: 60rpx;
+  font-weight: 500;
+  color: #000;
+}
+.date-month-label {
+  font-size: 28rpx;
+  font-weight: 500;
+  color: #000;
+  margin-top: 20rpx;
+  margin-left: 2rpx;
+}
+.date-arrow {
+  width: 0;
+  height: 0;
+  border-left: 10rpx solid transparent;
+  border-right: 10rpx solid transparent;
+  border-top: 14rpx solid #000;
+  margin-left: 4rpx;
+  margin-top: 24rpx;
+}
+.header-title {
+  font-size: 30rpx;
+  font-weight: 600;
+  color: #000;
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  align-self: center;
+}
+.header-right-icon {
+  margin-top: -16rpx;
+  flex-shrink: 0;
+}
+.invisible {
+  visibility: hidden;
+}
+.avatar-circle {
+  width: 86rpx;
+  height: 86rpx;
+  border-radius: 50%;
+  background: #ddd;
+}
+
+/* ---- 卡片网格 ---- */
+.card-grid {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 16rpx;
+  padding: 10rpx 0;
+  overflow: hidden;
+}
+
+.card {
+  background: rgba(255,255,255,0.5);
+  border: 2rpx solid #000;
+  border-radius: 26rpx;
+  padding: 24rpx 26rpx;
+  box-shadow: 0rpx 6rpx 0rpx 1rpx rgba(0,0,0,0.2);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.grid-span-1 { flex: 1; }
+.grid-span-2 { flex: 2; }
+.grid-span-3 { flex: 3; }
+
+/* ---- 卡片内部 ---- */
+.card-header {
+  position: relative;
+  padding-left: 82rpx;
+  flex-shrink: 0;
+}
+.card-header.compact {
+  padding-left: 0;
+}
+.card-avatar {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 66rpx;
+  height: 66rpx;
+  border-radius: 50%;
+  background: #ccc;
+}
+.card-title {
+  font-size: 32rpx;
+  font-weight: 700;
+  color: #000;
+}
+.card-arrow {
+  font-size: 28rpx;
+  font-weight: 700;
+  color: #d1d1d1;
+  position: absolute;
+  right: 0;
+  top: 0;
+}
+.card-subtitle {
+  font-size: 20rpx;
+  font-weight: 700;
+  color: #d1d1d1;
+  display: block;
+  margin-top: 2rpx;
+}
+.card-divider {
+  height: 2rpx;
+  background: #d1d1d1;
+  margin: 12rpx 0;
+  flex-shrink: 0;
+}
+
+/* ---- 卡片行 ---- */
+.card-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex: 1;
+}
+.card-row.three-col {
+  justify-content: space-between;
+}
+.col-label {
+  font-size: 32rpx;
+  font-weight: 700;
+  color: #d1d1d1;
+  text-align: center;
+  flex: 1;
+}
+.row-label {
+  font-size: 32rpx;
+  font-weight: 700;
+  color: #000;
+}
+
+/* ---- 金额标签 ---- */
+.value-tag {
+  display: flex;
+  align-items: baseline;
+}
+.three-col .value-tag {
+  flex: 1;
+  justify-content: center;
+}
+.value-yen {
+  font-size: 28rpx;
+  font-weight: 700;
+}
+.value-num {
+  font-size: 37rpx;
+  font-weight: 700;
+}
+.green .value-yen,
+.green .value-num {
+  color: #00d042;
+}
+.red .value-yen,
+.red .value-num {
+  color: red;
+}
+
+/* ---- 占位卡片 ---- */
+.placeholder-card {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 37rpx;
+  font-weight: 700;
+  color: #000;
+}
+
+/* ---- 底部 TabBar ---- */
+.tab-bar-wrapper {
+  position: relative;
+  height: 129rpx;
+  z-index: 999;
+  overflow: visible;
+  flex-shrink: 0;
+  margin: 0 -26rpx;
+}
+.tab-bar-center-bg {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 119rpx;
+  height: 119rpx;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 -4rpx 12rpx rgba(0,0,0,0.08);
+  z-index: 2;
+}
+.tab-bar {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 103rpx;
+  display: flex;
+  justify-content: space-around;
+  align-items: flex-end;
+  padding-bottom: 16rpx;
+  background: #fff;
+  border-radius: 30rpx 30rpx 0 0;
+  box-shadow: 0 -2rpx 8rpx rgba(0,0,0,0.05);
+}
+.tab-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  z-index: 1;
+}
+.tab-item-center {
+  position: relative;
+  z-index: 3;
+}
+.tab-icon {
+  width: 56rpx;
+  height: 56rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 2rpx;
+}
+.tab-icon-placeholder {
+  width: 40rpx;
+  height: 40rpx;
+  border-radius: 8rpx;
+  background: #ddd;
+}
+.tab-label {
+  font-size: 18rpx;
+  font-weight: 600;
+  color: #999;
+  letter-spacing: 6rpx;
+}
+.tab-label-active {
+  color: #000;
+}
+
+/* ---- 我的页面卡片 ---- */
+.my-card {
+  background: rgba(255,255,255,0.5);
+  border: 2rpx solid #000;
+  border-radius: 26rpx;
+  box-shadow: 0rpx 6rpx 0rpx 1rpx rgba(0,0,0,0.2);
+  padding: 24rpx 36rpx;
+  justify-content: space-evenly;
+}
+
+.my-group {
+  display: flex;
+  flex-direction: column;
+  gap: 12rpx;
+}
+
+/* 头像区 */
+.my-profile {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 28rpx;
+}
+.my-login-text {
+  font-size: 32rpx;
+  font-weight: 700;
+  color: #000;
+}
+.my-avatar {
+  width: 86rpx;
+  height: 86rpx;
+  border-radius: 50%;
+  background: #ddd;
+}
+
+/* 列表项 */
+.my-item {
+  display: flex;
+  align-items: center;
+  background: rgba(255,255,255,0.5);
+  border-radius: 22rpx;
+  padding: 16rpx 20rpx;
+  box-shadow: 0rpx 4rpx 4rpx 0rpx rgba(0,0,0,0.08);
+}
+.my-item-last {
+  padding: 20rpx;
+}
+.my-item-icon {
+  width: 56rpx;
+  height: 56rpx;
+  border-radius: 16rpx;
+  background: #ddd;
+  flex-shrink: 0;
+  margin-right: 20rpx;
+}
+.my-item-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+.my-item-title {
+  font-size: 32rpx;
+  font-weight: 700;
+  color: #a0a0a0;
+}
+.my-item-sub {
+  font-size: 20rpx;
+  font-weight: 700;
+  color: #a0a0a0;
+  margin-top: 2rpx;
+}
+.my-item-arrow {
+  font-size: 28rpx;
+  font-weight: 700;
+  color: #d1d1d1;
+  flex-shrink: 0;
+}
+
+/* 图标行卡片 */
+.my-icon-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  background: rgba(255,255,255,0.5);
+  border-radius: 22rpx;
+  padding: 23rpx 16rpx;
+  box-shadow: 0rpx 4rpx 4rpx 0rpx rgba(0,0,0,0.08);
+}
+.my-icon-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8rpx;
+}
+.my-icon-circle {
+  width: 48rpx;
+  height: 48rpx;
+  border-radius: 50%;
+  background: #ddd;
+}
+.my-icon-label {
+  font-size: 20rpx;
+  font-weight: 700;
+  color: #a0a0a0;
+}
+.my-icon-row-arrow {
+  font-size: 28rpx;
+  font-weight: 700;
+  color: #d1d1d1;
+}

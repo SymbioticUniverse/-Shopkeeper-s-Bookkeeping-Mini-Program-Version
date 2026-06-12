@@ -1,0 +1,76 @@
+.tab-bar-wrapper {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 129rpx;
+  z-index: 999;
+  overflow: visible;
+}
+
+/* 中间凸起圆 */
+.tab-bar-center-bg {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 119rpx;
+  height: 119rpx;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 -4rpx 12rpx rgba(0,0,0,0.08);
+  z-index: 2;
+}
+
+.tab-bar {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 103rpx;
+  display: flex;
+  justify-content: space-around;
+  align-items: flex-end;
+  padding-bottom: 16rpx;
+  background: #fff;
+  border-radius: 30rpx 30rpx 0 0;
+  box-shadow: 0 -2rpx 8rpx rgba(0,0,0,0.05);
+}
+
+.tab-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  z-index: 1;
+}
+.tab-item-center {
+  position: relative;
+  z-index: 3;
+}
+
+.tab-icon {
+  width: 56rpx;
+  height: 56rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 2rpx;
+}
+
+.tab-icon-placeholder {
+  width: 40rpx;
+  height: 40rpx;
+  border-radius: 8rpx;
+  background: #ddd;
+}
+
+.tab-label {
+  font-size: 18rpx;
+  font-weight: 600;
+  color: #999;
+  letter-spacing: 6rpx;
+}
+
+.tab-label-active {
+  color: #000;
+}

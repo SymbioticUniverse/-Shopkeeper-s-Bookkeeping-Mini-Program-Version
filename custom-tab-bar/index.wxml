@@ -1,0 +1,21 @@
+<view class="tab-bar-wrapper">
+  <!-- 中间凸起圆形 -->
+  <view class="tab-bar-center-bg"></view>
+
+  <view class="tab-bar">
+    <view
+      class="tab-item {{index === 2 ? 'tab-item-center' : ''}}"
+      wx:for="{{list}}"
+      wx:key="index"
+      data-path="{{item.pagePath}}"
+      data-index="{{index}}"
+      bindtap="switchTab"
+    >
+      <!-- 图标占位 -->
+      <view wx:if="{{index !== 2}}" class="tab-icon {{index === selected ? 'tab-icon-active' : ''}}">
+        <view class="tab-icon-placeholder"></view>
+      </view>
+      <text class="tab-label {{index === selected ? 'tab-label-active' : ''}} {{index === 2 ? 'tab-label-center' : ''}}">{{item.text}}</text>
+    </view>
+  </view>
+</view>

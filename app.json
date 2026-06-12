@@ -1,6 +1,13 @@
 {
   "pages": [
-    "pages/index/index"
+    "pages/mingxi/mingxi",
+    "pages/index/index",
+    "pages/baobiao/baobiao",
+    "pages/jizhang/jizhang",
+    "pages/jieqing/jieqing",
+    "pages/wode/wode",
+    "pages/personal-ledger/personal-ledger",
+    "pages/company-ledger/company-ledger"
   ],
   "window": {
     "navigationBarTextStyle": "black",

@@ -1,0 +1,255 @@
+<view class="page">
+  <!-- 标题栏 -->
+  <view class="header">
+    <view class="header-left {{showHeader ? '' : 'invisible'}}">
+      <text class="year-text">2026年</text>
+      <view class="date-badge">
+        <text class="date-month-num">06</text>
+        <text class="date-month-label">月</text>
+        <view class="date-arrow"></view>
+      </view>
+    </view>
+    <text class="header-title {{showHeader ? '' : 'invisible'}}">公私OPC记账</text>
+    <view class="header-right-icon">
+      <view class="avatar-circle"></view>
+    </view>
+  </view>
+
+  <!-- 卡片网格区 -->
+  <view class="card-grid">
+    <!-- Tab 0: 明细 -->
+    <block wx:if="{{currentTab === 0}}">
+      <!-- 个人账本 - 占1格 -->
+      <view class="card grid-span-1" bindtap="goPersonalLedger">
+        <view class="card-header">
+          <view class="card-avatar"></view>
+          <text class="card-title">个人账本</text>
+          <text class="card-arrow">〉</text>
+          <text class="card-subtitle">日常收支</text>
+        </view>
+        <view class="card-divider"></view>
+        <view class="card-row">
+          <text class="row-label">预算</text>
+          <view class="value-tag green">
+            <text class="value-yen">¥</text>
+            <text class="value-num">0.00</text>
+          </view>
+        </view>
+        <view class="card-divider"></view>
+        <view class="card-row three-col">
+          <text class="col-label">收入</text>
+          <text class="col-label">支出</text>
+          <text class="col-label">结余</text>
+        </view>
+        <view class="card-row three-col">
+          <view class="value-tag green">
+            <text class="value-yen">¥</text>
+            <text class="value-num">0.00</text>
+          </view>
+          <view class="value-tag red">
+            <text class="value-yen">¥</text>
+            <text class="value-num">0.00</text>
+          </view>
+          <view class="value-tag red">
+            <text class="value-yen">¥</text>
+            <text class="value-num">0.00</text>
+          </view>
+        </view>
+      </view>
+
+      <!-- 公司账本 - 占2格 -->
+      <view class="card grid-span-2" bindtap="goCompanyLedger">
+        <view class="card-header compact">
+          <text class="card-title">共生宇宙公司账本</text>
+          <text class="card-arrow">〉</text>
+          <text class="card-subtitle">经营收支</text>
+        </view>
+        <view class="card-divider"></view>
+        <view class="card-row">
+          <text class="row-label">公司总资产</text>
+          <view class="value-tag green">
+            <text class="value-yen">¥</text>
+            <text class="value-num">0.00</text>
+          </view>
+        </view>
+        <view class="card-row">
+          <text class="row-label">公司总负债</text>
+          <view class="value-tag red">
+            <text class="value-yen">¥</text>
+            <text class="value-num">0.00</text>
+          </view>
+        </view>
+        <view class="card-row">
+          <text class="row-label">公司净资产</text>
+          <view class="value-tag green">
+            <text class="value-yen">¥</text>
+            <text class="value-num">0.00</text>
+          </view>
+        </view>
+        <view class="card-row">
+          <text class="row-label">可支配资产</text>
+          <view class="value-tag green">
+            <text class="value-yen">¥</text>
+            <text class="value-num">0.00</text>
+          </view>
+        </view>
+        <view class="card-divider"></view>
+        <view class="card-row three-col">
+          <text class="col-label">应收</text>
+          <text class="col-label">应出</text>
+          <text class="col-label">未结算</text>
+        </view>
+        <view class="card-row three-col">
+          <view class="value-tag green">
+            <text class="value-yen">¥</text>
+            <text class="value-num">0.00</text>
+          </view>
+          <view class="value-tag red">
+            <text class="value-yen">¥</text>
+            <text class="value-num">0.00</text>
+          </view>
+          <view class="value-tag red">
+            <text class="value-yen">¥</text>
+            <text class="value-num">0.00</text>
+          </view>
+        </view>
+      </view>
+    </block>
+
+    <!-- Tab 1: 报表 -->
+    <block wx:if="{{currentTab === 1}}">
+      <view class="card grid-span-3 placeholder-card">
+        <text>报表</text>
+      </view>
+    </block>
+
+    <!-- Tab 2: 记账 -->
+    <block wx:if="{{currentTab === 2}}">
+      <view class="card grid-span-1 placeholder-card"><text>收入</text></view>
+      <view class="card grid-span-1 placeholder-card"><text>支出</text></view>
+      <view class="card grid-span-1 placeholder-card"><text>转账</text></view>
+    </block>
+
+    <!-- Tab 3: 结清 -->
+    <block wx:if="{{currentTab === 3}}">
+      <view class="card grid-span-3 placeholder-card">
+        <text>结清</text>
+      </view>
+    </block>
+
+    <!-- Tab 4: 我的 -->
+    <block wx:if="{{currentTab === 4}}">
+      <view class="card grid-span-3 my-card">
+        <!-- 头像 + 登录 -->
+        <view class="my-profile">
+          <text class="my-login-text">登录/注册</text>
+          <view class="my-avatar"></view>
+        </view>
+
+        <!-- 第一组：升级VIP + 图标行 -->
+        <view class="my-group">
+          <view class="my-item">
+            <view class="my-item-icon icon-vip"></view>
+            <view class="my-item-body">
+              <text class="my-item-title">升级为VIP</text>
+              <text class="my-item-sub">畅享更多高级功能</text>
+            </view>
+            <text class="my-item-arrow">〉</text>
+          </view>
+          <view class="my-icon-row">
+            <view class="my-icon-item">
+              <view class="my-icon-circle icon-link"></view>
+              <text class="my-icon-label">链接公司</text>
+            </view>
+            <view class="my-icon-item">
+              <view class="my-icon-circle icon-invite"></view>
+              <text class="my-icon-label">邀请员工</text>
+            </view>
+            <view class="my-icon-item">
+              <view class="my-icon-circle icon-audit"></view>
+              <text class="my-icon-label">审核</text>
+            </view>
+            <view class="my-icon-item">
+              <view class="my-icon-circle icon-notify"></view>
+              <text class="my-icon-label">通知</text>
+            </view>
+          </view>
+        </view>
+
+        <!-- 第二组：自定义简览页 + 自定义分类 + 链接公司 + 导出账单 -->
+        <view class="my-group">
+          <view class="my-item">
+            <view class="my-item-icon icon-custom-view"></view>
+            <view class="my-item-body">
+              <text class="my-item-title">自定义简览页</text>
+              <text class="my-item-sub">新简览</text>
+            </view>
+            <text class="my-item-arrow">〉</text>
+          </view>
+          <view class="my-item">
+            <view class="my-item-icon icon-custom-cat"></view>
+            <view class="my-item-body">
+              <text class="my-item-title">自定义分类</text>
+              <text class="my-item-sub">新分类</text>
+            </view>
+            <text class="my-item-arrow">〉</text>
+          </view>
+          <view class="my-item">
+            <view class="my-item-icon icon-share"></view>
+            <view class="my-item-body">
+              <text class="my-item-title">链接公司共享同一账本</text>
+              <text class="my-item-sub">随时记账再也不忘</text>
+            </view>
+            <text class="my-item-arrow">〉</text>
+          </view>
+          <view class="my-item">
+            <view class="my-item-icon icon-export"></view>
+            <view class="my-item-body">
+              <text class="my-item-title">导出账单</text>
+              <text class="my-item-sub">一键导出</text>
+            </view>
+            <text class="my-item-arrow">〉</text>
+          </view>
+        </view>
+
+        <!-- 第三组：联系我们 + 设置 -->
+        <view class="my-group">
+          <view class="my-item">
+            <view class="my-item-icon icon-contact"></view>
+            <view class="my-item-body">
+              <text class="my-item-title">联系我们获好礼</text>
+              <text class="my-item-sub">提意见赠会员</text>
+            </view>
+            <text class="my-item-arrow">〉</text>
+          </view>
+          <view class="my-item my-item-last">
+            <view class="my-item-icon icon-settings"></view>
+            <view class="my-item-body">
+              <text class="my-item-title">设置</text>
+            </view>
+            <text class="my-item-arrow">〉</text>
+          </view>
+        </view>
+      </view>
+    </block>
+  </view>
+
+  <!-- 底部 TabBar -->
+  <view class="tab-bar-wrapper">
+    <view class="tab-bar-center-bg"></view>
+    <view class="tab-bar">
+      <view
+        class="tab-item {{index === 2 ? 'tab-item-center' : ''}}"
+        wx:for="{{tabs}}"
+        wx:key="index"
+        data-index="{{index}}"
+        bindtap="switchTab"
+      >
+        <view wx:if="{{index !== 2}}" class="tab-icon">
+          <view class="tab-icon-placeholder"></view>
+        </view>
+        <text class="tab-label {{index === currentTab ? 'tab-label-active' : ''}}">{{item.text}}</text>
+      </view>
+    </view>
+  </view>
+</view>
