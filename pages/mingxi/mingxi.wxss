@@ -2190,7 +2190,7 @@ page {
 }
 
 .custom-template-card--span2 {
-  width: calc((100% - 12rpx) / 3 * 2);
+  width: 100%;
 }
 
 /* 玻璃框高度适配 */
@@ -2198,7 +2198,12 @@ page {
   aspect-ratio: 0.72;
 }
 .custom-glass-inner--s2 {
-  aspect-ratio: 0.42;
+  aspect-ratio: 0.33;
+}
+
+/* span-2 内卡片略宽，充分利用玻璃框空间 */
+.custom-tpl-card--span2 {
+  width: 82%;
 }
 
 /* ===== 三卡槽弹窗 ===== */
