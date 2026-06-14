@@ -25,13 +25,13 @@
     <!-- ===== 自定义简览页 ===== -->
     <block wx:if="{{showCustomOverview && showOverview}}">
       <view class="custom-overview-container">
-        <view class="edit-mode-header">
-          <text class="edit-mode-title">自定义简览页</text>
-          <view class="edit-done-btn" bindtap="onExitEditMode">
-            <text class="edit-done-text">完成</text>
-          </view>
-        </view>
         <view class="card grid-span-3 my-card custom-edit-card">
+          <view class="edit-mode-header">
+            <text class="edit-mode-title">自定义简览页</text>
+            <view class="edit-done-btn" bindtap="onExitEditMode">
+              <text class="edit-done-text">完成</text>
+            </view>
+          </view>
           <!-- 卡片放置画布 -->
           <view class="custom-edit-canvas">
             <movable-area class="custom-edit-area" id="customEditArea">
