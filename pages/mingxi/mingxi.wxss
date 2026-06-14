@@ -2162,61 +2162,59 @@ page {
   color: rgba(0,0,0,0.12);
 }
 
-/* 底部模版条 */
-.custom-template-strip {
-  flex-shrink: 0;
-  margin: 0 -20rpx -16rpx;
-  padding: 12rpx 0 10rpx;
-  border-top: 2rpx solid rgba(0,0,0,0.08);
-}
-
-.custom-template-label {
-  display: block;
+/* 分区标签 */
+.custom-section-label {
   font-size: 22rpx;
   font-weight: 500;
-  color: rgba(0,0,0,0.25);
-  padding: 0 20rpx 6rpx;
+  color: rgba(0,0,0,0.2);
+  padding: 4rpx 0 8rpx;
 }
 
-.custom-template-scroll {
-  white-space: nowrap;
-  width: 100%;
+/* 模版卡片行 */
+.custom-card-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12rpx;
+  margin-bottom: 16rpx;
 }
 
-.custom-template-chip {
-  display: inline-flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  min-width: 140rpx;
-  padding: 14rpx 24rpx;
-  margin-left: 16rpx;
+/* 模版卡片 */
+.custom-template-card {
   background: rgba(255,255,255,0.5);
   border: 2rpx solid #000;
-  border-radius: 16rpx;
-  box-shadow: 0rpx 3rpx 0rpx 1rpx rgba(0,0,0,0.08);
+  border-radius: 18rpx;
+  padding: 20rpx 24rpx;
+  box-shadow: 0rpx 4rpx 0rpx 1rpx rgba(0,0,0,0.1);
+  display: flex;
+  flex-direction: column;
   gap: 4rpx;
 }
 
-.custom-template-chip:last-child {
-  margin-right: 16rpx;
+.custom-template-card--span1 {
+  width: calc((100% - 12rpx) / 2);
 }
 
-.custom-template-chip:active {
-  background: rgba(0,0,0,0.06);
-  transform: scale(0.95);
+.custom-template-card--span2 {
+  width: 100%;
 }
 
-.custom-template-chip-name {
-  font-size: 28rpx;
+.custom-template-card-name {
+  font-size: 30rpx;
   font-weight: 500;
   color: #000;
 }
 
-.custom-template-chip-meta {
-  font-size: 20rpx;
+.custom-template-card-sub {
+  font-size: 22rpx;
   font-weight: 500;
   color: #a0a0a0;
+}
+
+.custom-template-card-src {
+  font-size: 20rpx;
+  font-weight: 500;
+  color: rgba(0,0,0,0.2);
+  margin-top: 2rpx;
 }
 
 /* ===== 三卡槽弹窗 ===== */

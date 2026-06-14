@@ -32,7 +32,34 @@
               <text class="edit-done-text">完成</text>
             </view>
           </view>
-          <view class="custom-edit-canvas"></view>
+          <view class="custom-edit-canvas">
+            <!-- 占1格卡片 -->
+            <view class="custom-section-label">占 1 格</view>
+            <view class="custom-card-row">
+              <view
+                class="custom-template-card custom-template-card--span1"
+                wx:for="{{span1Templates}}"
+                wx:key="id"
+              >
+                <text class="custom-template-card-name">{{item.name}}</text>
+                <text class="custom-template-card-sub">{{item.subtitle}}</text>
+                <text class="custom-template-card-src">{{item.source}}</text>
+              </view>
+            </view>
+            <!-- 占2格卡片 -->
+            <view class="custom-section-label">占 2 格</view>
+            <view class="custom-card-row">
+              <view
+                class="custom-template-card custom-template-card--span2"
+                wx:for="{{span2Templates}}"
+                wx:key="id"
+              >
+                <text class="custom-template-card-name">{{item.name}}</text>
+                <text class="custom-template-card-sub">{{item.subtitle}}</text>
+                <text class="custom-template-card-src">{{item.source}}</text>
+              </view>
+            </view>
+          </view>
         </view>
       </view>
     </block>

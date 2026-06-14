@@ -82,6 +82,8 @@ Page({
     customCards: [], // 自定义简览页已添加的卡片列表
     editCardWidths: [], // movable-view 宽度（px），按索引
     editCardHeight: 120, // movable-view 高度（px）
+    span1Templates: [], // 占 1 格的模版
+    span2Templates: [], // 占 2 格的模版
     overviewSlots: [null, null, null], // 3 列卡槽，每个为 null 或卡片对象
     visibleSlots: [], // 从 overviewSlots 计算出的可见槽位（处理 span 合并。弹窗用，保持列顺序）
     visibleSlotsCompact: [], // 编辑模式用，按 span 分组：span-1 在前，span-2 次之
@@ -1452,13 +1454,15 @@ Page({
   // ---- 自定义简览页 ----
   onCustomOverviewEntry() {
     const saved = wx.getStorageSync('customOverviewCards') || []
+    const templates = this.data.customTemplates
     this.setData({
       showCustomOverview: true, showOverview: true,
       customCards: saved,
+      span1Templates: templates.filter(t => t.span === 1),
+      span2Templates: templates.filter(t => t.span === 2),
       showPopup: false,
       ghostDrag: { visible: false, x: 0, y: 0, templateId: '', name: '', slotHover: -1, template: null },
     })
-    // 延迟查询画布尺寸并初始化卡片位置
     setTimeout(() => this._initEditGrid(), 300)
   },
 
