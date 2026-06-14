@@ -80,6 +80,17 @@ Page({
     showVipPage: false,
     showCustomOverview: false,
     customCards: [], // 自定义简览页已添加的卡片列表
+    defaultOverviewCards: [
+      { id: 'd_personal', name: '个人账本', subtitle: '日常收支', span: 1, type: 'personal', x: 0, y: 0 },
+      { id: 'd_company', name: '共生宇宙公司账本', subtitle: '经营收支', span: 2, type: 'company', x: 0, y: 120 },
+    ],
+    // 槽位拖放对话框
+    showSlotModal: false,
+    draggingTemplate: null, // 正在拖放的模版卡片数据
+    slotCards: [null, null, null], // 三个卡槽，null = 空
+    slotLayout: [], // 槽位布局（含合并信息）[{ card, height: 1|2, index: 0|1|2 }]
+    slotHover: -1, // 当前悬停的卡槽索引，-1 = 无
+    dragFloat: { visible: false, x: 0, y: 0, name: '', subtitle: '' }, // 拖放中跟随手指的浮动卡片
     editCardWidths: [], // movable-view 宽度（px），按索引
     editCardHeight: 120, // movable-view 高度（px）
     span1Templates: [], // 占 1 格的模版
@@ -1567,6 +1578,189 @@ Page({
     const editCardWidths = [...this.data.editCardWidths]
     editCardWidths.splice(idx, 1)
     this.setData({ customCards, editCardWidths })
+  },
+
+  // ---- 槽位拖放对话框 ----
+  onTemplateTouchStart(e) {
+    const templateId = e.currentTarget.dataset.id
+    const template = this.data.customTemplates.find(t => t.id === templateId)
+    if (!template) return
+    const touch = (e.touches && e.touches[0]) || (e.changedTouches && e.changedTouches[0])
+    if (!touch) return
+    // 现有卡片映射到卡槽：customCards 为空则用默认简览卡片
+    const src = this.data.customCards.length > 0
+      ? this.data.customCards
+      : this.data.defaultOverviewCards
+    const existing = [...src].sort((a, b) => (a.y || 0) - (b.y || 0))
+    const slotCards = [null, null, null]
+    for (let i = 0; i < Math.min(existing.length, 3); i++) {
+      slotCards[i] = existing[i]
+    }
+    this.setData({
+      draggingTemplate: template,
+      slotCards,
+      slotLayout: this._buildSlotLayout(slotCards),
+      slotHover: -1,
+      'dragFloat.visible': true,
+      'dragFloat.x': touch.clientX - 50,
+      'dragFloat.y': touch.clientY - 40,
+      'dragFloat.name': template.name,
+      'dragFloat.subtitle': template.subtitle || '',
+      showSlotModal: false,
+    })
+  },
+
+  onDragOverlayMove(e) {
+    if (!this.data.dragFloat.visible) return
+    const touch = (e.touches && e.touches[0]) || (e.changedTouches && e.changedTouches[0])
+    if (!touch) return
+    const x = touch.clientX - 50
+    const y = touch.clientY - 40
+    // 拖动超过 30px 后才显示槽位弹窗
+    const showModal = this.data.showSlotModal || y > 120
+    // 检测悬停槽位
+    let hover = -1
+    if (showModal) {
+      hover = this._calcSlotHover(touch.clientX, touch.clientY)
+    }
+    this.setData({
+      'dragFloat.x': x,
+      'dragFloat.y': y,
+      showSlotModal: showModal,
+      slotHover: hover,
+    })
+    // 预查询一次弹窗位置以便后续松手计算
+    if (showModal) {
+      this._slotModalRect = null
+      wx.createSelectorQuery().select('#slotModalContent').boundingClientRect((res) => {
+        if (res) this._slotModalRect = res
+      }).exec()
+    }
+  },
+
+  _calcSlotHover(clientX, clientY) {
+    const rect = this._slotModalRect
+    const layout = this.data.slotLayout
+    if (!rect || !layout.length) return -1
+    if (clientX < rect.left || clientX > rect.right ||
+        clientY < rect.top || clientY > rect.bottom) return -1
+    // 根据 slotLayout 计算每个槽位的高度区间
+    const slotStart = rect.top + 50
+    const slotTotalH = rect.height - 50 - 80
+    const unitH = slotTotalH / 3 // 1 格高度
+    let offset = 0
+    for (const item of layout) {
+      const h = unitH * item.height
+      if (clientY >= slotStart + offset && clientY < slotStart + offset + h) {
+        return item.index
+      }
+      offset += h
+    }
+    return -1
+  },
+
+  async onDragOverlayEnd(e) {
+    const { slotHover, slotCards, draggingTemplate, showSlotModal } = this.data
+    const touch = (e.changedTouches && e.changedTouches[0]) || (e.touches && e.touches[0])
+    // 再算一次，确保使用最新弹窗位置
+    let hover = slotHover
+    if (showSlotModal && touch) {
+      hover = this._calcSlotHover(touch.clientX, touch.clientY)
+    }
+    if (hover >= 0 && draggingTemplate && showSlotModal) {
+      const newCard = {
+        id: `c_${Date.now()}`,
+        templateId: draggingTemplate.id,
+        name: draggingTemplate.name,
+        subtitle: draggingTemplate.subtitle,
+        type: draggingTemplate.type,
+        span: draggingTemplate.span,
+        x: 0,
+        y: hover * 120,
+      }
+      const updated = [...slotCards]
+      updated[hover] = newCard
+      // span-2 卡片清除被合并的相邻槽位
+      if (newCard.span >= 2 && hover < 2) {
+        updated[hover + 1] = null
+      }
+      // 如果前一个槽位是 span-2 且占用了当前槽位，先清掉
+      if (hover > 0 && updated[hover - 1] && (updated[hover - 1].span || 1) >= 2) {
+        updated[hover - 1] = null
+      }
+      // 同一张卡不进多个槽位
+      for (let i = 0; i < 3; i++) {
+        if (i !== hover && updated[i] && updated[i].id === newCard.id) {
+          updated[i] = null
+        }
+      }
+      this.setData({
+        slotCards: updated,
+        slotLayout: this._buildSlotLayout(updated),
+        slotHover: -1,
+        'dragFloat.visible': false,
+      })
+      // 不关弹窗，等用户确认
+    } else {
+      // 没有放到槽位上，取消拖放
+      const empty = [null, null, null]
+      this.setData({
+        'dragFloat.visible': false,
+        showSlotModal: false,
+        draggingTemplate: null,
+        slotCards: empty,
+        slotLayout: this._buildSlotLayout(empty),
+        slotHover: -1,
+      })
+    }
+  },
+
+  _buildSlotLayout(slotCards) {
+    const layout = []
+    let i = 0
+    while (i < 3) {
+      const card = slotCards[i]
+      const span = card ? Math.min(card.span || 1, 3 - i) : 1
+      layout.push({ card: slotCards[i], height: span, index: i, slotHover: false })
+      i += span
+    }
+    return layout
+  },
+
+  onSlotConfirm() {
+    const { slotCards } = this.data
+    const ordered = []
+    for (let i = 0; i < 3; i++) {
+      if (slotCards[i]) {
+        ordered.push({ ...slotCards[i], y: i * 120, x: 0 })
+      }
+    }
+    wx.setStorageSync('customOverviewCards', ordered)
+    const colW = (this._grid && this._grid.colWidth) || 100
+    const editCardWidths = ordered.map(c => Math.round(colW * (c.span || 1)))
+    const empty = [null, null, null]
+    this.setData({
+      customCards: ordered,
+      editCardWidths,
+      showSlotModal: false,
+      draggingTemplate: null,
+      slotCards: empty,
+      slotLayout: this._buildSlotLayout(empty),
+      slotHover: -1,
+      'dragFloat.visible': false,
+    })
+  },
+
+  onSlotCancel() {
+    const empty = [null, null, null]
+    this.setData({
+      showSlotModal: false,
+      draggingTemplate: null,
+      slotCards: empty,
+      slotLayout: this._buildSlotLayout(empty),
+      slotHover: -1,
+      'dragFloat.visible': false,
+    })
   },
 
   _refreshVisibleSlots() {
