@@ -2189,7 +2189,7 @@ page {
 }
 
 .custom-template-card--span2 {
-  width: 100%;
+  width: calc((100% - 12rpx) / 3 * 2);
 }
 
 /* 玻璃框高度适配 */
