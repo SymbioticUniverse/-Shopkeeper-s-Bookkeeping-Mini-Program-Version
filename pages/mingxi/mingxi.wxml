@@ -1,7 +1,7 @@
 <view class="page">
   <!-- 标题栏 -->
   <view class="header">
-    <view class="header-left {{showHeader ? '' : 'invisible'}}">
+    <view class="header-left" wx:if="{{showOverview}}">
       <text class="year-text">2026年</text>
       <view class="date-badge">
         <text class="date-month-num">06</text>
@@ -9,7 +9,11 @@
         <view class="date-arrow"></view>
       </view>
     </view>
-    <text class="header-title {{showHeader ? '' : 'invisible'}}">公私OPC记账</text>
+    <view class="header-back-btn" wx:if="{{!showOverview}}" bindtap="goOverview">
+      <view class="back-arrow"></view>
+      <text class="back-text">返回简览页</text>
+    </view>
+    <text class="header-title">公私OPC记账</text>
     <view class="header-right-icon">
       <view class="avatar-circle"></view>
     </view>
@@ -17,109 +21,399 @@
 
   <!-- 卡片网格区 -->
   <view class="card-grid">
-    <!-- Tab 0: 明细 -->
-    <block wx:if="{{currentTab === 0}}">
-      <!-- 个人账本 - 占1格 -->
-      <view class="card grid-span-1" bindtap="goPersonalLedger">
+
+    <!-- ===== 自定义简览页（编辑态） ===== -->
+    <block wx:if="{{showCustomOverview && showOverview}}">
+    <view class="custom-overview-container">
+      <view class="edit-mode-header">
+        <text class="edit-mode-title">自定义简览页</text>
+        <view class="edit-done-btn" bindtap="onExitEditMode">
+          <text class="edit-done-text">完成</text>
+        </view>
+      </view>
+      <!-- 大卡片包裹 -->
+      <view wx:if="{{hasCustomCards}}" class="card grid-span-3">
+        <scroll-view class="custom-cards-scroll" scroll-y enhanced show-scrollbar="{{false}}">
+          <view class="custom-card-wrapper" wx:for="{{visibleSlots}}" wx:key="col" wx:for-item="item" wx:if="{{!item.isEmpty}}">
+            <view class="custom-card-remove" catchtap="onCustomCardRemove" data-col="{{item.col}}">
+              <text class="custom-card-remove-x">×</text>
+            </view>
+            <block wx:if="{{item.card.type === 'overview_personal'}}">
+              <view class="card-header"><view class="card-avatar"></view><text class="card-title">{{item.card.name}}</text><text class="card-subtitle">{{item.card.subtitle}} · {{item.spanLabel}}</text></view>
+              <view class="card-divider card-divider--down"></view>
+              <view class="card-row"><text class="row-label">预算</text><view class="value-tag green"><text class="value-yen">¥</text><text class="value-num">0.00</text></view></view>
+              <view class="card-divider card-divider--tight"></view>
+              <view class="card-row three-col"><text class="col-label">收入</text><text class="col-label">支出</text><text class="col-label">结余</text></view>
+              <view class="card-row three-col">
+                <view class="value-tag green"><text class="value-yen">¥</text><text class="value-num">0.00</text></view>
+                <view class="value-tag red"><text class="value-yen">¥</text><text class="value-num">0.00</text></view>
+                <view class="value-tag red"><text class="value-yen">¥</text><text class="value-num">0.00</text></view>
+              </view>
+            </block>
+            <block wx:elif="{{item.card.type === 'overview_company'}}">
+              <view class="card-header compact"><text class="card-title">{{item.card.name}}</text><text class="card-subtitle">{{item.card.subtitle}} · {{item.spanLabel}}</text></view>
+              <view class="card-divider"></view>
+              <view class="card-row"><text class="row-label">公司总资产</text><view class="value-tag green"><text class="value-yen">¥</text><text class="value-num">0.00</text></view></view>
+              <view class="card-row"><text class="row-label">公司总负债</text><view class="value-tag red"><text class="value-yen">¥</text><text class="value-num">0.00</text></view></view>
+              <view class="card-row"><text class="row-label">公司净资产</text><view class="value-tag green"><text class="value-yen">¥</text><text class="value-num">0.00</text></view></view>
+              <view class="card-row"><text class="row-label">可支配资产</text><view class="value-tag green"><text class="value-yen">¥</text><text class="value-num">0.00</text></view></view>
+              <view class="card-divider"></view>
+              <view class="card-row three-col"><text class="col-label">应收</text><text class="col-label">应出</text><text class="col-label">未结算</text></view>
+              <view class="card-row three-col">
+                <view class="value-tag green"><text class="value-yen">¥</text><text class="value-num">0.00</text></view>
+                <view class="value-tag red"><text class="value-yen">¥</text><text class="value-num">0.00</text></view>
+                <view class="value-tag red"><text class="value-yen">¥</text><text class="value-num">0.00</text></view>
+              </view>
+            </block>
+            <block wx:elif="{{item.card.type === 'detail_personal' || item.card.type === 'detail_company'}}">
+              <view class="card-header compact"><text class="card-title">{{item.card.name}}</text><text class="card-subtitle">{{item.card.subtitle}} · {{item.spanLabel}}</text></view>
+              <view class="card-divider"></view>
+              <view class="card-row"><text class="row-label">本月收入</text><view class="value-tag green"><text class="value-yen">¥</text><text class="value-num">0.00</text></view></view>
+              <view class="card-row"><text class="row-label">本月支出</text><view class="value-tag red"><text class="value-yen">¥</text><text class="value-num">0.00</text></view></view>
+              <view class="card-row"><text class="row-label">结余</text><view class="value-tag green"><text class="value-yen">¥</text><text class="value-num">0.00</text></view></view>
+            </block>
+            <block wx:elif="{{item.card.type === 'jieqing_personal' || item.card.type === 'jieqing_company'}}">
+              <view class="card-header compact"><text class="card-title">{{item.card.name}}</text><text class="card-subtitle">{{item.card.subtitle}} · {{item.spanLabel}}</text></view>
+              <view class="card-divider"></view>
+              <view class="card-row"><text class="row-label">待结清笔数</text><text class="row-label">0</text></view>
+              <view class="card-row"><text class="row-label">待结清总额</text><view class="value-tag red"><text class="value-yen">¥</text><text class="value-num">0.00</text></view></view>
+              <view class="settle-btn"><text class="settle-btn-text">一键全结清</text></view>
+            </block>
+          </view>
+        </scroll-view>
+      </view>
+      <view wx:else class="custom-cards-empty">
+        <text class="custom-cards-empty-text">点击下方模版添加卡片到简览页</text>
+      </view>
+      <!-- 模版库 -->
+      <view class="template-library">
+        <text class="edit-templates-label">模版库 · 点击添加</text>
+        <scroll-view class="edit-templates-scroll" scroll-x enhanced show-scrollbar="{{false}}">
+          <view class="custom-glass-frame {{ghostDrag.templateId === item.id && ghostDrag.visible ? 'custom-glass-frame--active' : ''}}" wx:for="{{customTemplates}}" wx:key="id" bindtap="onTemplateTap" data-id="{{item.id}}">
+            <view class="custom-glass-inner">
+              <view class="custom-tpl-card custom-tpl-card--span{{item.span}}">
+                <block wx:if="{{item.type === 'overview_personal'}}">
+                  <view class="card-header"><view class="card-avatar"></view><text class="card-title">个人账本</text><text class="card-subtitle">日常收支</text></view>
+                  <view class="card-divider card-divider--down"></view>
+                  <view class="card-row"><text class="row-label">预算</text><view class="value-tag green"><text class="value-yen">¥</text><text class="value-num">0.00</text></view></view>
+                  <view class="card-divider card-divider--tight"></view>
+                  <view class="card-row three-col"><text class="col-label">收入</text><text class="col-label">支出</text><text class="col-label">结余</text></view>
+                  <view class="card-row three-col"><view class="value-tag green"><text class="value-yen">¥</text><text class="value-num">0.00</text></view><view class="value-tag red"><text class="value-yen">¥</text><text class="value-num">0.00</text></view><view class="value-tag red"><text class="value-yen">¥</text><text class="value-num">0.00</text></view></view>
+                </block>
+                <block wx:elif="{{item.type === 'overview_company'}}">
+                  <view class="card-header compact"><text class="card-title">公司账本</text><text class="card-subtitle">经营收支</text></view>
+                  <view class="card-divider"></view>
+                  <view class="card-row"><text class="row-label">公司总资产</text><view class="value-tag green"><text class="value-yen">¥</text><text class="value-num">0.00</text></view></view>
+                  <view class="card-row"><text class="row-label">公司总负债</text><view class="value-tag red"><text class="value-yen">¥</text><text class="value-num">0.00</text></view></view>
+                  <view class="card-row"><text class="row-label">公司净资产</text><view class="value-tag green"><text class="value-yen">¥</text><text class="value-num">0.00</text></view></view>
+                  <view class="card-row"><text class="row-label">可支配资产</text><view class="value-tag green"><text class="value-yen">¥</text><text class="value-num">0.00</text></view></view>
+                  <view class="card-divider"></view>
+                  <view class="card-row three-col"><text class="col-label">应收</text><text class="col-label">应出</text><text class="col-label">未结算</text></view>
+                  <view class="card-row three-col"><view class="value-tag green"><text class="value-yen">¥</text><text class="value-num">0.00</text></view><view class="value-tag red"><text class="value-yen">¥</text><text class="value-num">0.00</text></view><view class="value-tag red"><text class="value-yen">¥</text><text class="value-num">0.00</text></view></view>
+                </block>
+                <block wx:elif="{{item.type === 'detail_personal' || item.type === 'detail_company'}}">
+                  <view class="card-header compact"><text class="card-title">{{item.name}}</text><text class="card-subtitle">月度 · 季度 · 年度 · 日度</text></view>
+                  <view class="card-divider"></view>
+                  <view class="card-row"><text class="row-label">本月收入</text><view class="value-tag green"><text class="value-yen">¥</text><text class="value-num">0.00</text></view></view>
+                  <view class="card-row"><text class="row-label">本月支出</text><view class="value-tag red"><text class="value-yen">¥</text><text class="value-num">0.00</text></view></view>
+                  <view class="card-row"><text class="row-label">结余</text><view class="value-tag green"><text class="value-yen">¥</text><text class="value-num">0.00</text></view></view>
+                </block>
+                <block wx:elif="{{item.type === 'jieqing_personal' || item.type === 'jieqing_company'}}">
+                  <view class="card-header compact"><text class="card-title">{{item.name}}</text><text class="card-subtitle">垫付 · 应付</text></view>
+                  <view class="card-divider"></view>
+                  <view class="card-row"><text class="row-label">待结清笔数</text><text class="row-label">0</text></view>
+                  <view class="card-row"><text class="row-label">待结清总额</text><view class="value-tag red"><text class="value-yen">¥</text><text class="value-num">0.00</text></view></view>
+                  <view class="settle-btn"><text class="settle-btn-text">一键全结清</text></view>
+                </block>
+              </view>
+            </view>
+            <view class="custom-glass-label">
+              <view class="custom-glass-label-left">
+                <text class="custom-glass-label-name">{{item.name}}</text>
+                <text class="custom-glass-label-meta">{{item.source}}</text>
+              </view>
+            </view>
+          </view>
+        </scroll-view>
+      </view>
+    </view>
+    </block>
+
+    <!-- ===== 自定义简览（已保存，非编辑态） ===== -->
+    <block wx:if="{{!showCustomOverview && showOverview && hasCustomCards}}">
+      <view class="card grid-span-3">
+        <view class="custom-card-wrapper" wx:for="{{visibleSlots}}" wx:key="col" wx:for-item="item" wx:if="{{!item.isEmpty}}">
+          <block wx:if="{{item.card.type === 'overview_personal'}}">
+            <view class="card-header"><view class="card-avatar"></view><text class="card-title">{{item.card.name}}</text><text class="card-subtitle">{{item.card.subtitle}}</text></view>
+            <view class="card-divider card-divider--down"></view>
+            <view class="card-row"><text class="row-label">预算</text><view class="value-tag green"><text class="value-yen">¥</text><text class="value-num">0.00</text></view></view>
+            <view class="card-divider card-divider--tight"></view>
+            <view class="card-row three-col"><text class="col-label">收入</text><text class="col-label">支出</text><text class="col-label">结余</text></view>
+            <view class="card-row three-col">
+              <view class="value-tag green"><text class="value-yen">¥</text><text class="value-num">0.00</text></view>
+              <view class="value-tag red"><text class="value-yen">¥</text><text class="value-num">0.00</text></view>
+              <view class="value-tag red"><text class="value-yen">¥</text><text class="value-num">0.00</text></view>
+            </view>
+          </block>
+          <block wx:elif="{{item.card.type === 'overview_company'}}">
+            <view class="card-header compact"><text class="card-title">{{item.card.name}}</text><text class="card-subtitle">{{item.card.subtitle}}</text></view>
+            <view class="card-divider"></view>
+            <view class="card-row"><text class="row-label">公司总资产</text><view class="value-tag green"><text class="value-yen">¥</text><text class="value-num">0.00</text></view></view>
+            <view class="card-row"><text class="row-label">公司总负债</text><view class="value-tag red"><text class="value-yen">¥</text><text class="value-num">0.00</text></view></view>
+            <view class="card-row"><text class="row-label">公司净资产</text><view class="value-tag green"><text class="value-yen">¥</text><text class="value-num">0.00</text></view></view>
+            <view class="card-row"><text class="row-label">可支配资产</text><view class="value-tag green"><text class="value-yen">¥</text><text class="value-num">0.00</text></view></view>
+            <view class="card-divider"></view>
+            <view class="card-row three-col"><text class="col-label">应收</text><text class="col-label">应出</text><text class="col-label">未结算</text></view>
+            <view class="card-row three-col">
+              <view class="value-tag green"><text class="value-yen">¥</text><text class="value-num">0.00</text></view>
+              <view class="value-tag red"><text class="value-yen">¥</text><text class="value-num">0.00</text></view>
+              <view class="value-tag red"><text class="value-yen">¥</text><text class="value-num">0.00</text></view>
+            </view>
+          </block>
+          <block wx:elif="{{item.card.type === 'detail_personal' || item.card.type === 'detail_company'}}">
+            <view class="card-header compact"><text class="card-title">{{item.card.name}}</text><text class="card-subtitle">{{item.card.subtitle}}</text></view>
+            <view class="card-divider"></view>
+            <view class="card-row"><text class="row-label">本月收入</text><view class="value-tag green"><text class="value-yen">¥</text><text class="value-num">0.00</text></view></view>
+            <view class="card-row"><text class="row-label">本月支出</text><view class="value-tag red"><text class="value-yen">¥</text><text class="value-num">0.00</text></view></view>
+            <view class="card-row"><text class="row-label">结余</text><view class="value-tag green"><text class="value-yen">¥</text><text class="value-num">0.00</text></view></view>
+          </block>
+          <block wx:elif="{{item.card.type === 'jieqing_personal' || item.card.type === 'jieqing_company'}}">
+            <view class="card-header compact"><text class="card-title">{{item.card.name}}</text><text class="card-subtitle">{{item.card.subtitle}}</text></view>
+            <view class="card-divider"></view>
+            <view class="card-row"><text class="row-label">待结清笔数</text><text class="row-label">0</text></view>
+            <view class="card-row"><text class="row-label">待结清总额</text><view class="value-tag red"><text class="value-yen">¥</text><text class="value-num">0.00</text></view></view>
+            <view class="settle-btn"><text class="settle-btn-text">一键全结清</text></view>
+          </block>
+        </view>
+      </view>
+    </block>
+
+    <!-- ===== 默认简览（无自定义） ===== -->
+    <block wx:if="{{!showCustomOverview && showOverview && !hasCustomCards}}">
+      <view class="card grid-span-1" bindtap="switchTab" data-index="0">
         <view class="card-header">
           <view class="card-avatar"></view>
           <text class="card-title">个人账本</text>
           <text class="card-arrow">〉</text>
           <text class="card-subtitle">日常收支</text>
         </view>
-        <view class="card-divider"></view>
-        <view class="card-row">
-          <text class="row-label">预算</text>
-          <view class="value-tag green">
-            <text class="value-yen">¥</text>
-            <text class="value-num">0.00</text>
-          </view>
-        </view>
-        <view class="card-divider"></view>
+        <view class="card-divider card-divider--down"></view>
+        <view class="card-row"><text class="row-label">预算</text><view class="value-tag green"><text class="value-yen">¥</text><text class="value-num">0.00</text></view></view>
+        <view class="card-divider card-divider--tight"></view>
+        <view class="card-row three-col"><text class="col-label">收入</text><text class="col-label">支出</text><text class="col-label">结余</text></view>
         <view class="card-row three-col">
-          <text class="col-label">收入</text>
-          <text class="col-label">支出</text>
-          <text class="col-label">结余</text>
-        </view>
-        <view class="card-row three-col">
-          <view class="value-tag green">
-            <text class="value-yen">¥</text>
-            <text class="value-num">0.00</text>
-          </view>
-          <view class="value-tag red">
-            <text class="value-yen">¥</text>
-            <text class="value-num">0.00</text>
-          </view>
-          <view class="value-tag red">
-            <text class="value-yen">¥</text>
-            <text class="value-num">0.00</text>
-          </view>
+          <view class="value-tag green"><text class="value-yen">¥</text><text class="value-num">0.00</text></view>
+          <view class="value-tag red"><text class="value-yen">¥</text><text class="value-num">0.00</text></view>
+          <view class="value-tag red"><text class="value-yen">¥</text><text class="value-num">0.00</text></view>
         </view>
       </view>
-
-      <!-- 公司账本 - 占2格 -->
-      <view class="card grid-span-2" bindtap="goCompanyLedger">
+      <view class="card grid-span-2" bindtap="switchTab" data-index="0">
         <view class="card-header compact">
           <text class="card-title">共生宇宙公司账本</text>
           <text class="card-arrow">〉</text>
           <text class="card-subtitle">经营收支</text>
         </view>
         <view class="card-divider"></view>
-        <view class="card-row">
-          <text class="row-label">公司总资产</text>
-          <view class="value-tag green">
-            <text class="value-yen">¥</text>
-            <text class="value-num">0.00</text>
-          </view>
-        </view>
-        <view class="card-row">
-          <text class="row-label">公司总负债</text>
-          <view class="value-tag red">
-            <text class="value-yen">¥</text>
-            <text class="value-num">0.00</text>
-          </view>
-        </view>
-        <view class="card-row">
-          <text class="row-label">公司净资产</text>
-          <view class="value-tag green">
-            <text class="value-yen">¥</text>
-            <text class="value-num">0.00</text>
-          </view>
-        </view>
-        <view class="card-row">
-          <text class="row-label">可支配资产</text>
-          <view class="value-tag green">
-            <text class="value-yen">¥</text>
-            <text class="value-num">0.00</text>
-          </view>
-        </view>
+        <view class="card-row"><text class="row-label">公司总资产</text><view class="value-tag green"><text class="value-yen">¥</text><text class="value-num">0.00</text></view></view>
+        <view class="card-row"><text class="row-label">公司总负债</text><view class="value-tag red"><text class="value-yen">¥</text><text class="value-num">0.00</text></view></view>
+        <view class="card-row"><text class="row-label">公司净资产</text><view class="value-tag green"><text class="value-yen">¥</text><text class="value-num">0.00</text></view></view>
+        <view class="card-row"><text class="row-label">可支配资产</text><view class="value-tag green"><text class="value-yen">¥</text><text class="value-num">0.00</text></view></view>
         <view class="card-divider"></view>
+        <view class="card-row three-col"><text class="col-label">应收</text><text class="col-label">应出</text><text class="col-label">未结算</text></view>
         <view class="card-row three-col">
-          <text class="col-label">应收</text>
-          <text class="col-label">应出</text>
-          <text class="col-label">未结算</text>
+          <view class="value-tag green"><text class="value-yen">¥</text><text class="value-num">0.00</text></view>
+          <view class="value-tag red"><text class="value-yen">¥</text><text class="value-num">0.00</text></view>
+          <view class="value-tag red"><text class="value-yen">¥</text><text class="value-num">0.00</text></view>
         </view>
-        <view class="card-row three-col">
-          <view class="value-tag green">
-            <text class="value-yen">¥</text>
-            <text class="value-num">0.00</text>
+      </view>
+    </block>
+
+    <!-- ===== 非简览页：各 Tab 内容 ===== -->
+    <block wx:if="{{!showOverview}}">
+
+    <!-- Tab 0: 明细 -->
+    <block wx:if="{{currentTab === 0}}">
+      <view class="card grid-span-3 detail-card">
+        <view class="detail-header">
+          <text class="detail-title">明细</text>
+          <view class="report-type-toggle" bindtap="switchDetailType">
+            <view class="report-type-bg"></view>
+            <view class="report-type-slider {{detailType === 1 ? 'report-type-slider--right' : ''}}"></view>
+            <text class="report-type-text {{detailType === 0 ? 'report-type-text--active' : ''}}">个人</text>
+            <text class="report-type-text {{detailType === 1 ? 'report-type-text--active' : ''}}">公司</text>
           </view>
-          <view class="value-tag red">
-            <text class="value-yen">¥</text>
-            <text class="value-num">0.00</text>
+        </view>
+        <view class="report-period-bar">
+          <view class="report-period-item {{detailPeriod === 0 ? 'report-period-item--active' : ''}}" bindtap="switchDetailPeriod" data-period="{{0}}">
+            <text class="report-period-text {{detailPeriod === 0 ? 'report-period-text--active' : ''}}">月度</text>
           </view>
-          <view class="value-tag red">
-            <text class="value-yen">¥</text>
-            <text class="value-num">0.00</text>
+          <view class="report-period-item {{detailPeriod === 1 ? 'report-period-item--active' : ''}}" bindtap="switchDetailPeriod" data-period="{{1}}">
+            <text class="report-period-text {{detailPeriod === 1 ? 'report-period-text--active' : ''}}">季度</text>
           </view>
+          <view class="report-period-item {{detailPeriod === 2 ? 'report-period-item--active' : ''}}" bindtap="switchDetailPeriod" data-period="{{2}}">
+            <text class="report-period-text {{detailPeriod === 2 ? 'report-period-text--active' : ''}}">年度</text>
+          </view>
+          <view class="report-period-item {{detailPeriod === 3 ? 'report-period-item--active' : ''}}" bindtap="switchDetailPeriod" data-period="{{3}}">
+            <text class="report-period-text {{detailPeriod === 3 ? 'report-period-text--active' : ''}}">日度</text>
+          </view>
+        </view>
+        <view class="detail-list-area">
+          <view class="detail-date-row">
+            <picker wx:if="{{detailPeriod === 0}}" mode="date" fields="month" value="{{detailPickerDate}}" bindchange="onDetailPickerChange">
+              <view class="detail-date-box">
+                <text class="report-date-text">{{detailDateText}}</text>
+                <view class="report-date-arrow"></view>
+              </view>
+            </picker>
+            <picker wx:elif="{{detailPeriod === 1}}" mode="multiSelector" range="{{reportQuarterRange}}" value="{{reportQuarterMultiIndex}}" bindchange="onDetailQuarterChange">
+              <view class="detail-date-box">
+                <text class="report-date-text">{{detailDateText}}</text>
+                <view class="report-date-arrow"></view>
+              </view>
+            </picker>
+            <picker wx:elif="{{detailPeriod === 2}}" mode="date" fields="year" value="{{detailPickerDate}}" bindchange="onDetailPickerChange">
+              <view class="detail-date-box">
+                <text class="report-date-text">{{detailDateText}}</text>
+                <view class="report-date-arrow"></view>
+              </view>
+            </picker>
+            <picker wx:elif="{{detailPeriod === 3}}" mode="date" value="{{detailPickerDate}}" bindchange="onDetailPickerChange">
+              <view class="detail-date-box">
+                <text class="report-date-text">{{detailDateText}}</text>
+                <view class="report-date-arrow"></view>
+              </view>
+            </picker>
+            <view class="detail-inout-box">
+              <view class="report-inout-item">
+                <view class="report-dot report-dot--green"></view>
+                <text class="report-inout-label">收入</text>
+              </view>
+              <view class="report-inout-item">
+                <view class="report-dot report-dot--red"></view>
+                <text class="report-inout-label">支出</text>
+              </view>
+            </view>
+          </view>
+          <view class="detail-col-headers">
+            <view class="bill-header-row">
+              <text class="bill-header-label" style="width:70rpx">分类</text>
+              <text class="bill-header-label" style="width:70rpx">类型</text>
+              <text class="bill-header-label" style="width:80rpx">备注</text>
+              <text class="bill-header-label" style="flex:1;text-align:right;margin-right:12rpx">金额</text>
+              <text class="bill-header-label" style="width:110rpx;text-align:right">日期</text>
+            </view>
+          </view>
+          <scroll-view class="detail-list" scroll-y enhanced show-scrollbar="{{false}}">
+            <view wx:for="{{detailItems}}" wx:key="id" class="bill-row">
+              <view class="bill-actions">
+                <view class="bill-act-btn bill-act-settle" catchtap="onBillSettle" data-id="{{item.id}}" data-from="detail">结清</view>
+                <view class="bill-act-btn bill-act-delete" catchtap="onBillDelete" data-id="{{item.id}}" data-from="detail">删除</view>
+                <view wx:if="{{!item._voided}}" class="bill-act-btn bill-act-void" catchtap="onBillVoid" data-id="{{item.id}}" data-from="detail">作废</view>
+                <view wx:else class="bill-act-btn bill-act-unvoid" catchtap="onBillUnvoid" data-id="{{item.id}}" data-from="detail">恢复</view>
+              </view>
+              <view class="bill-item {{item.typeLabel === '垫付' ? 'bill-item--advance' : ''}} {{item.typeLabel === '应付' ? 'bill-item--payable' : ''}} {{item._voided ? 'bill-item--voided' : ''}}"
+                    bindtouchstart="onBillTouchStart"
+                    bindtouchmove="onBillTouchMove"
+                    bindtouchend="onBillTouchEnd"
+                    bindtap="onBillTap"
+                    data-id="{{item.id}}"
+                    data-from="detail">
+                <view class="bill-dot"></view>
+                <text class="bill-cat">{{item.category}}</text>
+                <text class="bill-type">{{item.typeLabel}}</text>
+                <text class="bill-note-inline">{{item.note || '-'}}</text>
+                <text class="bill-amount {{item.type === 'in' ? 'bill-amount--in' : 'bill-amount--out'}}">¥{{item.amount}}</text>
+                <text class="bill-date">{{item.date}}</text>
+              </view>
+            </view>
+          </scroll-view>
         </view>
       </view>
     </block>
 
     <!-- Tab 1: 报表 -->
     <block wx:if="{{currentTab === 1}}">
-      <view class="card grid-span-3 placeholder-card">
-        <text>报表</text>
+      <view class="card grid-span-3 report-card">
+        <view class="report-header">
+          <text class="report-title">报表</text>
+          <view class="report-type-toggle" bindtap="switchReportType">
+            <view class="report-type-bg"></view>
+            <view class="report-type-slider {{reportType === 1 ? 'report-type-slider--right' : ''}}"></view>
+            <text class="report-type-text {{reportType === 0 ? 'report-type-text--active' : ''}}">个人</text>
+            <text class="report-type-text {{reportType === 1 ? 'report-type-text--active' : ''}}">公司</text>
+          </view>
+        </view>
+        <view class="report-period-bar">
+          <view class="report-period-item {{reportPeriod === 0 ? 'report-period-item--active' : ''}}" bindtap="switchReportPeriod" data-period="{{0}}">
+            <text class="report-period-text {{reportPeriod === 0 ? 'report-period-text--active' : ''}}">月度</text>
+          </view>
+          <view class="report-period-item {{reportPeriod === 1 ? 'report-period-item--active' : ''}}" bindtap="switchReportPeriod" data-period="{{1}}">
+            <text class="report-period-text {{reportPeriod === 1 ? 'report-period-text--active' : ''}}">季度</text>
+          </view>
+          <view class="report-period-item {{reportPeriod === 2 ? 'report-period-item--active' : ''}}" bindtap="switchReportPeriod" data-period="{{2}}">
+            <text class="report-period-text {{reportPeriod === 2 ? 'report-period-text--active' : ''}}">年度</text>
+          </view>
+          <view class="report-period-item {{reportPeriod === 3 ? 'report-period-item--active' : ''}}" bindtap="switchReportPeriod" data-period="{{3}}">
+            <text class="report-period-text {{reportPeriod === 3 ? 'report-period-text--active' : ''}}">日度</text>
+          </view>
+        </view>
+        <view class="report-chart-area">
+          <view class="report-info-row">
+            <picker wx:if="{{reportPeriod === 0}}" mode="date" fields="month" value="{{reportPickerDate}}" bindchange="onReportPickerChange">
+              <view class="report-date-box">
+                <text class="report-date-text">{{reportDateText}}</text>
+                <view class="report-date-arrow"></view>
+              </view>
+            </picker>
+            <picker wx:elif="{{reportPeriod === 1}}" mode="multiSelector" range="{{reportQuarterRange}}" value="{{reportQuarterMultiIndex}}" bindchange="onReportQuarterChange" bindcolumnchange="onReportQuarterColumnChange">
+              <view class="report-date-box">
+                <text class="report-date-text">{{reportDateText}}</text>
+                <view class="report-date-arrow"></view>
+              </view>
+            </picker>
+            <picker wx:elif="{{reportPeriod === 2}}" mode="date" fields="year" value="{{reportPickerDate}}" bindchange="onReportPickerChange">
+              <view class="report-date-box">
+                <text class="report-date-text">{{reportDateText}}</text>
+                <view class="report-date-arrow"></view>
+              </view>
+            </picker>
+            <picker wx:elif="{{reportPeriod === 3}}" mode="date" value="{{reportPickerDate}}" bindchange="onReportPickerChange">
+              <view class="report-date-box">
+                <text class="report-date-text">{{reportDateText}}</text>
+                <view class="report-date-arrow"></view>
+              </view>
+            </picker>
+            <view class="report-inout-box">
+              <view class="report-inout-item">
+                <view class="report-dot report-dot--green"></view>
+                <text class="report-inout-label">收入</text>
+              </view>
+              <view class="report-inout-item">
+                <view class="report-dot report-dot--red"></view>
+                <text class="report-inout-label">支出</text>
+              </view>
+            </view>
+          </view>
+          <view class="report-chart-block">
+            <canvas type="2d" id="lineChart" class="report-canvas" bindtouchstart="onChartTap"></canvas>
+          </view>
+          <text class="report-chart-label">收入 / 支出柱状图</text>
+          <view class="report-chart-block">
+            <canvas type="2d" id="barChart" class="report-canvas"></canvas>
+          </view>
+          <view class="report-pie-block">
+            <view class="report-pie-row">
+              <view class="report-pie-cell">
+                <text class="report-pie-label">收入来源</text>
+                <canvas type="2d" id="pieIncome" class="report-pie-canvas" bindtouchstart="onPieIncomeTap"></canvas>
+              </view>
+              <view class="report-pie-cell">
+                <text class="report-pie-label">支出类别</text>
+                <canvas type="2d" id="pieExpense" class="report-pie-canvas" bindtouchstart="onPieExpenseTap"></canvas>
+              </view>
+            </view>
+          </view>
+        </view>
       </view>
     </block>
 
@@ -132,23 +426,60 @@
 
     <!-- Tab 3: 结清 -->
     <block wx:if="{{currentTab === 3}}">
-      <view class="card grid-span-3 placeholder-card">
-        <text>结清</text>
+      <view class="card grid-span-3 settle-card">
+        <view class="settle-header">
+          <view>
+            <text class="settle-title">结清</text>
+            <view class="settle-subtitle">{{settleType === 0 ? '个人垫付 · 应付' : '公司垫付 · 应付'}}</view>
+          </view>
+          <view class="report-type-toggle" bindtap="switchSettleType">
+            <view class="report-type-bg"></view>
+            <view class="report-type-slider {{settleType === 1 ? 'report-type-slider--right' : ''}}"></view>
+            <text class="report-type-text {{settleType === 0 ? 'report-type-text--active' : ''}}">个人</text>
+            <text class="report-type-text {{settleType === 1 ? 'report-type-text--active' : ''}}">公司</text>
+          </view>
+        </view>
+        <view class="settle-divider"></view>
+        <scroll-view class="settle-list" scroll-y enhanced show-scrollbar="{{false}}">
+          <view wx:for="{{settleItems}}" wx:key="id" class="bill-row">
+            <view class="bill-actions">
+              <view class="bill-act-btn bill-act-settle" catchtap="onBillSettle" data-id="{{item.id}}" data-from="settle">结清</view>
+              <view class="bill-act-btn bill-act-delete" catchtap="onBillDelete" data-id="{{item.id}}" data-from="settle">删除</view>
+              <view wx:if="{{!item._voided}}" class="bill-act-btn bill-act-void" catchtap="onBillVoid" data-id="{{item.id}}" data-from="settle">作废</view>
+              <view wx:else class="bill-act-btn bill-act-unvoid" catchtap="onBillUnvoid" data-id="{{item.id}}" data-from="settle">恢复</view>
+            </view>
+            <view class="bill-item {{item.typeLabel === '垫付' ? 'bill-item--advance' : ''}} {{item.typeLabel === '应付' ? 'bill-item--payable' : ''}} {{item._voided ? 'bill-item--voided' : ''}}"
+                  bindtouchstart="onBillTouchStart"
+                  bindtouchmove="onBillTouchMove"
+                  bindtouchend="onBillTouchEnd"
+                  bindtap="onBillTap"
+                  data-id="{{item.id}}"
+                  data-from="settle">
+              <view class="bill-dot"></view>
+              <text class="bill-cat">{{item.category}}</text>
+              <text class="bill-type">{{item.typeLabel}}</text>
+              <text class="bill-note-inline">{{item.note || '-'}}</text>
+              <text class="bill-amount {{item.type === 'in' ? 'bill-amount--in' : 'bill-amount--out'}}">¥{{item.amount}}</text>
+              <text class="bill-date">{{item.date}}</text>
+            </view>
+          </view>
+        </scroll-view>
+        <view class="settle-btn" bindtap="onSettleAll">
+          <text class="settle-btn-text">一键全结清</text>
+        </view>
+        <text class="settle-warn">* 结清后相关收支将自动转为普通流水</text>
       </view>
     </block>
 
     <!-- Tab 4: 我的 -->
     <block wx:if="{{currentTab === 4}}">
       <view class="card grid-span-3 my-card">
-        <!-- 头像 + 登录 -->
         <view class="my-profile">
           <text class="my-login-text">登录/注册</text>
           <view class="my-avatar"></view>
         </view>
-
-        <!-- 第一组：升级VIP + 图标行 -->
         <view class="my-group">
-          <view class="my-item">
+          <view class="my-item" bindtap="onVipEntry">
             <view class="my-item-icon icon-vip"></view>
             <view class="my-item-body">
               <text class="my-item-title">升级为VIP</text>
@@ -157,28 +488,14 @@
             <text class="my-item-arrow">〉</text>
           </view>
           <view class="my-icon-row">
-            <view class="my-icon-item">
-              <view class="my-icon-circle icon-link"></view>
-              <text class="my-icon-label">链接公司</text>
-            </view>
-            <view class="my-icon-item">
-              <view class="my-icon-circle icon-invite"></view>
-              <text class="my-icon-label">邀请员工</text>
-            </view>
-            <view class="my-icon-item">
-              <view class="my-icon-circle icon-audit"></view>
-              <text class="my-icon-label">审核</text>
-            </view>
-            <view class="my-icon-item">
-              <view class="my-icon-circle icon-notify"></view>
-              <text class="my-icon-label">通知</text>
-            </view>
+            <view class="my-icon-item"><view class="my-icon-circle icon-link"></view><text class="my-icon-label">链接公司</text></view>
+            <view class="my-icon-item"><view class="my-icon-circle icon-invite"></view><text class="my-icon-label">邀请员工</text></view>
+            <view class="my-icon-item"><view class="my-icon-circle icon-audit"></view><text class="my-icon-label">审核</text></view>
+            <view class="my-icon-item"><view class="my-icon-circle icon-notify"></view><text class="my-icon-label">通知</text></view>
           </view>
         </view>
-
-        <!-- 第二组：自定义简览页 + 自定义分类 + 链接公司 + 导出账单 -->
         <view class="my-group">
-          <view class="my-item">
+          <view class="my-item" bindtap="onCustomOverviewEntry">
             <view class="my-item-icon icon-custom-view"></view>
             <view class="my-item-body">
               <text class="my-item-title">自定义简览页</text>
@@ -211,8 +528,6 @@
             <text class="my-item-arrow">〉</text>
           </view>
         </view>
-
-        <!-- 第三组：联系我们 + 设置 -->
         <view class="my-group">
           <view class="my-item">
             <view class="my-item-icon icon-contact"></view>
@@ -224,31 +539,84 @@
           </view>
           <view class="my-item my-item-last">
             <view class="my-item-icon icon-settings"></view>
-            <view class="my-item-body">
-              <text class="my-item-title">设置</text>
-            </view>
+            <view class="my-item-body"><text class="my-item-title">设置</text></view>
             <text class="my-item-arrow">〉</text>
           </view>
         </view>
       </view>
     </block>
+
+    </block>
+  </view>
+
+  <!-- 自定义简览页 · 拖拽弹窗 -->
+  <view class="popup-mask" wx:if="{{showPopup}}" catchtouchstart="onPopupDragStart" catchtouchmove="onPopupDragMove" catchtouchend="onPopupDragEnd">
+    <view class="popup-card" catchtap="nop">
+      <view class="popup-card-header">
+        <text class="popup-card-title">拖入卡槽</text>
+        <text class="popup-card-drag-hint">拖拽下方卡片到目标槽位</text>
+      </view>
+      <view class="popup-slots">
+        <view class="popup-slot popup-slot--span{{item.span}} {{ghostDrag.slotHover === index ? 'popup-slot--hover' : ''}} {{item.isEmpty ? 'popup-slot--empty' : ''}}" wx:for="{{visibleSlots}}" wx:key="col" wx:for-item="item" data-col="{{item.col}}" data-span="{{item.span}}">
+          <block wx:if="{{!item.isEmpty}}">
+            <text class="popup-slot-name">{{item.card.name}}</text>
+            <text class="popup-slot-meta">占{{item.span}}格 · 将被替换</text>
+          </block>
+          <block wx:else>
+            <text class="popup-slot-empty-text">空槽位 · 占{{item.span}}格</text>
+          </block>
+        </view>
+      </view>
+    </view>
+    <view wx:if="{{ghostDrag.visible}}" class="ghost-card" style="left: {{ghostDrag.x}}px; top: {{ghostDrag.y}}px;">
+      <text class="ghost-card-title">{{ghostDrag.name}}</text>
+      <text class="ghost-card-hint">拖到槽位松手</text>
+    </view>
+  </view>
+
+  <!-- 账单详情弹窗 -->
+  <view class="bill-modal-mask" wx:if="{{modalItem}}" catchtap="onModalClose">
+    <view class="bill-modal" catchtap="nop">
+      <text class="bill-modal-title">{{modalItem.category}}</text>
+      <view class="bill-modal-divider"></view>
+      <view class="bill-modal-row">
+        <text class="bill-modal-label">类型</text>
+        <text class="bill-modal-value {{modalItem.type === 'in' ? 'bill-modal-value--in' : 'bill-modal-value--out'}}">{{modalItem.typeLabel}}</text>
+      </view>
+      <view class="bill-modal-row">
+        <text class="bill-modal-label">分类</text>
+        <input class="bill-modal-input" value="{{modalEdit.category}}" bindinput="onModalFieldEdit" data-field="category"/>
+      </view>
+      <view class="bill-modal-row">
+        <text class="bill-modal-label">金额</text>
+        <input class="bill-modal-input" value="{{modalEdit.amount}}" bindinput="onModalFieldEdit" data-field="amount" type="digit"/>
+      </view>
+      <view class="bill-modal-row">
+        <text class="bill-modal-label">备注</text>
+        <input class="bill-modal-input" value="{{modalEdit.note}}" bindinput="onModalFieldEdit" data-field="note"/>
+      </view>
+      <view class="bill-modal-row">
+        <text class="bill-modal-label">日期</text>
+        <text class="bill-modal-value">{{modalItem.date}}</text>
+      </view>
+      <view class="bill-modal-divider"></view>
+      <view class="bill-modal-btns">
+        <view class="bill-modal-btn bill-modal-save" bindtap="onModalSave">保存</view>
+        <view wx:if="{{modalItem.typeLabel === '垫付' || modalItem.typeLabel === '应付'}}" class="bill-modal-btn bill-modal-settle" bindtap="onBillSettle" data-id="{{modalItem.id}}" data-from="{{modalFrom}}">结清</view>
+        <view wx:if="{{!modalItem._voided}}" class="bill-modal-btn bill-modal-void" bindtap="onBillVoid" data-id="{{modalItem.id}}" data-from="{{modalFrom}}">作废</view>
+        <view wx:else class="bill-modal-btn bill-modal-unvoid" bindtap="onBillUnvoid" data-id="{{modalItem.id}}" data-from="{{modalFrom}}">恢复</view>
+        <view class="bill-modal-btn bill-modal-delete" bindtap="onBillDelete" data-id="{{modalItem.id}}" data-from="{{modalFrom}}">删除</view>
+      </view>
+    </view>
   </view>
 
   <!-- 底部 TabBar -->
   <view class="tab-bar-wrapper">
     <view class="tab-bar-center-bg"></view>
     <view class="tab-bar">
-      <view
-        class="tab-item {{index === 2 ? 'tab-item-center' : ''}}"
-        wx:for="{{tabs}}"
-        wx:key="index"
-        data-index="{{index}}"
-        bindtap="switchTab"
-      >
-        <view wx:if="{{index !== 2}}" class="tab-icon">
-          <view class="tab-icon-placeholder"></view>
-        </view>
-        <text class="tab-label {{index === currentTab ? 'tab-label-active' : ''}}">{{item.text}}</text>
+      <view class="tab-item {{index === 2 ? 'tab-item-center' : ''}}" wx:for="{{tabs}}" wx:key="index" data-index="{{index}}" bindtap="switchTab">
+        <view wx:if="{{index !== 2}}" class="tab-icon"><view class="tab-icon-placeholder"></view></view>
+        <text class="tab-label {{index === currentTab && !showOverview ? 'tab-label-active' : ''}}">{{item.text}}</text>
       </view>
     </view>
   </view>
