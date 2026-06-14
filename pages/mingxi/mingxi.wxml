@@ -80,7 +80,30 @@
               <block wx:for="{{span2Templates}}" wx:key="id">
                 <view class="custom-template-card custom-template-card--span2">
                   <view class="custom-glass-inner custom-glass-inner--s2">
-                    <view class="custom-tpl-card custom-tpl-card--span2">
+                    <!-- 明细页风格：图表 + 截断账单 -->
+                    <view class="custom-tpl-card custom-tpl-card--span2" wx:if="{{item.previewStyle === 'detail'}}">
+                      <view class="custom-tpl-detail-head">
+                        <text class="custom-tpl-detail-name">{{item.name}}</text>
+                        <text class="custom-tpl-detail-date">2026年06月</text>
+                      </view>
+                      <view class="custom-tpl-detail-chart">
+                        <view class="custom-tpl-chart-bar" style="height: 55%;"></view>
+                        <view class="custom-tpl-chart-bar" style="height: 38%;"></view>
+                        <view class="custom-tpl-chart-bar" style="height: 72%;"></view>
+                        <view class="custom-tpl-chart-bar" style="height: 25%;"></view>
+                        <view class="custom-tpl-chart-bar" style="height: 60%;"></view>
+                        <view class="custom-tpl-chart-bar" style="height: 45%;"></view>
+                      </view>
+                      <view class="custom-tpl-detail-bills">
+                        <view class="custom-tpl-bill-row" wx:for="{{item.rows}}" wx:key="label" wx:for-item="row">
+                          <text class="custom-tpl-bill-label">{{row.label}}</text>
+                          <text class="custom-tpl-bill-val {{row.color === 'green' ? 'custom-tpl-bill-val--in' : 'custom-tpl-bill-val--out'}}">¥{{row.value}}</text>
+                        </view>
+                      </view>
+                      <view class="custom-tpl-detail-cut">...</view>
+                    </view>
+                    <!-- 简览页风格：card rows -->
+                    <view class="custom-tpl-card custom-tpl-card--span2" wx:else>
                       <view class="card-header">
                         <text class="card-title">{{item.name}}</text>
                         <text class="card-subtitle">{{item.subtitle}}</text>

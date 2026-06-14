@@ -94,7 +94,7 @@ Page({
       // === 简览页卡片 ===
       {
         id: 't_personal', span: 1, name: '个人账本', subtitle: '日常收支', source: '简览页',
-        type: 'overview_personal', hasAvatar: true,
+        type: 'overview_personal', previewStyle: 'overview', hasAvatar: true,
         rows: [
           { label: '预算', value: '0.00', color: 'green' },
           { labels: ['收入', '支出', '结余'], values: ['0.00', '0.00', '0.00'], colors: ['green', 'red', 'red'], threeCol: true },
@@ -102,7 +102,7 @@ Page({
       },
       {
         id: 't_company', span: 2, name: '公司账本', subtitle: '经营收支', source: '简览页',
-        type: 'overview_company',
+        type: 'overview_company', previewStyle: 'overview',
         rows: [
           { label: '公司总资产', value: '0.00', color: 'green' },
           { label: '公司总负债', value: '0.00', color: 'red' },
@@ -114,7 +114,7 @@ Page({
       // === 明细页卡片（个人/公司分开） ===
       {
         id: 't_detail_personal', span: 2, name: '个人流水明细', subtitle: '月度 · 季度 · 年度 · 日度', source: '明细页',
-        type: 'detail_personal',
+        type: 'detail_personal', previewStyle: 'detail',
         rows: [
           { label: '本月收入', value: '0.00', color: 'green' },
           { label: '本月支出', value: '0.00', color: 'red' },
@@ -123,7 +123,7 @@ Page({
       },
       {
         id: 't_detail_company', span: 2, name: '公司流水明细', subtitle: '月度 · 季度 · 年度 · 日度', source: '明细页',
-        type: 'detail_company',
+        type: 'detail_company', previewStyle: 'detail',
         rows: [
           { label: '本月收入', value: '0.00', color: 'green' },
           { label: '本月支出', value: '0.00', color: 'red' },
@@ -132,7 +132,7 @@ Page({
       },
       {
         id: 't_jieqing_personal', span: 1, name: '个人待结清', subtitle: '垫付 · 应付', source: '明细页',
-        type: 'jieqing_personal',
+        type: 'jieqing_personal', previewStyle: 'overview',
         rows: [
           { label: '待结清笔数', value: '0', color: 'red' },
           { label: '待结清总额', value: '0.00', color: 'red' },
@@ -140,7 +140,7 @@ Page({
       },
       {
         id: 't_jieqing_company', span: 1, name: '公司待结清', subtitle: '垫付 · 应付', source: '明细页',
-        type: 'jieqing_company',
+        type: 'jieqing_company', previewStyle: 'overview',
         rows: [
           { label: '待结清笔数', value: '0', color: 'red' },
           { label: '待结清总额', value: '0.00', color: 'red' },
