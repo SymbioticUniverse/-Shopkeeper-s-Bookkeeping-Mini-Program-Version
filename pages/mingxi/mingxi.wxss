@@ -2092,6 +2092,7 @@ page {
   min-height: 0;
   padding: 16rpx 20rpx !important;
   gap: 12rpx;
+  overflow: visible;
 }
 
 /* 画布容器 */
@@ -2099,7 +2100,7 @@ page {
   flex: 1;
   min-height: 0;
   position: relative;
-  overflow: hidden;
+  overflow-y: auto;
   border-radius: 16rpx;
   background: rgba(0,0,0,0.03);
 }
