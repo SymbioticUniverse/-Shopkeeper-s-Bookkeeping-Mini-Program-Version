@@ -2198,7 +2198,7 @@ page {
   aspect-ratio: 0.72;
 }
 .custom-glass-inner--s2 {
-  aspect-ratio: 0.33;
+  aspect-ratio: 0.26;
 }
 
 /* span-2 内卡片略宽，充分利用玻璃框空间 */
