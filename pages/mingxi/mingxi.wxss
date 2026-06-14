@@ -2198,7 +2198,21 @@ page {
   aspect-ratio: 0.72;
 }
 .custom-glass-inner--s2 {
-  aspect-ratio: 0.26;
+  aspect-ratio: 0.16;
+}
+
+/* span-2 内卡片更扁：缩减内边距、行间距 */
+.custom-glass-inner--s2 .custom-tpl-card {
+  padding: 8rpx 14rpx;
+}
+.custom-glass-inner--s2 .custom-tpl-card .card-divider {
+  margin: 1rpx 0;
+}
+.custom-glass-inner--s2 .custom-tpl-card .card-divider--down {
+  top: 4rpx;
+}
+.custom-glass-inner--s2 .custom-tpl-card .card-divider--tight {
+  margin-top: -4rpx;
 }
 
 /* span-2 内卡片略宽，充分利用玻璃框空间 */
