@@ -32,51 +32,7 @@
               <text class="edit-done-text">完成</text>
             </view>
           </view>
-          <!-- 卡片放置画布 -->
-          <view class="custom-edit-canvas">
-            <movable-area class="custom-edit-area" id="customEditArea">
-              <movable-view
-                wx:for="{{customCards}}"
-                wx:key="id"
-                class="custom-edit-movable"
-                style="width: {{editCardWidths[index]}}px; height: {{editCardHeight}}px;"
-                x="{{item.x}}"
-                y="{{item.y}}"
-                direction="all"
-                inertia="{{false}}"
-                bindchange="onCardDragChange"
-                data-index="{{index}}"
-              >
-                <view class="custom-edit-card-inner">
-                  <text class="custom-edit-card-name">{{item.name}}</text>
-                  <text class="custom-edit-card-sub">{{item.subtitle}}</text>
-                </view>
-                <view class="custom-card-remove" catchtap="onRemoveCustomCard" data-id="{{item.id}}">
-                  <text class="custom-card-remove-x">×</text>
-                </view>
-              </movable-view>
-            </movable-area>
-            <!-- 空状态 -->
-            <view class="custom-edit-empty" wx:if="{{customCards.length === 0}}">
-              <text class="custom-edit-empty-text">点击下方模版添加卡片</text>
-            </view>
-          </view>
-          <!-- 底部模版条 -->
-          <view class="custom-template-strip">
-            <text class="custom-template-label">添加卡片</text>
-            <scroll-view scroll-x class="custom-template-scroll">
-              <view
-                class="custom-template-chip"
-                wx:for="{{customTemplates}}"
-                wx:key="id"
-                bindtap="onAddCustomCard"
-                data-id="{{item.id}}"
-              >
-                <text class="custom-template-chip-name">{{item.name}}</text>
-                <text class="custom-template-chip-meta">{{item.source}} · {{item.span}}格</text>
-              </view>
-            </scroll-view>
-          </view>
+          <view class="custom-edit-canvas"></view>
         </view>
       </view>
     </block>
