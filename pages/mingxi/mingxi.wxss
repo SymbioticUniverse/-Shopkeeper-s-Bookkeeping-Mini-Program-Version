@@ -2200,7 +2200,8 @@ page {
 
 /* 模版卡片内真实 card class 缩小覆盖 */
 .custom-template-card .card-header {
-  margin-bottom: 4rpx;
+  padding-left: 48rpx;
+  padding-top: 4rpx;
 }
 .custom-template-card .card-avatar {
   width: 36rpx;
@@ -2213,16 +2214,13 @@ page {
   font-size: 16rpx;
 }
 .custom-template-card .card-row {
-  margin-bottom: 2rpx;
+  flex: none;
 }
 .custom-template-card .row-label {
   font-size: 18rpx;
 }
 .custom-template-card .col-label {
   font-size: 16rpx;
-}
-.custom-template-card .value-tag {
-  padding: 1rpx 6rpx;
 }
 .custom-template-card .value-yen {
   font-size: 16rpx;
@@ -2231,14 +2229,14 @@ page {
   font-size: 20rpx;
 }
 .custom-template-card .card-divider {
-  margin: 6rpx 0;
   height: 1rpx;
+  margin: 4rpx 0;
 }
 .custom-template-card .card-divider--down {
-  margin-bottom: 4rpx;
+  top: 6rpx;
 }
 .custom-template-card .card-divider--tight {
-  margin: 4rpx 0;
+  margin-top: -6rpx;
 }
 
 /* ===== 三卡槽弹窗 ===== */
