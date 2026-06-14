@@ -79,6 +79,7 @@ Page({
     // VIP 升级页
     showVipPage: false,
     showCustomOverview: false,
+    customCards: [], // 自定义简览页已添加的卡片列表
     overviewSlots: [null, null, null], // 3 列卡槽，每个为 null 或卡片对象
     visibleSlots: [], // 从 overviewSlots 计算出的可见槽位（处理 span 合并。弹窗用，保持列顺序）
     visibleSlotsCompact: [], // 编辑模式用，按 span 分组：span-1 在前，span-2 次之
@@ -1448,24 +1449,14 @@ Page({
 
   // ---- 自定义简览页 ----
   onCustomOverviewEntry() {
-    // 如果没有自定义过，默认填入个人账本 + 公司账本
-    const { overviewSlots } = this.data
-    const hasCustom = overviewSlots.some(s => s !== null)
-    let slots = [...overviewSlots]
-    if (!hasCustom) {
-      slots = [
-        { id: 'def_personal', templateId: 't_personal', name: '个人账本', subtitle: '日常收支', type: 'overview_personal', span: 1, col: 0 },
-        { id: 'def_company', templateId: 't_company', name: '公司账本', subtitle: '经营收支', type: 'overview_company', span: 2, col: 1 },
-        null,
-      ]
-    }
+    // 从本地存储恢复已保存的卡片
+    const saved = wx.getStorageSync('customOverviewCards') || []
     this.setData({
       showCustomOverview: true, showOverview: true,
-      overviewSlots: slots,
+      customCards: saved,
       showPopup: false,
       ghostDrag: { visible: false, x: 0, y: 0, templateId: '', name: '', slotHover: -1, template: null },
     })
-    this._refreshVisibleSlots()
   },
 
   // 从 overviewSlots 构建可见槽位列表（处理 span 占多列）
@@ -1500,7 +1491,31 @@ Page({
   },
 
   onExitEditMode() {
+    // 保存自定义卡片到本地存储
+    wx.setStorageSync('customOverviewCards', this.data.customCards)
     this.setData({ showCustomOverview: false })
+  },
+
+  onAddCustomCard(e) {
+    const templateId = e.currentTarget.dataset.id
+    const template = this.data.customTemplates.find(t => t.id === templateId)
+    if (!template) return
+    const newCard = {
+      id: `c_${Date.now()}`,
+      templateId: template.id,
+      name: template.name,
+      subtitle: template.subtitle,
+      type: template.type,
+      span: template.span,
+    }
+    const customCards = [...this.data.customCards, newCard]
+    this.setData({ customCards })
+  },
+
+  onRemoveCustomCard(e) {
+    const id = e.currentTarget.dataset.id
+    const customCards = this.data.customCards.filter(c => c.id !== id)
+    this.setData({ customCards })
   },
 
   onCustomCardRemove(e) {

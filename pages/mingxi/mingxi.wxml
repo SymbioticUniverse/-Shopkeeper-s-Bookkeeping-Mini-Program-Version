@@ -32,7 +32,32 @@
           </view>
         </view>
         <view class="card grid-span-3 custom-big-card">
-          <text class="custom-big-card-label">自定义简览页</text>
+          <!-- 卡片放置区 -->
+          <view class="custom-canvas">
+            <block wx:if="{{customCards.length > 0}}">
+              <view class="custom-placed-item" wx:for="{{customCards}}" wx:key="id">
+                <view class="custom-placed-item-bar">
+                  <text class="custom-placed-item-name">{{item.name}}</text>
+                  <text class="custom-placed-item-meta">{{item.subtitle}} · 占{{item.span}}格</text>
+                  <view class="custom-placed-item-remove" catchtap="onRemoveCustomCard" data-id="{{item.id}}">
+                    <text class="custom-card-remove-x">×</text>
+                  </view>
+                </view>
+              </view>
+            </block>
+            <view wx:else class="custom-canvas-empty">
+              <text class="custom-canvas-empty-text">点击下方模版添加卡片</text>
+            </view>
+          </view>
+          <!-- 底部模版条 -->
+          <view class="custom-template-strip">
+            <scroll-view class="custom-template-scroll" scroll-x enhanced show-scrollbar="{{false}}">
+              <view class="custom-template-chip" wx:for="{{customTemplates}}" wx:key="id" bindtap="onAddCustomCard" data-id="{{item.id}}">
+                <text class="custom-template-chip-name">{{item.name}}</text>
+                <text class="custom-template-chip-span">占{{item.span}}格</text>
+              </view>
+            </scroll-view>
+          </view>
         </view>
       </view>
     </block>
