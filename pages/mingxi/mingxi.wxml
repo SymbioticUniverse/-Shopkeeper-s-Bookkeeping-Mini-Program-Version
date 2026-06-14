@@ -38,35 +38,39 @@
             <view class="custom-card-row">
               <block wx:for="{{span1Templates}}" wx:key="id">
                 <view class="custom-template-card custom-template-card--span1">
-                  <view class="card-header">
-                    <view class="card-avatar" wx:if="{{item.hasAvatar}}"></view>
-                    <text class="card-title">{{item.name}}</text>
-                    <text class="card-subtitle">{{item.subtitle}}</text>
+                  <view class="custom-glass-inner custom-glass-inner--s1">
+                    <view class="custom-tpl-card custom-tpl-card--span1">
+                      <view class="card-header">
+                        <view class="card-avatar" wx:if="{{item.hasAvatar}}"></view>
+                        <text class="card-title">{{item.name}}</text>
+                        <text class="card-subtitle">{{item.subtitle}}</text>
+                      </view>
+                      <view class="card-divider card-divider--down"></view>
+                      <block wx:for="{{item.rows}}" wx:key="label" wx:for-item="row">
+                        <block wx:if="{{!row.threeCol}}">
+                          <view class="card-row">
+                            <text class="row-label">{{row.label}}</text>
+                            <view class="value-tag {{row.color}}">
+                              <text class="value-yen">¥</text>
+                              <text class="value-num">{{row.value}}</text>
+                            </view>
+                          </view>
+                        </block>
+                        <block wx:else>
+                          <view class="card-divider card-divider--tight"></view>
+                          <view class="card-row three-col">
+                            <text class="col-label" wx:for="{{row.labels}}" wx:key="*this" wx:for-item="lbl">{{lbl}}</text>
+                          </view>
+                          <view class="card-row three-col">
+                            <view class="value-tag {{row.colors[ci]}}" wx:for="{{row.values}}" wx:key="*this" wx:for-item="val" wx:for-index="ci">
+                              <text class="value-yen">¥</text>
+                              <text class="value-num">{{val}}</text>
+                            </view>
+                          </view>
+                        </block>
+                      </block>
+                    </view>
                   </view>
-                  <view class="card-divider card-divider--down"></view>
-                  <block wx:for="{{item.rows}}" wx:key="label" wx:for-item="row">
-                    <block wx:if="{{!row.threeCol}}">
-                      <view class="card-row">
-                        <text class="row-label">{{row.label}}</text>
-                        <view class="value-tag {{row.color}}">
-                          <text class="value-yen">¥</text>
-                          <text class="value-num">{{row.value}}</text>
-                        </view>
-                      </view>
-                    </block>
-                    <block wx:else>
-                      <view class="card-divider card-divider--tight"></view>
-                      <view class="card-row three-col">
-                        <text class="col-label" wx:for="{{row.labels}}" wx:key="*this" wx:for-item="lbl">{{lbl}}</text>
-                      </view>
-                      <view class="card-row three-col">
-                        <view class="value-tag {{row.colors[ci]}}" wx:for="{{row.values}}" wx:key="*this" wx:for-item="val" wx:for-index="ci">
-                          <text class="value-yen">¥</text>
-                          <text class="value-num">{{val}}</text>
-                        </view>
-                      </view>
-                    </block>
-                  </block>
                 </view>
               </block>
             </view>
@@ -75,34 +79,38 @@
             <view class="custom-card-row">
               <block wx:for="{{span2Templates}}" wx:key="id">
                 <view class="custom-template-card custom-template-card--span2">
-                  <view class="card-header">
-                    <text class="card-title">{{item.name}}</text>
-                    <text class="card-subtitle">{{item.subtitle}}</text>
+                  <view class="custom-glass-inner custom-glass-inner--s2">
+                    <view class="custom-tpl-card custom-tpl-card--span2">
+                      <view class="card-header">
+                        <text class="card-title">{{item.name}}</text>
+                        <text class="card-subtitle">{{item.subtitle}}</text>
+                      </view>
+                      <view class="card-divider card-divider--down"></view>
+                      <block wx:for="{{item.rows}}" wx:key="label" wx:for-item="row">
+                        <block wx:if="{{!row.threeCol}}">
+                          <view class="card-row">
+                            <text class="row-label">{{row.label}}</text>
+                            <view class="value-tag {{row.color}}">
+                              <text class="value-yen">¥</text>
+                              <text class="value-num">{{row.value}}</text>
+                            </view>
+                          </view>
+                        </block>
+                        <block wx:else>
+                          <view class="card-divider card-divider--tight"></view>
+                          <view class="card-row three-col">
+                            <text class="col-label" wx:for="{{row.labels}}" wx:key="*this" wx:for-item="lbl">{{lbl}}</text>
+                          </view>
+                          <view class="card-row three-col">
+                            <view class="value-tag {{row.colors[ci]}}" wx:for="{{row.values}}" wx:key="*this" wx:for-item="val" wx:for-index="ci">
+                              <text class="value-yen">¥</text>
+                              <text class="value-num">{{val}}</text>
+                            </view>
+                          </view>
+                        </block>
+                      </block>
+                    </view>
                   </view>
-                  <view class="card-divider card-divider--down"></view>
-                  <block wx:for="{{item.rows}}" wx:key="label" wx:for-item="row">
-                    <block wx:if="{{!row.threeCol}}">
-                      <view class="card-row">
-                        <text class="row-label">{{row.label}}</text>
-                        <view class="value-tag {{row.color}}">
-                          <text class="value-yen">¥</text>
-                          <text class="value-num">{{row.value}}</text>
-                        </view>
-                      </view>
-                    </block>
-                    <block wx:else>
-                      <view class="card-divider card-divider--tight"></view>
-                      <view class="card-row three-col">
-                        <text class="col-label" wx:for="{{row.labels}}" wx:key="*this" wx:for-item="lbl">{{lbl}}</text>
-                      </view>
-                      <view class="card-row three-col">
-                        <view class="value-tag {{row.colors[ci]}}" wx:for="{{row.values}}" wx:key="*this" wx:for-item="val" wx:for-index="ci">
-                          <text class="value-yen">¥</text>
-                          <text class="value-num">{{val}}</text>
-                        </view>
-                      </view>
-                    </block>
-                  </block>
                 </view>
               </block>
             </view>

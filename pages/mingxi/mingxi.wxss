@@ -2178,16 +2178,10 @@ page {
   margin-bottom: 16rpx;
 }
 
-/* 模版卡片 */
+/* 模版卡片（仅负责尺寸，视觉效果由 glass-inner 提供） */
 .custom-template-card {
-  background: rgba(255,255,255,0.5);
-  border: 2rpx solid #000;
-  border-radius: 18rpx;
-  padding: 20rpx 24rpx;
-  box-shadow: 0rpx 4rpx 0rpx 1rpx rgba(0,0,0,0.1);
   display: flex;
   flex-direction: column;
-  gap: 4rpx;
 }
 
 .custom-template-card--span1 {
@@ -2198,45 +2192,12 @@ page {
   width: 100%;
 }
 
-/* 模版卡片内真实 card class 缩小覆盖 */
-.custom-template-card .card-header {
-  padding-left: 48rpx;
-  padding-top: 4rpx;
+/* 玻璃框高度适配 */
+.custom-glass-inner--s1 {
+  aspect-ratio: 0.72;
 }
-.custom-template-card .card-avatar {
-  width: 36rpx;
-  height: 36rpx;
-}
-.custom-template-card .card-title {
-  font-size: 22rpx;
-}
-.custom-template-card .card-subtitle {
-  font-size: 16rpx;
-}
-.custom-template-card .card-row {
-  flex: none;
-}
-.custom-template-card .row-label {
-  font-size: 18rpx;
-}
-.custom-template-card .col-label {
-  font-size: 16rpx;
-}
-.custom-template-card .value-yen {
-  font-size: 16rpx;
-}
-.custom-template-card .value-num {
-  font-size: 20rpx;
-}
-.custom-template-card .card-divider {
-  height: 1rpx;
-  margin: 4rpx 0;
-}
-.custom-template-card .card-divider--down {
-  top: 6rpx;
-}
-.custom-template-card .card-divider--tight {
-  margin-top: -6rpx;
+.custom-glass-inner--s2 {
+  aspect-ratio: 0.42;
 }
 
 /* ===== 三卡槽弹窗 ===== */
