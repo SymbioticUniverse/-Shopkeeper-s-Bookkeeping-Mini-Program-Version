@@ -36,28 +36,51 @@
             <!-- 占1格卡片 -->
             <view class="custom-section-label">占 1 格</view>
             <view class="custom-card-row">
-              <view
-                class="custom-template-card custom-template-card--span1"
-                wx:for="{{span1Templates}}"
-                wx:key="id"
-              >
-                <text class="custom-template-card-name">{{item.name}}</text>
-                <text class="custom-template-card-sub">{{item.subtitle}}</text>
-                <text class="custom-template-card-src">{{item.source}}</text>
-              </view>
+              <block wx:for="{{span1Templates}}" wx:key="id">
+                <view class="custom-template-card custom-template-card--span1">
+                  <view class="custom-preview-avatar" wx:if="{{item.hasAvatar}}"></view>
+                  <text class="custom-template-card-name">{{item.name}}</text>
+                  <view class="custom-preview-rows">
+                    <view wx:for="{{item.rows}}" wx:key="label" wx:for-item="row" wx:if="{{!row.threeCol}}" class="custom-preview-row">
+                      <text class="custom-preview-label">{{row.label}}</text>
+                      <text class="custom-preview-value custom-preview-value--{{row.color}}">{{row.value}}</text>
+                    </view>
+                    <view wx:for="{{item.rows}}" wx:key="label" wx:for-item="row" wx:if="{{row.threeCol}}" class="custom-preview-threecol">
+                      <block wx:for="{{row.labels}}" wx:key="*this" wx:for-item="lbl" wx:for-index="ci">
+                        <text class="custom-preview-label">{{lbl}}</text>
+                      </block>
+                      <block wx:for="{{row.values}}" wx:key="*this" wx:for-item="val" wx:for-index="ci">
+                        <text class="custom-preview-value custom-preview-value--{{row.colors[ci]}}">{{val}}</text>
+                      </block>
+                    </view>
+                  </view>
+                  <text class="custom-template-card-src">{{item.source}}</text>
+                </view>
+              </block>
             </view>
             <!-- 占2格卡片 -->
             <view class="custom-section-label">占 2 格</view>
             <view class="custom-card-row">
-              <view
-                class="custom-template-card custom-template-card--span2"
-                wx:for="{{span2Templates}}"
-                wx:key="id"
-              >
-                <text class="custom-template-card-name">{{item.name}}</text>
-                <text class="custom-template-card-sub">{{item.subtitle}}</text>
-                <text class="custom-template-card-src">{{item.source}}</text>
-              </view>
+              <block wx:for="{{span2Templates}}" wx:key="id">
+                <view class="custom-template-card custom-template-card--span2">
+                  <text class="custom-template-card-name">{{item.name}}</text>
+                  <view class="custom-preview-rows">
+                    <view wx:for="{{item.rows}}" wx:key="label" wx:for-item="row" wx:if="{{!row.threeCol}}" class="custom-preview-row">
+                      <text class="custom-preview-label">{{row.label}}</text>
+                      <text class="custom-preview-value custom-preview-value--{{row.color}}">{{row.value}}</text>
+                    </view>
+                    <view wx:for="{{item.rows}}" wx:key="label" wx:for-item="row" wx:if="{{row.threeCol}}" class="custom-preview-threecol">
+                      <block wx:for="{{row.labels}}" wx:key="*this" wx:for-item="lbl" wx:for-index="ci">
+                        <text class="custom-preview-label">{{lbl}}</text>
+                      </block>
+                      <block wx:for="{{row.values}}" wx:key="*this" wx:for-item="val" wx:for-index="ci">
+                        <text class="custom-preview-value custom-preview-value--{{row.colors[ci]}}">{{val}}</text>
+                      </block>
+                    </view>
+                  </view>
+                  <text class="custom-template-card-src">{{item.source}}</text>
+                </view>
+              </block>
             </view>
           </view>
         </view>
