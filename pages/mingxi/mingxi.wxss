@@ -2092,6 +2092,13 @@ page {
   overflow: hidden;
 }
 
+.custom-big-card {
+  flex: 1;
+  min-height: 400rpx;
+  display: flex;
+  flex-direction: column;
+}
+
 /* 保存后的简览页卡片项 */
 .saved-card-item + .saved-card-item {
   border-top: 2rpx solid rgba(0, 0, 0, 0.06);
