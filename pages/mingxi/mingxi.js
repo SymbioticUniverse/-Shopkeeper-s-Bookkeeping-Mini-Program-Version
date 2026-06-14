@@ -80,6 +80,8 @@ Page({
     showVipPage: false,
     showCustomOverview: false,
     customCards: [], // 自定义简览页已添加的卡片列表
+    editCardWidths: [], // movable-view 宽度（px），按索引
+    editCardHeight: 120, // movable-view 高度（px）
     overviewSlots: [null, null, null], // 3 列卡槽，每个为 null 或卡片对象
     visibleSlots: [], // 从 overviewSlots 计算出的可见槽位（处理 span 合并。弹窗用，保持列顺序）
     visibleSlotsCompact: [], // 编辑模式用，按 span 分组：span-1 在前，span-2 次之
@@ -1449,7 +1451,6 @@ Page({
 
   // ---- 自定义简览页 ----
   onCustomOverviewEntry() {
-    // 从本地存储恢复已保存的卡片
     const saved = wx.getStorageSync('customOverviewCards') || []
     this.setData({
       showCustomOverview: true, showOverview: true,
@@ -1457,9 +1458,113 @@ Page({
       showPopup: false,
       ghostDrag: { visible: false, x: 0, y: 0, templateId: '', name: '', slotHover: -1, template: null },
     })
+    // 延迟查询画布尺寸并初始化卡片位置
+    setTimeout(() => this._initEditGrid(), 300)
   },
 
-  // 从 overviewSlots 构建可见槽位列表（处理 span 占多列）
+  _initEditGrid() {
+    const query = wx.createSelectorQuery()
+    query.select('#customEditArea').boundingClientRect()
+    query.exec((res) => {
+      if (!res || !res[0]) return
+      const areaWidth = res[0].width
+      const areaHeight = res[0].height
+      if (areaWidth <= 0) return
+      const colWidth = areaWidth / 3
+      this._grid = { areaWidth, areaHeight, colWidth, rowHeight: 120 }
+      // 更新已保存卡片的尺寸与位置
+      this._refreshCardSizes()
+    })
+  },
+
+  _refreshCardSizes() {
+    const colW = (this._grid && this._grid.colWidth) || 100
+    const cards = this.data.customCards
+    const widths = cards.map(c => {
+      const span = c.span || 1
+      return Math.round(colW * span)
+    })
+    // 确保每张卡片有初始位置
+    const updated = cards.map((c, i) => ({
+      ...c,
+      x: c.x != null ? c.x : 0,
+      y: c.y != null ? c.y : i * this._grid.rowHeight,
+    }))
+    this.setData({ editCardWidths: widths, customCards: updated })
+  },
+
+  onExitEditMode() {
+    wx.setStorageSync('customOverviewCards', this.data.customCards)
+    this.setData({ showCustomOverview: false })
+  },
+
+  onAddCustomCard(e) {
+    const templateId = e.currentTarget.dataset.id
+    const template = this.data.customTemplates.find(t => t.id === templateId)
+    if (!template) return
+    const rowH = (this._grid && this._grid.rowHeight) || 120
+    const colW = (this._grid && this._grid.colWidth) || 100
+    const cards = this.data.customCards
+    // 计算新卡片位置：放在已有卡片下方
+    const maxY = cards.reduce((m, c) => Math.max(m, (c.y || 0) + rowH), 0)
+    const newCard = {
+      id: `c_${Date.now()}`,
+      templateId: template.id,
+      name: template.name,
+      subtitle: template.subtitle,
+      type: template.type,
+      span: template.span,
+      x: 0,
+      y: maxY,
+    }
+    const customCards = [...cards, newCard]
+    const editCardWidths = [...this.data.editCardWidths, Math.round(colW * template.span)]
+    this.setData({ customCards, editCardWidths })
+  },
+
+  onCardDragChange(e) {
+    const index = e.currentTarget.dataset.index
+    const { x, y, source } = e.detail
+    if (source === 'touch') {
+      const cards = [...this.data.customCards]
+      cards[index] = { ...cards[index], x, y }
+      this.setData({ customCards: cards })
+    }
+    // 防抖：手指抬起后做网格吸附
+    if (this._dragTimer) clearTimeout(this._dragTimer)
+    this._dragTimer = setTimeout(() => {
+      this._snapCard(index)
+    }, 180)
+  },
+
+  _snapCard(index) {
+    if (!this._grid) return
+    const { colWidth, rowHeight } = this._grid
+    const cards = [...this.data.customCards]
+    const card = { ...cards[index] }
+    const span = card.span || 1
+    const maxCol = 3 - span
+    // 吸附 X
+    const targetCol = Math.round(card.x / colWidth)
+    const clampedCol = Math.max(0, Math.min(maxCol, targetCol))
+    card.x = clampedCol * colWidth
+    // 吸附 Y
+    card.y = Math.round(card.y / rowHeight) * rowHeight
+    card.y = Math.max(0, card.y)
+    cards[index] = card
+    this.setData({ customCards: cards })
+  },
+
+  onRemoveCustomCard(e) {
+    const id = e.currentTarget.dataset.id
+    const idx = this.data.customCards.findIndex(c => c.id === id)
+    if (idx < 0) return
+    const customCards = this.data.customCards.filter(c => c.id !== id)
+    const editCardWidths = [...this.data.editCardWidths]
+    editCardWidths.splice(idx, 1)
+    this.setData({ customCards, editCardWidths })
+  },
+
   _refreshVisibleSlots() {
     const overviewSlots = this.data.overviewSlots
     const visible = []
@@ -1476,7 +1581,6 @@ Page({
       }
     }
     const hasAny = visible.some(v => !v.isEmpty)
-    // 编辑模式用：按 span 分组，非空卡片在前，空槽在后
     const compact = [...visible].sort((a, b) => {
       if (a.isEmpty && !b.isEmpty) return 1
       if (!a.isEmpty && b.isEmpty) return -1
@@ -1484,46 +1588,6 @@ Page({
       return a.span - b.span
     })
     this.setData({ visibleSlots: visible, visibleSlotsCompact: compact, hasCustomCards: hasAny })
-  },
-
-  onCustomOverviewBack() {
-    this.setData({ showCustomOverview: false })
-  },
-
-  onExitEditMode() {
-    // 保存自定义卡片到本地存储
-    wx.setStorageSync('customOverviewCards', this.data.customCards)
-    this.setData({ showCustomOverview: false })
-  },
-
-  onAddCustomCard(e) {
-    const templateId = e.currentTarget.dataset.id
-    const template = this.data.customTemplates.find(t => t.id === templateId)
-    if (!template) return
-    const newCard = {
-      id: `c_${Date.now()}`,
-      templateId: template.id,
-      name: template.name,
-      subtitle: template.subtitle,
-      type: template.type,
-      span: template.span,
-    }
-    const customCards = [...this.data.customCards, newCard]
-    this.setData({ customCards })
-  },
-
-  onRemoveCustomCard(e) {
-    const id = e.currentTarget.dataset.id
-    const customCards = this.data.customCards.filter(c => c.id !== id)
-    this.setData({ customCards })
-  },
-
-  onCustomCardRemove(e) {
-    const col = parseInt(e.currentTarget.dataset.col)
-    const overviewSlots = [...this.data.overviewSlots]
-    overviewSlots[col] = null
-    this.setData({ overviewSlots })
-    this._refreshVisibleSlots()
   },
 
   // ---- 模版点击 → 弹窗 + 拖拽 ----

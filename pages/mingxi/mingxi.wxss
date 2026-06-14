@@ -2085,100 +2085,102 @@ page {
   margin-top: 8rpx;
 }
 
-/* 自定义简览页中的大卡片 */
-.custom-overview-container > .card {
+
+/* ===== 自定义编辑卡片 ===== */
+.custom-edit-card {
   flex: 1;
   min-height: 0;
-  overflow: hidden;
-}
-
-.custom-big-card {
-  flex: 1;
-  min-height: 400rpx;
-  display: flex;
-  flex-direction: column;
-  gap: 0;
-}
-
-/* 卡片放置区 */
-.custom-canvas {
-  flex: 1;
-  min-height: 0;
-  overflow-y: auto;
-  display: flex;
-  flex-direction: column;
+  padding: 16rpx 20rpx !important;
   gap: 12rpx;
 }
 
-.custom-canvas-empty {
+/* 画布容器 */
+.custom-edit-canvas {
+  flex: 1;
+  min-height: 0;
+  position: relative;
+  overflow: hidden;
+  border-radius: 16rpx;
+  background: rgba(0,0,0,0.03);
+}
+
+/* movable-area */
+.custom-edit-area {
+  width: 100%;
+  height: 100%;
+}
+
+/* movable-view 卡片 */
+.custom-edit-movable {
+  display: flex;
+  flex-direction: column;
+  background: rgba(255,255,255,0.7);
+  border: 2rpx solid #000;
+  border-radius: 18rpx;
+  padding: 16rpx 20rpx;
+  box-shadow: 0rpx 4rpx 0rpx 1rpx rgba(0,0,0,0.12);
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+.custom-edit-card-inner {
   flex: 1;
   display: flex;
-  align-items: center;
+  flex-direction: column;
   justify-content: center;
 }
 
-.custom-canvas-empty-text {
-  font-size: 30rpx;
-  font-weight: 500;
-  color: #a0a0a0;
-}
-
-/* 已放置卡片条目 */
-.custom-placed-item {
-  background: rgba(255,255,255,0.5);
-  border: 2rpx solid #000;
-  border-radius: 18rpx;
-  padding: 20rpx 24rpx;
-  box-shadow: 0rpx 4rpx 0rpx 1rpx rgba(0,0,0,0.15);
-  flex-shrink: 0;
-}
-
-.custom-placed-item-bar {
-  display: flex;
-  align-items: center;
-  gap: 12rpx;
-}
-
-.custom-placed-item-name {
+.custom-edit-card-name {
   font-size: 30rpx;
   font-weight: 500;
   color: #000;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.custom-placed-item-meta {
-  flex: 1;
+.custom-edit-card-sub {
   font-size: 22rpx;
   font-weight: 500;
   color: #a0a0a0;
+  margin-top: 4rpx;
 }
 
-.custom-placed-item-remove {
-  width: 40rpx;
-  height: 40rpx;
+/* 空状态 */
+.custom-edit-empty {
+  position: absolute;
+  inset: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(0,0,0,0.06);
-  border-radius: 50%;
-  flex-shrink: 0;
+  pointer-events: none;
 }
 
-.custom-card-remove-x {
+.custom-edit-empty-text {
   font-size: 28rpx;
   font-weight: 500;
-  color: #ed2e2e;
+  color: rgba(0,0,0,0.12);
 }
 
 /* 底部模版条 */
 .custom-template-strip {
   flex-shrink: 0;
-  margin: 0 -28rpx -32rpx;
-  padding: 20rpx 0 20rpx;
+  margin: 0 -20rpx -16rpx;
+  padding: 12rpx 0 10rpx;
   border-top: 2rpx solid rgba(0,0,0,0.08);
+}
+
+.custom-template-label {
+  display: block;
+  font-size: 22rpx;
+  font-weight: 500;
+  color: rgba(0,0,0,0.25);
+  padding: 0 20rpx 6rpx;
 }
 
 .custom-template-scroll {
   white-space: nowrap;
+  width: 100%;
 }
 
 .custom-template-chip {
@@ -2186,18 +2188,18 @@ page {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  width: 160rpx;
-  height: 100rpx;
-  margin-left: 20rpx;
+  min-width: 140rpx;
+  padding: 14rpx 24rpx;
+  margin-left: 16rpx;
   background: rgba(255,255,255,0.5);
   border: 2rpx solid #000;
-  border-radius: 18rpx;
-  box-shadow: 0rpx 4rpx 0rpx 1rpx rgba(0,0,0,0.1);
-  gap: 6rpx;
+  border-radius: 16rpx;
+  box-shadow: 0rpx 3rpx 0rpx 1rpx rgba(0,0,0,0.08);
+  gap: 4rpx;
 }
 
 .custom-template-chip:last-child {
-  margin-right: 20rpx;
+  margin-right: 16rpx;
 }
 
 .custom-template-chip:active {
@@ -2206,107 +2208,15 @@ page {
 }
 
 .custom-template-chip-name {
-  font-size: 26rpx;
+  font-size: 28rpx;
   font-weight: 500;
   color: #000;
 }
 
-.custom-template-chip-span {
+.custom-template-chip-meta {
   font-size: 20rpx;
   font-weight: 500;
   color: #a0a0a0;
-}
-
-/* 保存后的简览页卡片项 */
-.saved-card-item + .saved-card-item {
-  border-top: 2rpx solid rgba(0, 0, 0, 0.06);
-  padding-top: 24rpx;
-  margin-top: 8rpx;
-}
-
-/* 编辑模式下的空卡槽占位 */
-.custom-empty-slot {
-  background: transparent !important;
-  border: 2rpx dashed rgba(0,0,0,0.12) !important;
-  box-shadow: none !important;
-  min-height: 200rpx;
-}
-
-/* 非编辑模式下的空卡槽占位（不可见，仅占位） */
-.overview-empty-slot {
-  background: transparent !important;
-  border: none !important;
-  box-shadow: none !important;
-  min-height: 10rpx;
-}
-
-.custom-card-remove {
-  position: absolute;
-  top: 8rpx;
-  right: 16rpx;
-  width: 48rpx;
-  height: 48rpx;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 10;
-}
-
-.custom-card-remove-x {
-  font-size: 40rpx;
-  font-weight: 400;
-  color: rgba(0,0,0,0.25);
-}
-
-.custom-cards-empty {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 200rpx;
-}
-
-.custom-cards-empty-text {
-  font-size: 26rpx;
-  color: rgba(0,0,0,0.2);
-}
-
-/* 模版库 */
-.template-library {
-  flex-shrink: 0;
-  padding-top: 16rpx;
-}
-
-.edit-templates-label {
-  font-size: 24rpx;
-  font-weight: 500;
-  color: #000;
-  margin-bottom: 12rpx;
-  flex-shrink: 0;
-}
-
-.edit-templates-scroll {
-  display: flex;
-  flex-direction: row;
-  white-space: nowrap;
-  flex-shrink: 0;
-  padding-bottom: 12rpx;
-  width: 100%;
-}
-
-.edit-templates-scroll .custom-glass-frame {
-  flex-shrink: 0;
-  width: 270rpx;
-  margin-right: 20rpx;
-}
-
-/* 玻璃框激活态 */
-.custom-glass-frame--active .custom-glass-inner {
-  border-color: #00d042 !important;
-  box-shadow:
-    inset 0 1rpx 2rpx rgba(0,208,66,0.3),
-    0 0 0 3rpx rgba(0,208,66,0.15),
-    0 4rpx 16rpx rgba(0,0,0,0.06) !important;
 }
 
 /* ===== 三卡槽弹窗 ===== */
