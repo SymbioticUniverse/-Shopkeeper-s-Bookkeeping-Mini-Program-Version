@@ -1593,6 +1593,25 @@ page {
   position: relative;
 }
 
+.custom-glass-inner--s1 {
+  aspect-ratio: 0.72;
+}
+.custom-glass-inner--s2 {
+  aspect-ratio: 0.16;
+}
+.custom-glass-inner--s2 .custom-tpl-card {
+  padding: 8rpx 14rpx;
+}
+.custom-glass-inner--s2 .custom-tpl-card .card-divider {
+  margin: 1rpx 0;
+}
+.custom-glass-inner--s2 .custom-tpl-card .card-divider--down {
+  top: 4rpx;
+}
+.custom-glass-inner--s2 .custom-tpl-card .card-divider--tight {
+  margin-top: -4rpx;
+}
+
 /* 玻璃框内的卡片 — 悬浮倾斜 */
 .custom-tpl-card {
   background: rgba(255,255,255,0.3);
@@ -3619,6 +3638,25 @@ page {
   justify-content: center;
   overflow: hidden;
   position: relative;
+}
+
+.custom-glass-inner--s1 {
+  aspect-ratio: 0.72;
+}
+.custom-glass-inner--s2 {
+  aspect-ratio: 0.16;
+}
+.custom-glass-inner--s2 .custom-tpl-card {
+  padding: 8rpx 14rpx;
+}
+.custom-glass-inner--s2 .custom-tpl-card .card-divider {
+  margin: 1rpx 0;
+}
+.custom-glass-inner--s2 .custom-tpl-card .card-divider--down {
+  top: 4rpx;
+}
+.custom-glass-inner--s2 .custom-tpl-card .card-divider--tight {
+  margin-top: -4rpx;
 }
 
 /* 玻璃框内的卡片 — 悬浮倾斜 */
