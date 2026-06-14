@@ -911,15 +911,16 @@ page {
   color: #d7d7d7;
 }
 .bill-type {
-  font-size: 28rpx;
-  font-weight: 500;
+  font-size: 30rpx;
+  font-weight: 700;
   color: #000;
   width: 70rpx;
   flex-shrink: 0;
 }
 .bill-note-inline {
-  font-size: 26rpx;
-  color: #a0a0a0;
+  font-size: 28rpx;
+  font-weight: 700;
+  color: #666;
   width: 80rpx;
   flex-shrink: 0;
   overflow: hidden;
@@ -940,8 +941,8 @@ page {
   color: #d7d7d7;
 }
 .bill-amount {
-  font-size: 28rpx;
-  font-weight: 500;
+  font-size: 30rpx;
+  font-weight: 700;
   flex: 1;
   text-align: right;
   margin-right: 12rpx;
@@ -959,8 +960,9 @@ page {
   color: #fff;
 }
 .bill-date {
-  font-size: 24rpx;
-  color: #a0a0a0;
+  font-size: 26rpx;
+  font-weight: 700;
+  color: #666;
   width: 110rpx;
   flex-shrink: 0;
   text-align: right;
@@ -2901,15 +2903,16 @@ page {
   color: #d7d7d7;
 }
 .bill-type {
-  font-size: 28rpx;
-  font-weight: 500;
+  font-size: 30rpx;
+  font-weight: 700;
   color: #000;
   width: 70rpx;
   flex-shrink: 0;
 }
 .bill-note-inline {
-  font-size: 26rpx;
-  color: #a0a0a0;
+  font-size: 28rpx;
+  font-weight: 700;
+  color: #666;
   width: 80rpx;
   flex-shrink: 0;
   overflow: hidden;
@@ -2930,8 +2933,8 @@ page {
   color: #d7d7d7;
 }
 .bill-amount {
-  font-size: 28rpx;
-  font-weight: 500;
+  font-size: 30rpx;
+  font-weight: 700;
   flex: 1;
   text-align: right;
   margin-right: 12rpx;
@@ -2949,8 +2952,9 @@ page {
   color: #fff;
 }
 .bill-date {
-  font-size: 24rpx;
-  color: #a0a0a0;
+  font-size: 26rpx;
+  font-weight: 700;
+  color: #666;
   width: 110rpx;
   flex-shrink: 0;
   text-align: right;
