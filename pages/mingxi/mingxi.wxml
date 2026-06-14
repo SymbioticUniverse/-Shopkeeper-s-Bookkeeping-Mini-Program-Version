@@ -32,6 +32,7 @@
           </view>
         </view>
         <view class="card grid-span-3 custom-big-card">
+          <text class="custom-big-card-label">自定义简览页</text>
         </view>
       </view>
     </block>
