@@ -1155,9 +1155,11 @@ page {
 /* 缩略图滚动区 */
 .vip-thumb-scroll {
   flex: 1;
+  min-height: 0;
   overflow-y: auto;
   display: flex;
   align-items: center;
+  justify-content: center;
 }
 
 /* 缩略图网格 — 3列 */
@@ -3355,9 +3357,11 @@ page {
 /* 缩略图滚动区 */
 .vip-thumb-scroll {
   flex: 1;
+  min-height: 0;
   overflow-y: auto;
   display: flex;
   align-items: center;
+  justify-content: center;
 }
 
 /* 缩略图网格 — 3列 */

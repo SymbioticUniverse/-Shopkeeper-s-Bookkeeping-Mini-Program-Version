@@ -559,8 +559,75 @@
 
     <!-- Tab 4: 我的 -->
     <block wx:if="{{currentTab === 4}}">
+      <!-- VIP升级页 -->
+      <view class="card grid-span-3 my-card vip-main-card" wx:if="{{showVipPage}}">
+        <view class="custom-cat-header">
+          <view class="custom-cat-back" bindtap="onVipBack">
+            <view class="custom-cat-back-arrow"></view>
+          </view>
+          <text class="custom-cat-title">升级订阅版</text>
+        </view>
+        <!-- 缩略图视图 -->
+        <view class="vip-thumb-scroll" wx:if="{{vipDetailId < 0}}">
+          <view class="vip-thumb-grid">
+            <view class="vip-thumb-item vip-thumb--{{item.theme || 'default'}}" wx:for="{{vipCards}}" wx:key="id" bindtap="onVipThumbTap" data-id="{{item.id}}">
+              <text class="vip-thumb-name">{{item.name}}</text>
+              <text class="vip-thumb-tagline" wx:if="{{item.tagline}}">{{item.tagline}}</text>
+              <text class="vip-thumb-discount" wx:if="{{item.discount}}">{{item.discount}}</text>
+              <view class="vip-thumb-contact" wx:if="{{item.isContact}}">
+                <text class="vip-thumb-contact-text">联系我们</text>
+              </view>
+            </view>
+          </view>
+        </view>
+        <!-- 详情视图 -->
+        <view class="vip-detail-body" wx:else>
+          <view class="vip-detail-backdrop" bindtap="onVipBack"></view>
+          <scroll-view class="vip-detail-scroll" scroll-x enhanced show-scrollbar="{{false}}">
+            <view class="vip-card-row">
+              <view class="vip-card-single {{item.theme === 'free' ? 'vip-card-single--free' : ''}} {{item.theme === 'ultra' ? 'vip-card-single--ultra' : ''}} {{vipSelected === item.id ? 'vip-card-single--selected' : ''}}" wx:for="{{vipCards}}" wx:key="id" bindtap="onVipSelect" data-id="{{item.id}}">
+                <text class="vip-card-single-name">{{item.name}}</text>
+                <view class="vip-card-single-features">
+                  <view class="vip-feature-row" wx:for="{{item.features}}" wx:key="index" wx:for-item="feature">
+                    <text class="vip-feature-dot">·</text>
+                    <view class="vip-feature-text">
+                      <block wx:for="{{feature}}" wx:key="text" wx:for-item="seg">
+                        <text class="{{seg.strong ? 'vip-feature-text--strong' : ''}}">{{seg.text}}</text>
+                      </block>
+                    </view>
+                  </view>
+                </view>
+                <view class="vip-card-single-bottom">
+                  <view class="vip-price-sep"></view>
+                  <view class="vip-contact-btn" wx:if="{{item.isContact}}">
+                    <text class="vip-contact-text">联系我们</text>
+                  </view>
+                  <block wx:else>
+                    <view class="vip-price-row">
+                      <text class="vip-price-yen">￥</text>
+                      <text class="vip-price-int">{{item.price}}</text>
+                      <text class="vip-price-decimal" wx:if="{{item.decimal}}">{{item.decimal}}</text>
+                      <text class="vip-price-unit" wx:if="{{!item.decimal && item.unit}}">{{item.unit}}</text>
+                    </view>
+                    <view class="vip-discount-row" wx:if="{{item.discount || item.monthly}}">
+                      <text class="vip-discount-badge" wx:if="{{item.discount}}">{{item.discount}}</text>
+                      <text class="vip-discount-monthly" wx:if="{{item.monthly}}">{{item.monthly}}</text>
+                    </view>
+                    <view class="vip-price-sep vip-price-sep--thin" wx:if="{{!item.discount}}"></view>
+                  </block>
+                </view>
+              </view>
+            </view>
+          </scroll-view>
+        </view>
+        <view class="vip-confirm-wrap" wx:if="{{vipDetailId >= 0}}">
+          <view class="vip-confirm-btn" bindtap="onVipConfirm">
+            <text class="vip-confirm-text">确认订阅</text>
+          </view>
+        </view>
+      </view>
       <!-- 自定义分类页 -->
-      <view class="card grid-span-3 my-card custom-cat-card" wx:if="{{showCustomCategory}}">
+      <view class="card grid-span-3 my-card custom-cat-card" wx:elif="{{showCustomCategory}}">
         <view class="custom-cat-header">
           <view class="custom-cat-back" bindtap="onCustomCategoryBack">
             <view class="custom-cat-back-arrow"></view>
