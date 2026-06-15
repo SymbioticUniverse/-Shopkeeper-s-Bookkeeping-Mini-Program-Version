@@ -80,15 +80,16 @@ Page({
     showVipPage: false,
     showCustomOverview: false,
     customCards: [], // 自定义简览页已添加的卡片列表
+    overviewCards: [], // 简览页实际渲染的卡片（从存储同步或默认）
     defaultOverviewCards: [
-      { id: 'd_personal', name: '个人账本', subtitle: '日常收支', span: 1, type: 'personal', x: 0, y: 0 },
-      { id: 'd_company', name: '共生宇宙公司账本', subtitle: '经营收支', span: 2, type: 'company', x: 0, y: 120 },
+      { id: 'd_personal', name: '个人账本', subtitle: '日常收支', span: 1, type: 'personal' },
+      { id: 'd_company', name: '共生宇宙公司账本', subtitle: '经营收支', span: 2, type: 'company' },
     ],
     // 槽位拖放对话框
     showSlotModal: false,
-    draggingTemplate: null, // 正在拖放的模版卡片数据
-    slotCards: [null, null, null], // 三个卡槽，null = 空
-    slotLayout: [], // 槽位布局（含合并信息）[{ card, height: 1|2, index: 0|1|2 }]
+    draggingTemplate: null,
+    slotCards: [null, null, null],
+    slotLayout: [],
     slotHover: -1, // 当前悬停的卡槽索引，-1 = 无
     dragFloat: { visible: false, x: 0, y: 0, name: '', subtitle: '' }, // 拖放中跟随手指的浮动卡片
     editCardWidths: [], // movable-view 宽度（px），按索引
@@ -156,6 +157,32 @@ Page({
           { label: '待结清笔数', value: '0', color: 'red' },
           { label: '待结清总额', value: '0.00', color: 'red' },
         ],
+      },
+      // === 报表页图表卡片（折线图 / 柱状图 / 饼状图 × 个人 / 公司） ===
+      // 无 rows，内容由 canvas 直接渲染报表页真实图表
+      {
+        id: 't_report_line_personal', span: 1, name: '个人折线图', subtitle: '净值趋势 · 个人', source: '报表页',
+        type: 'report_line_personal', previewStyle: 'chart_line',
+      },
+      {
+        id: 't_report_line_company', span: 1, name: '公司折线图', subtitle: '净值趋势 · 公司', source: '报表页',
+        type: 'report_line_company', previewStyle: 'chart_line',
+      },
+      {
+        id: 't_report_bar_personal', span: 1, name: '个人柱状图', subtitle: '收支对比 · 个人', source: '报表页',
+        type: 'report_bar_personal', previewStyle: 'chart_bar',
+      },
+      {
+        id: 't_report_bar_company', span: 1, name: '公司柱状图', subtitle: '收支对比 · 公司', source: '报表页',
+        type: 'report_bar_company', previewStyle: 'chart_bar',
+      },
+      {
+        id: 't_report_pie_personal', span: 1, name: '个人饼状图', subtitle: '分类占比 · 个人', source: '报表页',
+        type: 'report_pie_personal', previewStyle: 'chart_pie',
+      },
+      {
+        id: 't_report_pie_company', span: 1, name: '公司饼状图', subtitle: '分类占比 · 公司', source: '报表页',
+        type: 'report_pie_company', previewStyle: 'chart_pie',
       },
     ],
     vipDetailId: -1,
@@ -273,6 +300,72 @@ Page({
     this.updateReportDate()
     this.initDetailItems()
     this.initSettleItems()
+    this._syncOverviewCards()
+  },
+
+  _syncOverviewCards() {
+    const saved = wx.getStorageSync('customOverviewCards')
+    if (saved && saved.length > 0) {
+      const enriched = saved.map(card => {
+        const tpl = this.data.customTemplates.find(t => t.type === card.type)
+        return { ...card, rows: tpl ? tpl.rows : [], hasAvatar: tpl ? tpl.hasAvatar : false, previewStyle: tpl ? tpl.previewStyle : 'overview' }
+      })
+      this.setData({ overviewCards: enriched, customCards: saved })
+    } else {
+      const enriched = this.data.defaultOverviewCards.map(card => {
+        const tpl = this.data.customTemplates.find(t => t.type === card.type)
+        return { ...card, rows: tpl ? tpl.rows : [], hasAvatar: tpl ? tpl.hasAvatar : false, previewStyle: tpl ? tpl.previewStyle : 'overview' }
+      })
+      this.setData({ overviewCards: enriched, customCards: [] })
+    }
+    setTimeout(() => this._initOverviewCharts(), 400)
+  },
+
+  _initOverviewCharts() {
+    const charts = this.data.overviewCards.filter(c =>
+      c.previewStyle === 'chart_line' || c.previewStyle === 'chart_bar' || c.previewStyle === 'chart_pie'
+    )
+    charts.forEach(card => {
+      const prefix = card.previewStyle === 'chart_line' ? 'ovLine_' : card.previewStyle === 'chart_bar' ? 'ovBar_' : 'ovPie_'
+      const sel = '#' + prefix + card.id
+      const query = wx.createSelectorQuery()
+      query.select(sel).fields({ node: true, size: true }).exec((res) => {
+        if (!res || !res[0] || !res[0].node) return
+        const canvas = res[0].node
+        const ctx = canvas.getContext('2d')
+        let w = res[0].width || 200
+        let h = res[0].height || 130
+        const dpr = wx.getSystemInfoSync().pixelRatio || 2
+        if (w < 10 || h < 10) {
+          setTimeout(() => this._initOverviewCharts(), 300)
+          return
+        }
+        canvas.width = w * dpr
+        canvas.height = h * dpr
+        ctx.scale(dpr, dpr)
+
+        const data = this.generateMockData()
+        if (card.previewStyle === 'chart_line') {
+          this.drawStockChart(ctx, w, h, data)
+        } else if (card.previewStyle === 'chart_bar') {
+          this.drawBarChart(ctx, w, h, data)
+        } else if (card.previewStyle === 'chart_pie') {
+          const pieData = this.generatePieData()
+          const palette = ['#007aff', '#ff9500', '#af52de', '#34c759', '#ff3b30', '#ffcc00', '#8e8e93']
+          const halfW = w / 2
+          this.drawPieChart(ctx, halfW, h, pieData.income, palette)
+          ctx.save()
+          ctx.translate(halfW, 0)
+          this.drawPieChart(ctx, halfW, h, pieData.expense, palette)
+          ctx.restore()
+          ctx.fillStyle = '#666'
+          ctx.font = '10px sans-serif'
+          ctx.textAlign = 'center'
+          ctx.fillText('收入', halfW / 2, 12)
+          ctx.fillText('支出', halfW * 1.5, 12)
+        }
+      })
+    })
   },
 
   switchTab(e) {
@@ -1317,12 +1410,8 @@ Page({
   },
 
   goOverview() {
-    // 返回简览页时，若无自定义卡片则清空 visibleSlots 以显示默认布局
-    const hasCustom = this.data.overviewSlots.some(s => s !== null)
+    this._syncOverviewCards()
     this.setData({ showOverview: true, showCustomOverview: false })
-    if (!hasCustom) {
-      this.setData({ visibleSlots: [], hasCustomCards: false })
-    }
   },
 
   // ---- 明细 ----
@@ -1580,14 +1669,27 @@ Page({
     this.setData({ customCards, editCardWidths })
   },
 
-  // ---- 槽位拖放对话框 ----
+  // ---- 槽位拖放对话框（长按 300ms 触发，短滑正常滚动） ----
   onTemplateTouchStart(e) {
     const templateId = e.currentTarget.dataset.id
     const template = this.data.customTemplates.find(t => t.id === templateId)
     if (!template) return
     const touch = (e.touches && e.touches[0]) || (e.changedTouches && e.changedTouches[0])
     if (!touch) return
-    // 现有卡片映射到卡槽：customCards 为空则用默认简览卡片
+    // 记录起始位置，启动长按计时器
+    this._dragPending = {
+      template,
+      startX: touch.clientX,
+      startY: touch.clientY,
+      timer: setTimeout(() => {
+        if (!this._dragPending) return
+        this._startDrag(this._dragPending.template, touch)
+        this._dragPending = null
+      }, 300),
+    }
+  },
+
+  _startDrag(template, touch) {
     const src = this.data.customCards.length > 0
       ? this.data.customCards
       : this.data.defaultOverviewCards
@@ -1611,14 +1713,23 @@ Page({
   },
 
   onDragOverlayMove(e) {
-    if (!this.data.dragFloat.visible) return
     const touch = (e.touches && e.touches[0]) || (e.changedTouches && e.changedTouches[0])
     if (!touch) return
+    // 长按计时器未触发：检查是否移动超过阈值 → 取消长按（正常滚动）
+    if (this._dragPending) {
+      const dx = Math.abs(touch.clientX - this._dragPending.startX)
+      const dy = Math.abs(touch.clientY - this._dragPending.startY)
+      if (dx > 10 || dy > 10) {
+        clearTimeout(this._dragPending.timer)
+        this._dragPending = null
+      }
+      return
+    }
+    // 拖拽已激活：更新浮动卡片位置
+    if (!this.data.dragFloat.visible) return
     const x = touch.clientX - 50
     const y = touch.clientY - 40
-    // 拖动超过 30px 后才显示槽位弹窗
     const showModal = this.data.showSlotModal || y > 120
-    // 检测悬停槽位
     let hover = -1
     if (showModal) {
       hover = this._calcSlotHover(touch.clientX, touch.clientY)
@@ -1629,40 +1740,37 @@ Page({
       showSlotModal: showModal,
       slotHover: hover,
     })
-    // 预查询一次弹窗位置以便后续松手计算
     if (showModal) {
-      this._slotModalRect = null
-      wx.createSelectorQuery().select('#slotModalContent').boundingClientRect((res) => {
-        if (res) this._slotModalRect = res
+      this._slotRects = []
+      wx.createSelectorQuery().selectAll('.slot-item').boundingClientRect((rects) => {
+        if (rects && rects.length) this._slotRects = rects
       }).exec()
     }
   },
 
   _calcSlotHover(clientX, clientY) {
-    const rect = this._slotModalRect
     const layout = this.data.slotLayout
-    if (!rect || !layout.length) return -1
-    if (clientX < rect.left || clientX > rect.right ||
-        clientY < rect.top || clientY > rect.bottom) return -1
-    // 根据 slotLayout 计算每个槽位的高度区间
-    const slotStart = rect.top + 50
-    const slotTotalH = rect.height - 50 - 80
-    const unitH = slotTotalH / 3 // 1 格高度
-    let offset = 0
-    for (const item of layout) {
-      const h = unitH * item.height
-      if (clientY >= slotStart + offset && clientY < slotStart + offset + h) {
-        return item.index
+    if (!layout.length || !this._slotRects || !this._slotRects.length) return -1
+    for (let i = 0; i < this._slotRects.length; i++) {
+      const r = this._slotRects[i]
+      if (r && clientX >= r.left && clientX <= r.right &&
+          clientY >= r.top && clientY <= r.bottom) {
+        return layout[i] ? layout[i].index : -1
       }
-      offset += h
     }
     return -1
   },
 
-  async onDragOverlayEnd(e) {
+  onDragOverlayEnd(e) {
+    // 长按计时器未触发 → 取消（短按/轻触）
+    if (this._dragPending) {
+      clearTimeout(this._dragPending.timer)
+      this._dragPending = null
+      return
+    }
+    // 拖拽已激活：处理松手放置
     const { slotHover, slotCards, draggingTemplate, showSlotModal } = this.data
     const touch = (e.changedTouches && e.changedTouches[0]) || (e.touches && e.touches[0])
-    // 再算一次，确保使用最新弹窗位置
     let hover = slotHover
     if (showSlotModal && touch) {
       hover = this._calcSlotHover(touch.clientX, touch.clientY)
@@ -1680,15 +1788,12 @@ Page({
       }
       const updated = [...slotCards]
       updated[hover] = newCard
-      // span-2 卡片清除被合并的相邻槽位
       if (newCard.span >= 2 && hover < 2) {
         updated[hover + 1] = null
       }
-      // 如果前一个槽位是 span-2 且占用了当前槽位，先清掉
       if (hover > 0 && updated[hover - 1] && (updated[hover - 1].span || 1) >= 2) {
         updated[hover - 1] = null
       }
-      // 同一张卡不进多个槽位
       for (let i = 0; i < 3; i++) {
         if (i !== hover && updated[i] && updated[i].id === newCard.id) {
           updated[i] = null
@@ -1700,9 +1805,7 @@ Page({
         slotHover: -1,
         'dragFloat.visible': false,
       })
-      // 不关弹窗，等用户确认
     } else {
-      // 没有放到槽位上，取消拖放
       const empty = [null, null, null]
       this.setData({
         'dragFloat.visible': false,
@@ -1717,11 +1820,12 @@ Page({
 
   _buildSlotLayout(slotCards) {
     const layout = []
+    const max = slotCards.length
     let i = 0
-    while (i < 3) {
+    while (i < max) {
       const card = slotCards[i]
-      const span = card ? Math.min(card.span || 1, 3 - i) : 1
-      layout.push({ card: slotCards[i], height: span, index: i, slotHover: false })
+      const span = card ? Math.min(card.span || 1, max - i) : 1
+      layout.push({ card: slotCards[i], height: span, index: i })
       i += span
     }
     return layout
@@ -1738,9 +1842,14 @@ Page({
     wx.setStorageSync('customOverviewCards', ordered)
     const colW = (this._grid && this._grid.colWidth) || 100
     const editCardWidths = ordered.map(c => Math.round(colW * (c.span || 1)))
+    const enriched = ordered.map(card => {
+      const tpl = this.data.customTemplates.find(t => t.type === card.type)
+      return { ...card, rows: tpl ? tpl.rows : [], hasAvatar: tpl ? tpl.hasAvatar : false, previewStyle: tpl ? tpl.previewStyle : 'overview' }
+    })
     const empty = [null, null, null]
     this.setData({
       customCards: ordered,
+      overviewCards: enriched,
       editCardWidths,
       showSlotModal: false,
       draggingTemplate: null,
