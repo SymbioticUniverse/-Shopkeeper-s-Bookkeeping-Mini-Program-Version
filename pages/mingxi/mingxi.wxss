@@ -4873,7 +4873,7 @@ page {
 
 /* === 自定义分类页（在 my-card 内） === */
 .card.custom-cat-card {
-  overflow: visible;
+  overflow: hidden;
 }
 .custom-cat-header {
   display: flex;
@@ -4881,6 +4881,28 @@ page {
   justify-content: space-between;
   margin-top: 0;
   margin-bottom: 0;
+  flex-shrink: 0;
+}
+
+.custom-cat-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  margin: 0 -36rpx;
+  min-height: 0;
+}
+
+.custom-cat-personal-block,
+.custom-cat-company-block {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.custom-cat-grid-scroll {
+  flex: 1;
+  min-height: 0;
 }
 
 .custom-cat-back {
@@ -4921,7 +4943,7 @@ page {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 10rpx 36rpx 16rpx;
+  padding: 6rpx 36rpx 8rpx;
 }
 
 .custom-cat-section-label {
@@ -4950,10 +4972,6 @@ page {
   color: #333;
   font-weight: 500;
   box-shadow: 0 1rpx 3rpx rgba(0, 0, 0, 0.06);
-}
-
-.custom-cat-grid-scroll {
-  max-height: 420rpx;
 }
 
 .custom-cat-grid {
@@ -4997,7 +5015,7 @@ page {
 .custom-cat-add {
   display: flex;
   justify-content: center;
-  padding: 0 0 16rpx;
+  padding: 0 0 8rpx;
 }
 
 .custom-cat-add-icon {
@@ -5016,4 +5034,120 @@ page {
 
 .custom-cat-bottom-spacer {
   height: 16rpx;
+}
+
+/* 添加分类弹窗 */
+.cat-modal-mask {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  z-index: 100;
+}
+
+.cat-modal {
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 560rpx;
+  background: #fff;
+  border-radius: 24rpx;
+  z-index: 101;
+  overflow: hidden;
+}
+
+.cat-modal-hd {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 28rpx 32rpx 16rpx;
+}
+
+.cat-modal-title {
+  font-size: 32rpx;
+  font-weight: 500;
+  color: #000;
+}
+
+.cat-modal-close {
+  width: 48rpx;
+  height: 48rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28rpx;
+  color: #aaa;
+}
+
+.cat-modal-body {
+  padding: 0 32rpx 24rpx;
+}
+
+.cat-modal-field {
+  margin-bottom: 24rpx;
+}
+
+.cat-modal-label {
+  font-size: 26rpx;
+  font-weight: 500;
+  color: #666;
+  margin-bottom: 12rpx;
+}
+
+.cat-modal-input {
+  width: 100%;
+  height: 72rpx;
+  background: #f5f5f5;
+  border-radius: 12rpx;
+  padding: 0 20rpx;
+  font-size: 28rpx;
+  box-sizing: border-box;
+}
+
+.cat-modal-emoji-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12rpx;
+  max-height: 240rpx;
+  overflow-y: auto;
+}
+
+.cat-modal-emoji-item {
+  width: 68rpx;
+  height: 68rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 36rpx;
+  border-radius: 14rpx;
+  background: #f5f5f5;
+}
+
+.cat-modal-emoji--on {
+  background: #e8f4fd;
+  box-shadow: 0 0 0 3rpx #4a90d9;
+}
+
+.cat-modal-ft {
+  display: flex;
+  border-top: 1rpx solid #eee;
+}
+
+.cat-modal-btn {
+  flex: 1;
+  height: 88rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 30rpx;
+  font-weight: 500;
+}
+
+.cat-modal-btn--cancel {
+  color: #999;
+  border-right: 1rpx solid #eee;
+}
+
+.cat-modal-btn--confirm {
+  color: #4a90d9;
 }

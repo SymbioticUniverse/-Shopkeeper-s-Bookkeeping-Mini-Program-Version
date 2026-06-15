@@ -80,6 +80,12 @@ Page({
     showVipPage: false,
     showCustomOverview: false,
     showCustomCategory: false, // 自定义分类页
+    // 添加分类弹窗
+    showCatModal: false,
+    catModalScope: 'personal',
+    catModalName: '',
+    catModalEmoji: '📌',
+    catEmojiList: ['🍽','🚗','🛍','🎮','💰','💼','📈','🏠','📱','🏥','🛵','🚕','🍿','📦','💡','🎁','✍','💎','👗','💄','🐱','⚽','🧳','🎲','📖','📷','🎵','🎨','🍰','🌷','🧧','↩','🎯','🎀','🧾','🪙','💹','🏘','🅿','🧽','📋','💵','✈','🏢','🍷','💳','🏗','💸','🚚','📊','🗣','🔧','💻','🛡','📢','🏦','📚'],
     customCards: [], // 自定义简览页已添加的卡片列表
     overviewCards: [], // 简览页实际渲染的卡片（从存储同步或默认）
     defaultOverviewCards: [
@@ -303,38 +309,24 @@ Page({
       { id: 'p_16', name: '奖金', emoji: '🎁', inOut: 'in' },
       { id: 'p_17', name: '稿费', emoji: '✍', inOut: 'in' },
 	      { id: 'p_18', name: '理财', emoji: '💎', inOut: 'in' },
-	      { id: 'p_19', name: '测试1', emoji: '📌', inOut: 'out' },
-	      { id: 'p_20', name: '测试2', emoji: '📎', inOut: 'out' },
-	      { id: 'p_21', name: '测试3', emoji: '🖇', inOut: 'out' },
-	      { id: 'p_22', name: '测试4', emoji: '🔖', inOut: 'out' },
-	      { id: 'p_23', name: '测试5', emoji: '📋', inOut: 'out' },
-	      { id: 'p_24', name: '测试6', emoji: '🗂', inOut: 'in' },
-	      { id: 'p_25', name: '测试7', emoji: '📁', inOut: 'in' },
-	      { id: 'p_26', name: '测试8', emoji: '📝', inOut: 'in' },
-	      { id: 'p_27', name: '测试9', emoji: '📄', inOut: 'in' },
-	      { id: 'p_28', name: '测试10', emoji: '📃', inOut: 'in' },
-{ id: 'p_29', name: '服装', emoji: '👗', inOut: 'out' },
-	      { id: 'p_30', name: '美妆', emoji: '💄', inOut: 'out' },
-	      { id: 'p_31', name: '宠物', emoji: '🐱', inOut: 'out' },
-	      { id: 'p_32', name: '运动', emoji: '⚽', inOut: 'out' },
-	      { id: 'p_33', name: '旅行', emoji: '🧳', inOut: 'out' },
-	      { id: 'p_34', name: '游戏', emoji: '🎲', inOut: 'out' },
-	      { id: 'p_35', name: '看书', emoji: '📖', inOut: 'out' },
-	      { id: 'p_36', name: '摄影', emoji: '📷', inOut: 'out' },
-	      { id: 'p_37', name: '音乐', emoji: '🎵', inOut: 'out' },
-	      { id: 'p_38', name: '画画', emoji: '🎨', inOut: 'out' },
-	      { id: 'p_39', name: '烘焙', emoji: '🍰', inOut: 'out' },
-	      { id: 'p_40', name: '养花', emoji: '🌷', inOut: 'out' },
-	      { id: 'p_41', name: '红包', emoji: '🧧', inOut: 'in' },
-	      { id: 'p_42', name: '退款', emoji: '↩', inOut: 'in' },
-	      { id: 'p_43', name: '中奖', emoji: '🎯', inOut: 'in' },
-	      { id: 'p_44', name: '礼金', emoji: '🎀', inOut: 'in' },
-	      { id: 'p_45', name: '报销', emoji: '🧾', inOut: 'in' },
-	      { id: 'p_46', name: '补贴', emoji: '🪙', inOut: 'in' },
-	      { id: 'p_47', name: '提成', emoji: '💹', inOut: 'in' },
-	      { id: 'p_48', name: '房租', emoji: '🏘', inOut: 'out' },
-	      { id: 'p_49', name: '停车', emoji: '🅿', inOut: 'out' },
-	      { id: 'p_50', name: '洗车', emoji: '🧽', inOut: 'out' },
+{ id: 'p_19', name: '服装', emoji: '👗', inOut: 'out' },
+	      { id: 'p_20', name: '美妆', emoji: '💄', inOut: 'out' },
+	      { id: 'p_21', name: '宠物', emoji: '🐱', inOut: 'out' },
+	      { id: 'p_22', name: '运动', emoji: '⚽', inOut: 'out' },
+	      { id: 'p_23', name: '旅行', emoji: '🧳', inOut: 'out' },
+	      { id: 'p_24', name: '游戏', emoji: '🎲', inOut: 'out' },
+	      { id: 'p_25', name: '电影', emoji: '🎬', inOut: 'out' },
+	      { id: 'p_26', name: '摄影', emoji: '📷', inOut: 'out' },
+	      { id: 'p_27', name: '音乐', emoji: '🎵', inOut: 'out' },
+	      { id: 'p_28', name: '画画', emoji: '🎨', inOut: 'out' },
+	      { id: 'p_29', name: '烘焙', emoji: '🍰', inOut: 'out' },
+	      { id: 'p_30', name: '养花', emoji: '🌷', inOut: 'out' },
+	      { id: 'p_31', name: '红包', emoji: '🧧', inOut: 'in' },
+	      { id: 'p_32', name: '退款', emoji: '↩', inOut: 'in' },
+	      { id: 'p_33', name: '中奖', emoji: '🎯', inOut: 'in' },
+	      { id: 'p_34', name: '礼金', emoji: '🎀', inOut: 'in' },
+	      { id: 'p_35', name: '报销', emoji: '🧾', inOut: 'in' },
+	      { id: 'p_36', name: '补贴', emoji: '🪙', inOut: 'in' },
     ],
     companyCategories: [
       { id: 'c_1', name: '采购', emoji: '📋', inOut: 'out' },
@@ -367,26 +359,12 @@ Page({
 	      { id: 'c_28', name: '认证', emoji: '✅', inOut: 'out' },
 	      { id: 'c_29', name: '打印', emoji: '🖨', inOut: 'out' },
 	      { id: 'c_30', name: '保洁', emoji: '🧹', inOut: 'out' },
-	      { id: 'c_31', name: '安保', emoji: '🔐', inOut: 'out' },
-	      { id: 'c_32', name: '绿化', emoji: '🌿', inOut: 'out' },
-	      { id: 'c_33', name: '合同款', emoji: '📝', inOut: 'in' },
-	      { id: 'c_34', name: '项目款', emoji: '📐', inOut: 'in' },
-	      { id: 'c_35', name: '服务费', emoji: '⚙', inOut: 'in' },
-	      { id: 'c_36', name: '佣金', emoji: '🤲', inOut: 'in' },
-	      { id: 'c_37', name: '赞助', emoji: '🎗', inOut: 'in' },
-	      { id: 'c_38', name: '政府补贴', emoji: '🏛', inOut: 'in' },
-	      { id: 'c_39', name: '退税', emoji: '📑', inOut: 'in' },
-	      { id: 'c_40', name: '版权费', emoji: '©', inOut: 'in' },
-	      { id: 'c_41', name: '授权费', emoji: '🔑', inOut: 'in' },
-	      { id: 'c_42', name: '保证金', emoji: '🔒', inOut: 'in' },
-	      { id: 'c_43', name: '专利申请', emoji: '📜', inOut: 'out' },
-	      { id: 'c_44', name: '商标注册', emoji: '🏷', inOut: 'out' },
-	      { id: 'c_45', name: '年检', emoji: '📋', inOut: 'out' },
-	      { id: 'c_46', name: '审计', emoji: '🔍', inOut: 'out' },
-	      { id: 'c_47', name: '法律咨询', emoji: '⚖', inOut: 'out' },
-	      { id: 'c_48', name: '翻译', emoji: '🌍', inOut: 'out' },
-	      { id: 'c_49', name: '仓储', emoji: '📦', inOut: 'out' },
-	      { id: 'c_50', name: '会员费', emoji: '💳', inOut: 'out' },
+	      { id: 'c_31', name: '合同款', emoji: '📝', inOut: 'in' },
+	      { id: 'c_32', name: '项目款', emoji: '📐', inOut: 'in' },
+	      { id: 'c_33', name: '服务费', emoji: '⚙', inOut: 'in' },
+	      { id: 'c_34', name: '佣金', emoji: '🤲', inOut: 'in' },
+	      { id: 'c_35', name: '赞助', emoji: '🎗', inOut: 'in' },
+	      { id: 'c_36', name: '政府补贴', emoji: '🏛', inOut: 'in' },
     ],
   },
 
@@ -1675,6 +1653,71 @@ Page({
     } else {
       this.setData({ catTabCompany: tab })
     }
+  },
+
+  onAddCategory(e) {
+    const { scope } = e.currentTarget.dataset
+    this.setData({
+      showCatModal: true,
+      catModalScope: scope,
+      catModalName: '',
+      catModalEmoji: '📌',
+    })
+  },
+
+  onCatModalClose() {
+    this.setData({ showCatModal: false })
+  },
+
+  onCatModalNameInput(e) {
+    this.setData({ catModalName: e.detail.value })
+  },
+
+  onCatModalPickEmoji(e) {
+    this.setData({ catModalEmoji: e.currentTarget.dataset.emoji })
+  },
+
+  onCatModalConfirm() {
+    const { catModalScope, catModalName, catModalEmoji } = this.data
+    const name = catModalName.trim()
+    if (!name) {
+      wx.showToast({ title: '请输入分类名称', icon: 'none' })
+      return
+    }
+    const key = catModalScope === 'personal' ? 'personalCategories' : 'companyCategories'
+    const list = this.data[key]
+    const prefix = catModalScope === 'personal' ? 'p' : 'c'
+    const maxNum = list.reduce((m, item) => {
+      const n = parseInt(item.id.split('_')[1])
+      return n > m ? n : m
+    }, 0)
+    const newItem = {
+      id: `${prefix}_${maxNum + 1}`,
+      name,
+      emoji: catModalEmoji,
+      inOut: 'out',
+    }
+    this.setData({
+      [key]: [...list, newItem],
+      showCatModal: false,
+    })
+    wx.showToast({ title: '已添加', icon: 'success' })
+  },
+
+  onDeleteCategory(e) {
+    const { id, scope } = e.currentTarget.dataset
+    const that = this
+    wx.showModal({
+      title: '删除分类',
+      content: '确定删除此分类吗？',
+      success(res) {
+        if (!res.confirm) return
+        const key = scope === 'personal' ? 'personalCategories' : 'companyCategories'
+        const list = that.data[key]
+        that.setData({ [key]: list.filter(item => item.id !== id) })
+        wx.showToast({ title: '已删除', icon: 'success' })
+      },
+    })
   },
 
   // ---- 自定义简览页 ----

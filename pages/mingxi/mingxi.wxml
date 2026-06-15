@@ -579,7 +579,7 @@
             </view>
             <scroll-view class="custom-cat-grid-scroll" scroll-y enhanced show-scrollbar="{{false}}">
               <view class="custom-cat-grid">
-                <view class="custom-cat-item" wx:for="{{personalCategories}}" wx:key="id" wx:if="{{item.inOut === catTabPersonal}}">
+                <view class="custom-cat-item" wx:for="{{personalCategories}}" wx:key="id" wx:if="{{item.inOut === catTabPersonal}}" bindlongtap="onDeleteCategory" data-id="{{item.id}}" data-scope="personal">
                   <view class="custom-cat-icon-wrap">
                     <text class="custom-cat-emoji">{{item.emoji}}</text>
                   </view>
@@ -592,27 +592,53 @@
             </view>
           </view>
           <view class="custom-cat-divider"></view>
-          <view class="custom-cat-section-hd">
-            <text class="custom-cat-section-label">公司分类</text>
-            <view class="custom-cat-tabs">
-              <view class="custom-cat-tab {{catTabCompany === 'out' ? 'custom-cat-tab--on' : ''}}" bindtap="onCatTabChange" data-scope="company" data-tab="out">支出</view>
-              <view class="custom-cat-tab {{catTabCompany === 'in' ? 'custom-cat-tab--on' : ''}}" bindtap="onCatTabChange" data-scope="company" data-tab="in">收入</view>
-            </view>
-          </view>
-          <scroll-view class="custom-cat-grid-scroll" scroll-y enhanced show-scrollbar="{{false}}">
-            <view class="custom-cat-grid">
-              <view class="custom-cat-item" wx:for="{{companyCategories}}" wx:key="id" wx:if="{{item.inOut === catTabCompany}}">
-                <view class="custom-cat-icon-wrap">
-                  <text class="custom-cat-emoji">{{item.emoji}}</text>
-                </view>
-                <text class="custom-cat-name">{{item.name}}</text>
+          <view class="custom-cat-company-block">
+            <view class="custom-cat-section-hd">
+              <text class="custom-cat-section-label">公司分类</text>
+              <view class="custom-cat-tabs">
+                <view class="custom-cat-tab {{catTabCompany === 'out' ? 'custom-cat-tab--on' : ''}}" bindtap="onCatTabChange" data-scope="company" data-tab="out">支出</view>
+                <view class="custom-cat-tab {{catTabCompany === 'in' ? 'custom-cat-tab--on' : ''}}" bindtap="onCatTabChange" data-scope="company" data-tab="in">收入</view>
               </view>
             </view>
-          </scroll-view>
-          <view class="custom-cat-add" bindtap="onAddCategory" data-scope="company">
-            <view class="custom-cat-add-icon">+</view>
+            <scroll-view class="custom-cat-grid-scroll" scroll-y enhanced show-scrollbar="{{false}}">
+              <view class="custom-cat-grid">
+                <view class="custom-cat-item" wx:for="{{companyCategories}}" wx:key="id" wx:if="{{item.inOut === catTabCompany}}" bindlongtap="onDeleteCategory" data-id="{{item.id}}" data-scope="company">
+                  <view class="custom-cat-icon-wrap">
+                    <text class="custom-cat-emoji">{{item.emoji}}</text>
+                  </view>
+                  <text class="custom-cat-name">{{item.name}}</text>
+                </view>
+              </view>
+            </scroll-view>
+            <view class="custom-cat-add" bindtap="onAddCategory" data-scope="company">
+              <view class="custom-cat-add-icon">+</view>
+            </view>
           </view>
           <view class="custom-cat-bottom-spacer"></view>
+        </view>
+        <!-- 添加分类弹窗 -->
+        <view class="cat-modal-mask" wx:if="{{showCatModal}}" bindtap="onCatModalClose"></view>
+        <view class="cat-modal" wx:if="{{showCatModal}}">
+          <view class="cat-modal-hd">
+            <text class="cat-modal-title">添加分类</text>
+            <view class="cat-modal-close" bindtap="onCatModalClose">✕</view>
+          </view>
+          <view class="cat-modal-body">
+            <view class="cat-modal-field">
+              <text class="cat-modal-label">名称</text>
+              <input class="cat-modal-input" value="{{catModalName}}" bindinput="onCatModalNameInput" placeholder="输入分类名称" maxlength="10"/>
+            </view>
+            <view class="cat-modal-field">
+              <text class="cat-modal-label">图标</text>
+              <view class="cat-modal-emoji-grid">
+                <view class="cat-modal-emoji-item {{catModalEmoji === item ? 'cat-modal-emoji--on' : ''}}" wx:for="{{catEmojiList}}" wx:key="*this" wx:for-item="item" bindtap="onCatModalPickEmoji" data-emoji="{{item}}">{{item}}</view>
+              </view>
+            </view>
+          </view>
+          <view class="cat-modal-ft">
+            <view class="cat-modal-btn cat-modal-btn--cancel" bindtap="onCatModalClose">取消</view>
+            <view class="cat-modal-btn cat-modal-btn--confirm" bindtap="onCatModalConfirm">确认</view>
+          </view>
         </view>
       </view>
       <!-- 正常我的页面 -->
