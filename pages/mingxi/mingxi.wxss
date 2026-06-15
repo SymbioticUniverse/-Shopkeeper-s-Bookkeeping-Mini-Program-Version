@@ -4879,7 +4879,8 @@ page {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-top: -36rpx;
+  margin-top: -44rpx;
+  margin-bottom: 0;
 }
 
 .custom-cat-back {
@@ -4908,48 +4909,48 @@ page {
 .custom-cat-divider {
   height: 1rpx;
   background: rgba(0, 0, 0, 0.1);
-  margin: 4rpx 0 0;
+  margin: 0;
   flex-shrink: 0;
 }
 
 .custom-cat-body {
   max-height: 52vh;
-  margin: 0 -36rpx;
+  margin: -20rpx -36rpx 0;
 }
 
 .custom-cat-section-hd {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 6rpx 36rpx 10rpx;
+  padding: 10rpx 36rpx 16rpx;
 }
 
 .custom-cat-section-label {
-  font-size: 32rpx;
+  font-size: 28rpx;
   font-weight: 500;
-  color: rgba(160, 160, 160, 0.63);
+  color: rgba(160, 160, 160, 0.7);
 }
 
 .custom-cat-tabs {
   display: flex;
-  gap: 4rpx;
-  background: rgba(0, 0, 0, 0.06);
-  border-radius: 12rpx;
-  padding: 4rpx;
+  gap: 2rpx;
+  background: rgba(0, 0, 0, 0.05);
+  border-radius: 10rpx;
+  padding: 3rpx;
 }
 
 .custom-cat-tab {
-  font-size: 24rpx;
-  color: #999;
-  padding: 6rpx 18rpx;
-  border-radius: 10rpx;
+  font-size: 22rpx;
+  color: #aaa;
+  padding: 4rpx 16rpx;
+  border-radius: 8rpx;
 }
 
 .custom-cat-tab--on {
   background: #fff;
   color: #333;
   font-weight: 500;
-  box-shadow: 0 1rpx 4rpx rgba(0, 0, 0, 0.08);
+  box-shadow: 0 1rpx 3rpx rgba(0, 0, 0, 0.06);
 }
 
 .custom-cat-grid {
@@ -4963,52 +4964,53 @@ page {
   display: flex;
   flex-direction: column;
   align-items: center;
-  margin-bottom: 18rpx;
+  margin-bottom: 22rpx;
 }
 
 .custom-cat-icon-wrap {
   width: 80rpx;
   height: 80rpx;
   border-radius: 50%;
-  background: #f0f0f0;
+  background: #fff;
+  border: 1rpx solid rgba(0, 0, 0, 0.08);
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
 .custom-cat-emoji {
-  font-size: 36rpx;
+  font-size: 34rpx;
   line-height: 1;
 }
 
 .custom-cat-name {
-  font-size: 22rpx;
-  color: #a0a0a0;
+  font-size: 20rpx;
+  color: #aaa;
   font-weight: 500;
-  margin-top: 6rpx;
+  margin-top: 8rpx;
   text-align: center;
 }
 
 .custom-cat-add {
   display: flex;
   justify-content: center;
-  padding: 8rpx 0 20rpx;
+  padding: 0 0 16rpx;
 }
 
 .custom-cat-add-icon {
-  width: 80rpx;
-  height: 80rpx;
+  width: 68rpx;
+  height: 68rpx;
   border-radius: 50%;
-  border: 3rpx dashed #c0c0c0;
+  border: 2rpx dashed #d0d0d0;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 44rpx;
-  color: #c0c0c0;
+  font-size: 36rpx;
+  color: #d0d0d0;
   font-weight: 300;
   line-height: 1;
 }
 
 .custom-cat-bottom-spacer {
-  height: 24rpx;
+  height: 16rpx;
 }
