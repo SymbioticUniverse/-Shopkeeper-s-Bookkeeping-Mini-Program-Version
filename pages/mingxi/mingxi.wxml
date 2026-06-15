@@ -26,11 +26,11 @@
     <block wx:if="{{showCustomOverview && showOverview}}">
       <view class="custom-overview-container">
         <view class="card grid-span-3 my-card custom-edit-card">
-          <view class="edit-mode-header">
-            <text class="edit-mode-title">自定义简览页</text>
-            <view class="edit-done-btn" bindtap="onExitEditMode">
-              <text class="edit-done-text">完成</text>
+          <view class="custom-cat-header">
+            <view class="custom-cat-back" bindtap="onExitEditMode">
+              <view class="custom-cat-back-arrow"></view>
             </view>
+            <text class="custom-cat-title">自定义简览页</text>
           </view>
           <scroll-view class="custom-edit-canvas" scroll-y enhanced show-scrollbar="{{false}}">
             <!-- 占1格卡片 -->

@@ -1768,7 +1768,7 @@ Page({
 
   onExitEditMode() {
     wx.setStorageSync('customOverviewCards', this.data.customCards)
-    this.setData({ showCustomOverview: false })
+    this.setData({ showCustomOverview: false, showOverview: false, currentTab: 4 })
   },
 
   onAddCustomCard(e) {
