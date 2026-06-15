@@ -4870,3 +4870,145 @@ page {
 }
 .mini-legend-dot--green { background: #00d042; }
 .mini-legend-dot--red { background: #ed2e2e; }
+
+/* === 自定义分类页（在 my-card 内） === */
+.card.custom-cat-card {
+  overflow: visible;
+}
+.custom-cat-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: -36rpx;
+}
+
+.custom-cat-back {
+  width: 48rpx;
+  height: 48rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.custom-cat-back-arrow {
+  width: 22rpx;
+  height: 22rpx;
+  border-left: 4rpx solid #333;
+  border-bottom: 4rpx solid #333;
+  transform: rotate(45deg);
+  margin-left: 10rpx;
+}
+
+.custom-cat-title {
+  font-size: 32rpx;
+  font-weight: 500;
+  color: #000;
+}
+
+.custom-cat-divider {
+  height: 1rpx;
+  background: rgba(0, 0, 0, 0.1);
+  margin: 4rpx 0 0;
+  flex-shrink: 0;
+}
+
+.custom-cat-body {
+  max-height: 52vh;
+  margin: 0 -36rpx;
+}
+
+.custom-cat-section-hd {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6rpx 36rpx 10rpx;
+}
+
+.custom-cat-section-label {
+  font-size: 32rpx;
+  font-weight: 500;
+  color: rgba(160, 160, 160, 0.63);
+}
+
+.custom-cat-tabs {
+  display: flex;
+  gap: 4rpx;
+  background: rgba(0, 0, 0, 0.06);
+  border-radius: 12rpx;
+  padding: 4rpx;
+}
+
+.custom-cat-tab {
+  font-size: 24rpx;
+  color: #999;
+  padding: 6rpx 18rpx;
+  border-radius: 10rpx;
+}
+
+.custom-cat-tab--on {
+  background: #fff;
+  color: #333;
+  font-weight: 500;
+  box-shadow: 0 1rpx 4rpx rgba(0, 0, 0, 0.08);
+}
+
+.custom-cat-grid {
+  display: flex;
+  flex-wrap: wrap;
+  padding: 0 36rpx;
+}
+
+.custom-cat-item {
+  width: calc(100% / 6);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 18rpx;
+}
+
+.custom-cat-icon-wrap {
+  width: 80rpx;
+  height: 80rpx;
+  border-radius: 50%;
+  background: #f0f0f0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.custom-cat-emoji {
+  font-size: 36rpx;
+  line-height: 1;
+}
+
+.custom-cat-name {
+  font-size: 22rpx;
+  color: #a0a0a0;
+  font-weight: 500;
+  margin-top: 6rpx;
+  text-align: center;
+}
+
+.custom-cat-add {
+  display: flex;
+  justify-content: center;
+  padding: 8rpx 0 20rpx;
+}
+
+.custom-cat-add-icon {
+  width: 80rpx;
+  height: 80rpx;
+  border-radius: 50%;
+  border: 3rpx dashed #c0c0c0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 44rpx;
+  color: #c0c0c0;
+  font-weight: 300;
+  line-height: 1;
+}
+
+.custom-cat-bottom-spacer {
+  height: 24rpx;
+}

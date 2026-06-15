@@ -79,6 +79,7 @@ Page({
     // VIP 升级页
     showVipPage: false,
     showCustomOverview: false,
+    showCustomCategory: false, // 自定义分类页
     customCards: [], // 自定义简览页已添加的卡片列表
     overviewCards: [], // 简览页实际渲染的卡片（从存储同步或默认）
     defaultOverviewCards: [
@@ -279,6 +280,49 @@ Page({
         ],
         isContact: true,
       },
+    ],
+    // === 自定义分类 ===
+    catTabPersonal: 'out', // 个人分类当前筛选：'in' 收入 / 'out' 支出
+    catTabCompany: 'out',  // 公司分类当前筛选
+    personalCategories: [
+      { id: 'p_1', name: '餐饮', emoji: '🍽', inOut: 'out' },
+      { id: 'p_2', name: '交通', emoji: '🚗', inOut: 'out' },
+      { id: 'p_3', name: '购物', emoji: '🛍', inOut: 'out' },
+      { id: 'p_4', name: '娱乐', emoji: '🎮', inOut: 'out' },
+      { id: 'p_5', name: '工资', emoji: '💰', inOut: 'in' },
+      { id: 'p_6', name: '兼职', emoji: '💼', inOut: 'in' },
+      { id: 'p_7', name: '投资', emoji: '📈', inOut: 'in' },
+      { id: 'p_8', name: '租金', emoji: '🏠', inOut: 'in' },
+      { id: 'p_9', name: '通讯', emoji: '📱', inOut: 'out' },
+      { id: 'p_10', name: '医疗', emoji: '🏥', inOut: 'out' },
+      { id: 'p_11', name: '外卖', emoji: '🛵', inOut: 'out' },
+      { id: 'p_12', name: '打车', emoji: '🚕', inOut: 'out' },
+      { id: 'p_13', name: '零食', emoji: '🍿', inOut: 'out' },
+      { id: 'p_14', name: '快递', emoji: '📦', inOut: 'out' },
+      { id: 'p_15', name: '水电', emoji: '💡', inOut: 'out' },
+      { id: 'p_16', name: '奖金', emoji: '🎁', inOut: 'in' },
+      { id: 'p_17', name: '稿费', emoji: '✍', inOut: 'in' },
+      { id: 'p_18', name: '理财', emoji: '💎', inOut: 'in' },
+    ],
+    companyCategories: [
+      { id: 'c_1', name: '采购', emoji: '📋', inOut: 'out' },
+      { id: 'c_2', name: '回款', emoji: '💵', inOut: 'in' },
+      { id: 'c_3', name: '差旅', emoji: '✈', inOut: 'out' },
+      { id: 'c_4', name: '营收', emoji: '🏢', inOut: 'in' },
+      { id: 'c_5', name: '招待', emoji: '🍷', inOut: 'out' },
+      { id: 'c_6', name: '融资', emoji: '💳', inOut: 'in' },
+      { id: 'c_7', name: '租金', emoji: '🏗', inOut: 'out' },
+      { id: 'c_8', name: '分红', emoji: '💸', inOut: 'in' },
+      { id: 'c_9', name: '物料', emoji: '📦', inOut: 'out' },
+      { id: 'c_10', name: '物流', emoji: '🚚', inOut: 'out' },
+      { id: 'c_11', name: '税费', emoji: '📊', inOut: 'out' },
+      { id: 'c_12', name: '咨询', emoji: '🗣', inOut: 'in' },
+      { id: 'c_13', name: '维修', emoji: '🔧', inOut: 'out' },
+      { id: 'c_14', name: '软件', emoji: '💻', inOut: 'out' },
+      { id: 'c_15', name: '保险', emoji: '🛡', inOut: 'out' },
+      { id: 'c_16', name: '广告', emoji: '📢', inOut: 'out' },
+      { id: 'c_17', name: '利息', emoji: '🏦', inOut: 'in' },
+      { id: 'c_18', name: '培训', emoji: '📚', inOut: 'in' },
     ],
   },
 
@@ -1411,7 +1455,7 @@ Page({
 
   goOverview() {
     this._syncOverviewCards()
-    this.setData({ showOverview: true, showCustomOverview: false })
+    this.setData({ showOverview: true, showCustomOverview: false, showCustomCategory: false })
   },
 
   // ---- 明细 ----
@@ -1549,6 +1593,24 @@ Page({
       }
     })
     this.setData({ settleItems: items })
+  },
+
+  // ---- 自定义分类 ----
+  onCustomCategoryEntry() {
+    this.setData({ showCustomCategory: true })
+  },
+
+  onCustomCategoryBack() {
+    this.setData({ showCustomCategory: false })
+  },
+
+  onCatTabChange(e) {
+    const { scope, tab } = e.currentTarget.dataset
+    if (scope === 'personal') {
+      this.setData({ catTabPersonal: tab })
+    } else {
+      this.setData({ catTabCompany: tab })
+    }
   },
 
   // ---- 自定义简览页 ----
