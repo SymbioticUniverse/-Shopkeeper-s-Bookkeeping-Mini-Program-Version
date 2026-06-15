@@ -568,24 +568,28 @@
           <text class="custom-cat-title">自定义分类</text>
         </view>
         <view class="custom-cat-divider"></view>
-        <scroll-view class="custom-cat-body" scroll-y enhanced show-scrollbar="{{false}}">
-          <view class="custom-cat-section-hd">
-            <text class="custom-cat-section-label">个人分类</text>
-            <view class="custom-cat-tabs">
-              <view class="custom-cat-tab {{catTabPersonal === 'out' ? 'custom-cat-tab--on' : ''}}" bindtap="onCatTabChange" data-scope="personal" data-tab="out">支出</view>
-              <view class="custom-cat-tab {{catTabPersonal === 'in' ? 'custom-cat-tab--on' : ''}}" bindtap="onCatTabChange" data-scope="personal" data-tab="in">收入</view>
-            </view>
-          </view>
-          <view class="custom-cat-grid">
-            <view class="custom-cat-item" wx:for="{{personalCategories}}" wx:key="id" wx:if="{{item.inOut === catTabPersonal}}">
-              <view class="custom-cat-icon-wrap">
-                <text class="custom-cat-emoji">{{item.emoji}}</text>
+        <view class="custom-cat-body">
+          <view class="custom-cat-personal-block">
+            <view class="custom-cat-section-hd">
+              <text class="custom-cat-section-label">个人分类</text>
+              <view class="custom-cat-tabs">
+                <view class="custom-cat-tab {{catTabPersonal === 'out' ? 'custom-cat-tab--on' : ''}}" bindtap="onCatTabChange" data-scope="personal" data-tab="out">支出</view>
+                <view class="custom-cat-tab {{catTabPersonal === 'in' ? 'custom-cat-tab--on' : ''}}" bindtap="onCatTabChange" data-scope="personal" data-tab="in">收入</view>
               </view>
-              <text class="custom-cat-name">{{item.name}}</text>
             </view>
-          </view>
-          <view class="custom-cat-add" bindtap="onAddCategory" data-scope="personal">
-            <view class="custom-cat-add-icon">+</view>
+            <scroll-view class="custom-cat-grid-scroll" scroll-y enhanced show-scrollbar="{{false}}">
+              <view class="custom-cat-grid">
+                <view class="custom-cat-item" wx:for="{{personalCategories}}" wx:key="id" wx:if="{{item.inOut === catTabPersonal}}">
+                  <view class="custom-cat-icon-wrap">
+                    <text class="custom-cat-emoji">{{item.emoji}}</text>
+                  </view>
+                  <text class="custom-cat-name">{{item.name}}</text>
+                </view>
+              </view>
+            </scroll-view>
+            <view class="custom-cat-add" bindtap="onAddCategory" data-scope="personal">
+              <view class="custom-cat-add-icon">+</view>
+            </view>
           </view>
           <view class="custom-cat-divider"></view>
           <view class="custom-cat-section-hd">
@@ -595,19 +599,21 @@
               <view class="custom-cat-tab {{catTabCompany === 'in' ? 'custom-cat-tab--on' : ''}}" bindtap="onCatTabChange" data-scope="company" data-tab="in">收入</view>
             </view>
           </view>
-          <view class="custom-cat-grid">
-            <view class="custom-cat-item" wx:for="{{companyCategories}}" wx:key="id" wx:if="{{item.inOut === catTabCompany}}">
-              <view class="custom-cat-icon-wrap">
-                <text class="custom-cat-emoji">{{item.emoji}}</text>
+          <scroll-view class="custom-cat-grid-scroll" scroll-y enhanced show-scrollbar="{{false}}">
+            <view class="custom-cat-grid">
+              <view class="custom-cat-item" wx:for="{{companyCategories}}" wx:key="id" wx:if="{{item.inOut === catTabCompany}}">
+                <view class="custom-cat-icon-wrap">
+                  <text class="custom-cat-emoji">{{item.emoji}}</text>
+                </view>
+                <text class="custom-cat-name">{{item.name}}</text>
               </view>
-              <text class="custom-cat-name">{{item.name}}</text>
             </view>
-          </view>
+          </scroll-view>
           <view class="custom-cat-add" bindtap="onAddCategory" data-scope="company">
             <view class="custom-cat-add-icon">+</view>
           </view>
           <view class="custom-cat-bottom-spacer"></view>
-        </scroll-view>
+        </view>
       </view>
       <!-- 正常我的页面 -->
       <view class="card grid-span-3 my-card" wx:else>

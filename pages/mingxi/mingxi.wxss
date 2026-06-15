@@ -4879,7 +4879,7 @@ page {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-top: -44rpx;
+  margin-top: 0;
   margin-bottom: 0;
 }
 
@@ -4914,8 +4914,7 @@ page {
 }
 
 .custom-cat-body {
-  max-height: 52vh;
-  margin: -20rpx -36rpx 0;
+  margin: 0 -36rpx;
 }
 
 .custom-cat-section-hd {
@@ -4951,6 +4950,10 @@ page {
   color: #333;
   font-weight: 500;
   box-shadow: 0 1rpx 3rpx rgba(0, 0, 0, 0.06);
+}
+
+.custom-cat-grid-scroll {
+  max-height: 420rpx;
 }
 
 .custom-cat-grid {
