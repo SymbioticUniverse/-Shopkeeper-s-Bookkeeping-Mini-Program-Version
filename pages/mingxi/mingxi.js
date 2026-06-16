@@ -239,9 +239,11 @@ Page({
     showSettingsPage: false, // 设置页
     showPrivacyPage: false, // 隐私设置页
     showPrivacyPolicyPage: false, // 隐私政策页
+    showAboutPage: false, // 关于我们页
     privacyAllowAnalytics: true,
     privacyAllowCrashReport: true,
     settingsLedgerRole: 'personal', // 当前账本角色: personal/boss/employee
+    cacheSize: '0MB',
     settingsLanguage: 'zh-CN', // 语言设置
     settingsLanguageLabel: '简体中文',
     settingsDarkMode: 'system', // 深色模式: system/light/dark
@@ -2058,8 +2060,10 @@ Page({
     const darkMode = wx.getStorageSync('appDarkMode') || 'system'
     const darkLabels = { system: this.data.t.dark_system || '跟随系统', light: this.data.t.dark_light || '浅色模式', dark: this.data.t.dark_dark || '深色模式' }
     const darkLabel = darkLabels[darkMode] || '跟随系统'
+    const storageInfo = wx.getStorageInfoSync()
+    const cacheSize = (storageInfo.currentSize / 1024).toFixed(1) + 'MB'
     this._applyLanguage(lang)
-    this.setData({ showSettingsPage: true, settingsLedgerRole: ledgerRole, settingsLanguage: lang, settingsLanguageLabel: langLabel, settingsDarkMode: darkMode, settingsDarkModeLabel: darkLabel })
+    this.setData({ showSettingsPage: true, settingsLedgerRole: ledgerRole, settingsLanguage: lang, settingsLanguageLabel: langLabel, settingsDarkMode: darkMode, settingsDarkModeLabel: darkLabel, cacheSize })
   },
 
   onSettingsBack() {
@@ -2103,6 +2107,10 @@ Page({
 
   onPrivacyPolicyBack() {
     this.setData({ showPrivacyPolicyPage: false })
+  },
+
+  onAboutBack() {
+    this.setData({ showAboutPage: false })
   },
 
   onSettingsTap(e) {
@@ -2188,19 +2196,42 @@ Page({
           }
         })
         break
-      case 'clearCache':
+      case 'clearCache': {
+        const info = wx.getStorageInfoSync()
+        const sizeMB = (info.currentSize / 1024).toFixed(1)
         wx.showModal({
           title: '清除缓存',
-          content: '确定要清除本地缓存数据吗？',
+          content: `当前缓存 ${sizeMB}MB，将清除所有本地账目记录和临时数据（保留语言、深色模式、登录状态等设置）。确定清除吗？`,
+          confirmText: '清除',
           success: (res) => {
             if (res.confirm) {
+              // 保留的用户设置
+              const lang = wx.getStorageSync('appLanguage')
+              const darkMode = wx.getStorageSync('appDarkMode')
+              const userInfo = wx.getStorageSync('userInfo')
+              const companyInfo = wx.getStorageSync('companyInfo')
+              const privacyAnalytics = wx.getStorageSync('privacy_allowAnalytics')
+              const privacyCrash = wx.getStorageSync('privacy_allowCrashReport')
+              wx.clearStorageSync()
+              // 恢复用户设置
+              if (lang) wx.setStorageSync('appLanguage', lang)
+              if (darkMode) wx.setStorageSync('appDarkMode', darkMode)
+              if (userInfo) wx.setStorageSync('userInfo', userInfo)
+              if (companyInfo) wx.setStorageSync('companyInfo', companyInfo)
+              if (privacyAnalytics !== undefined) wx.setStorageSync('privacy_allowAnalytics', privacyAnalytics)
+              if (privacyCrash !== undefined) wx.setStorageSync('privacy_allowCrashReport', privacyCrash)
               wx.showToast({ title: '缓存已清除', icon: 'success' })
+              // 刷新明细列表等数据
+              this.initDetailItems()
+              this.initSettleItems()
+              this.updateReportDate()
             }
           }
         })
         break
+      }
       case 'about':
-        wx.showToast({ title: '关于我们开发中', icon: 'none' })
+        this.setData({ showAboutPage: true })
         break
       case 'logout':
         wx.showModal({

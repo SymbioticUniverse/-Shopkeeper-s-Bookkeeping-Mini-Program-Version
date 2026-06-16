@@ -1058,6 +1058,40 @@
           </view>
         </scroll-view>
       </view>
+      <!-- 关于我们页 -->
+      <view class="card grid-span-3 my-card about-card" wx:elif="{{showAboutPage}}">
+        <view class="custom-cat-header">
+          <view class="custom-cat-back" bindtap="onAboutBack">
+            <view class="custom-cat-back-arrow"></view>
+          </view>
+          <text class="custom-cat-title">{{t.settings_about}}</text>
+        </view>
+        <view class="custom-cat-divider"></view>
+        <scroll-view class="about-scroll" scroll-y enhanced show-scrollbar="{{false}}">
+          <view class="about-body">
+            <view class="about-logo">OPC</view>
+            <text class="about-app-name">公私OPC记账</text>
+            <text class="about-version">v1.0.0</text>
+            <view class="about-divider"></view>
+            <text class="about-desc">一款简洁高效的个人与公司记账工具，支持多人协作、报表分析、自定义分类等功能。</text>
+            <view class="about-divider"></view>
+            <view class="about-info-row">
+              <text class="about-info-label">官网</text>
+              <text class="about-info-value">www.opc-book.com</text>
+            </view>
+            <view class="about-info-row">
+              <text class="about-info-label">邮箱</text>
+              <text class="about-info-value">feedback@opc-book.com</text>
+            </view>
+            <view class="about-info-row">
+              <text class="about-info-label">开发者</text>
+              <text class="about-info-value">OPC Team</text>
+            </view>
+            <view class="about-divider"></view>
+            <text class="about-copyright">Copyright © 2026 OPC. All rights reserved.</text>
+          </view>
+        </scroll-view>
+      </view>
       <!-- 设置页 -->
       <view class="card grid-span-3 my-card settings-card" wx:elif="{{showSettingsPage}}">
         <view class="custom-cat-header">
@@ -1114,7 +1148,7 @@
             <view class="settings-group-title">{{t.settings_other}}</view>
             <view class="settings-item" bindtap="onSettingsTap" data-action="clearCache">
               <text class="settings-item-label">{{t.settings_clear_cache}}</text>
-              <text class="settings-item-value settings-item-value--warn">12.5MB</text>
+              <text class="settings-item-value settings-item-value--warn">{{cacheSize}}</text>
               <text class="settings-item-arrow">〉</text>
             </view>
             <view class="settings-item" bindtap="onSettingsTap" data-action="about">
