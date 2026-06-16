@@ -505,9 +505,18 @@
 
     <!-- Tab 2: 记账 -->
     <block wx:if="{{currentTab === 2}}">
-      <view class="card grid-span-1 placeholder-card"><text>收入</text></view>
-      <view class="card grid-span-1 placeholder-card"><text>支出</text></view>
-      <view class="card grid-span-1 placeholder-card"><text>转账</text></view>
+      <view class="card grid-span-1 book-entry-card" bindtap="onBookEntry" data-type="income">
+        <view class="book-entry-dot book-entry-dot--in"></view>
+        <text class="book-entry-text">收入</text>
+      </view>
+      <view class="card grid-span-1 book-entry-card" bindtap="onBookEntry" data-type="expense">
+        <view class="book-entry-dot book-entry-dot--out"></view>
+        <text class="book-entry-text">支出</text>
+      </view>
+      <view class="card grid-span-1 book-entry-card" bindtap="onBookEntry" data-type="transfer">
+        <view class="book-entry-dot book-entry-dot--transfer"></view>
+        <text class="book-entry-text">转账</text>
+      </view>
     </block>
 
     <!-- Tab 3: 结清 -->
@@ -1347,6 +1356,79 @@
         <view wx:if="{{index !== 2}}" class="tab-icon"><view class="tab-icon-placeholder"></view></view>
         <text class="tab-label {{index === currentTab && !showOverview ? 'tab-label-active' : ''}}">{{item.text}}</text>
       </view>
+    </view>
+  </view>
+
+  <view class="book-mask" wx:if="{{showBookPopup}}" bindtap="onBookClose">
+    <view class="book-sheet" catchtap="nop">
+      <view class="book-date-row">
+        <picker mode="date" value="{{bookForm.date}}" bindchange="onBookDateChange">
+          <view class="book-date-picker">
+            <text class="book-date-label">日期</text>
+            <text class="book-date-value">{{bookForm.date}}</text>
+          </view>
+        </picker>
+      </view>
+      <view class="book-amount-row">
+        <view class="book-amount-left">
+          <text class="book-yen">¥</text>
+          <text class="book-amount-value">{{bookForm.amount || '0.00'}}</text>
+        </view>
+        <input class="book-note-input" placeholder="添加备注" value="{{bookForm.note}}" bindinput="onBookNoteInput" maxlength="50"/>
+      </view>
+      <view class="book-cat-select" bindtap="onBookOpenCatPanel">
+        <text class="book-cat-select-label">{{bookScopeLabel}}</text>
+        <text class="book-cat-select-sep">·</text>
+        <text class="book-cat-select-label">{{bookTypeLabel}}</text>
+        <text class="book-cat-select-sep">·</text>
+        <text class="book-cat-select-val">{{bookForm.category || '选择分类'}}</text>
+        <text class="book-cat-select-arrow">›</text>
+      </view>
+      <view class="book-keypad">
+        <view class="book-keypad-row">
+          <view class="book-key" bindtap="onBookKey" data-key="1"><text>1</text></view>
+          <view class="book-key" bindtap="onBookKey" data-key="2"><text>2</text></view>
+          <view class="book-key" bindtap="onBookKey" data-key="3"><text>3</text></view>
+        </view>
+        <view class="book-keypad-row">
+          <view class="book-key" bindtap="onBookKey" data-key="4"><text>4</text></view>
+          <view class="book-key" bindtap="onBookKey" data-key="5"><text>5</text></view>
+          <view class="book-key" bindtap="onBookKey" data-key="6"><text>6</text></view>
+        </view>
+        <view class="book-keypad-row">
+          <view class="book-key" bindtap="onBookKey" data-key="7"><text>7</text></view>
+          <view class="book-key" bindtap="onBookKey" data-key="8"><text>8</text></view>
+          <view class="book-key" bindtap="onBookKey" data-key="9"><text>9</text></view>
+        </view>
+        <view class="book-keypad-row">
+          <view class="book-key book-key--dot" bindtap="onBookKey" data-key="."><text>.</text></view>
+          <view class="book-key" bindtap="onBookKey" data-key="0"><text>0</text></view>
+          <view class="book-key book-key--del" bindtap="onBookKey" data-key="del"><text>⌫</text></view>
+        </view>
+      </view>
+      <view class="book-btn-row">
+        <view class="book-btn-save" bindtap="onBookSave"><text>记一笔</text></view>
+      </view>
+    </view>
+    <view class="book-cat-panel" wx:if="{{showBookCatPanel}}" catchtap="nop">
+      <view class="book-cat-panel-scope">
+        <view class="book-scope-tab {{bookScope === 'personal' ? 'book-scope-tab--active' : ''}}" bindtap="onBookScopeToggle" data-scope="personal"><text>个人</text></view>
+        <view class="book-scope-tab {{bookScope === 'company' ? 'book-scope-tab--active' : ''}}" bindtap="onBookScopeToggle" data-scope="company"><text>公司</text></view>
+      </view>
+      <view class="book-type-bar">
+        <view class="book-type-tab book-type-tab--income {{bookForm.type === 'income' ? 'book-type-tab--active' : ''}}" bindtap="onBookTypeSelect" data-type="income"><text>收入</text></view>
+        <view class="book-type-tab book-type-tab--expense {{bookForm.type === 'expense' ? 'book-type-tab--active' : ''}}" bindtap="onBookTypeSelect" data-type="expense"><text>支出</text></view>
+        <view class="book-type-tab book-type-tab--payForward {{bookForm.type === 'payForward' ? 'book-type-tab--active' : ''}}" bindtap="onBookTypeSelect" data-type="payForward"><text>垫付</text></view>
+        <view class="book-type-tab book-type-tab--payable {{bookForm.type === 'payable' ? 'book-type-tab--active' : ''}}" bindtap="onBookTypeSelect" data-type="payable"><text>应付</text></view>
+      </view>
+      <scroll-view class="book-cat-panel-grid" scroll-y enhanced show-scrollbar="{{false}}">
+        <view class="book-cat-panel-icons">
+          <view class="book-cat-panel-item" wx:for="{{bookCatPanelData}}" wx:key="id" bindtap="onBookCatPanelSelect" data-cat="{{item.name}}">
+            <view class="book-cat-panel-emoji"><text>{{item.emoji}}</text></view>
+            <text class="book-cat-panel-name">{{item.name}}</text>
+          </view>
+        </view>
+      </scroll-view>
     </view>
   </view>
 </view>

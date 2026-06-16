@@ -212,6 +212,15 @@ Page({
     modalFrom: '',
     modalIsPersonal: true,
     modalEdit: {},
+    // 记账弹窗
+    showBookPopup: false,
+    bookForm: { type: 'expense', amount: '', category: '', date: '', note: '' },
+    bookScope: 'personal',
+    bookScopeLabel: '个人',
+    bookTypeLabel: '支出',
+    showBookCatPanel: false,
+    bookCatPanelData: [],
+    bookCategories: ['餐饮', '交通', '购物', '工资', '兼职', '房租', '通讯', '医疗', '外卖', '娱乐', '奖金', '打车', '水电', '零食'],
     // VIP 升级页
     showVipPage: false,
     // 登录状态
@@ -724,6 +733,12 @@ Page({
     }
     if (index === 0) {
       this.initDetailItems()
+    }
+    if (index === 2) {
+      this.setData({ currentTab: 0 })
+      this.initDetailItems()
+      this.onBookEntry({ currentTarget: { dataset: { type: 'expense' } } })
+      return
     }
     if (index === 3) {
       this.initSettleItems()
@@ -1652,6 +1667,144 @@ Page({
   },
 
   nop() {},
+
+  // ========== 记账弹窗 ==========
+  onBookEntry(e) {
+    const type = e.currentTarget.dataset.type
+    const now = new Date()
+    const date = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
+    const cats = this.getBookCats(type)
+    const typeLabelMap = { income: '收入', expense: '支出', payForward: '垫付', payable: '应付' }
+    this.setData({
+      showBookPopup: true,
+      'bookForm.type': type,
+      'bookForm.amount': '',
+      'bookForm.category': '',
+      'bookForm.date': date,
+      'bookForm.note': '',
+      bookCategories: cats,
+      bookTypeLabel: typeLabelMap[type] || '支出',
+    })
+  },
+
+  getBookCats(type) {
+    if (type === 'income') return ['工资', '兼职', '奖金', '稿费', '理财', '补贴', '股息']
+    if (type === 'payForward') return ['餐饮', '交通', '购物', '办公用品', '快递', '维修']
+    if (type === 'payable') return ['房租', '通讯', '水电', '物业', '贷款', '税务']
+    return ['餐饮', '交通', '购物', '房租', '通讯', '医疗', '外卖', '打车', '水电', '零食', '娱乐']
+  },
+
+  onBookScopeToggle(e) {
+    const scope = e.currentTarget.dataset.scope
+    this.setData({
+      bookScope: scope,
+      bookScopeLabel: scope === 'personal' ? '个人' : '公司',
+    })
+    if (this.data.showBookCatPanel) this.refreshBookCatPanel()
+  },
+
+  onBookClose() {
+    if (this.data.showBookCatPanel) {
+      this.setData({ showBookCatPanel: false })
+    } else {
+      this.setData({ showBookPopup: false })
+    }
+  },
+
+  onBookTypeSelect(e) {
+    const type = e.currentTarget.dataset.type
+    const typeLabelMap = { income: '收入', expense: '支出', payForward: '垫付', payable: '应付' }
+    this.setData({
+      'bookForm.type': type,
+      'bookForm.category': '',
+      bookCategories: this.getBookCats(type),
+      bookTypeLabel: typeLabelMap[type] || '支出',
+    })
+    if (this.data.showBookCatPanel) this.refreshBookCatPanel()
+  },
+
+  onBookCatSelect(e) {
+    this.setData({ 'bookForm.category': e.currentTarget.dataset.cat })
+  },
+
+  onBookOpenCatPanel() {
+    this.refreshBookCatPanel()
+    this.setData({ showBookCatPanel: true })
+  },
+
+  refreshBookCatPanel() {
+    const scope = this.data.bookScope
+    const type = this.data.bookForm.type
+    const source = scope === 'personal' ? this.data.personalCategories : this.data.companyCategories
+    const inOut = (type === 'income') ? 'in' : 'out'
+    this.setData({ bookCatPanelData: source.filter(item => item.inOut === inOut) })
+  },
+
+  onBookCatPanelSelect(e) {
+    this.setData({
+      'bookForm.category': e.currentTarget.dataset.cat,
+      showBookCatPanel: false,
+    })
+  },
+
+  onBookAmountInput(e) {
+    this.setData({ 'bookForm.amount': e.detail.value })
+  },
+
+  onBookKey(e) {
+    const key = e.currentTarget.dataset.key
+    let amount = this.data.bookForm.amount || ''
+    if (key === 'del') {
+      amount = amount.slice(0, -1)
+    } else if (key === '.') {
+      if (!amount.includes('.')) {
+        amount += amount ? '.' : '0.'
+      }
+    } else {
+      // 限制小数点后两位
+      const parts = amount.split('.')
+      if (parts.length === 2 && parts[1].length >= 2) return
+      // 限制最多9位
+      if (amount.replace('.', '').length >= 9) return
+      amount += key
+    }
+    this.setData({ 'bookForm.amount': amount })
+  },
+
+  onBookNoteInput(e) {
+    this.setData({ 'bookForm.note': e.detail.value })
+  },
+
+  onBookDateChange(e) {
+    this.setData({ 'bookForm.date': e.detail.value })
+  },
+
+  onBookSave() {
+    const { type, amount, category, date, note } = this.data.bookForm
+    if (!amount || parseFloat(amount) <= 0) {
+      wx.showToast({ title: '请输入金额', icon: 'none' })
+      return
+    }
+    if (!category) {
+      wx.showToast({ title: '请选择分类', icon: 'none' })
+      return
+    }
+    const typeLabelMap = { income: '收入', expense: '支出', payForward: '垫付', payable: '应付' }
+    const itemType = type === 'income' ? 'in' : 'out'
+    const newItem = {
+      id: Date.now(),
+      category: category,
+      type: itemType,
+      typeLabel: typeLabelMap[type] || '支出',
+      scope: this.data.bookScope,
+      amount: parseFloat(amount).toFixed(2),
+      date: date,
+      note: note || '',
+    }
+    const items = [newItem, ...this.data.detailItems]
+    this.setData({ detailItems: items, showBookPopup: false })
+    wx.showToast({ title: '记账成功', icon: 'success' })
+  },
 
   onModalClose() {
     this.setData({ modalItem: null })

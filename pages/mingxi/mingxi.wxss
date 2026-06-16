@@ -7149,3 +7149,353 @@ page {
 .page--dark .privacy-policy-update {
   color: #888;
 }
+
+/* ========== 记账入口卡片 ========== */
+.book-entry-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 32rpx 0;
+  background: #fff;
+  border-radius: 16rpx;
+  min-height: 160rpx;
+}
+
+.book-entry-dot {
+  width: 24rpx;
+  height: 24rpx;
+  border-radius: 50%;
+  margin-bottom: 12rpx;
+}
+.book-entry-dot--in { background: #4caf50; }
+.book-entry-dot--out { background: #f44336; }
+.book-entry-dot--transfer { background: #2196f3; }
+
+.book-entry-text {
+  font-size: 28rpx;
+  font-weight: 600;
+  color: #333;
+}
+
+/* ========== 记账半屏弹窗 ========== */
+.book-mask {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0, 0, 0, 0.4);
+  z-index: 1000;
+}
+
+.book-sheet {
+  position: fixed;
+  left: 0; right: 0; bottom: 0;
+  height: 55vh;
+  background: #fff;
+  border-radius: 32rpx 32rpx 0 0;
+  z-index: 1001;
+  display: flex;
+  flex-direction: column;
+  padding: 24rpx 28rpx 0;
+}
+
+.book-type-bar {
+  display: flex;
+  gap: 12rpx;
+  margin-bottom: 24rpx;
+}
+
+.book-type-tab {
+  flex: 1;
+  text-align: center;
+  padding: 18rpx 0;
+  font-size: 26rpx;
+  color: #888;
+  border-radius: 12rpx;
+  background: #f5f5f5;
+  font-weight: 500;
+}
+.book-type-tab--active {
+  color: #fff;
+  font-weight: 600;
+}
+.book-type-tab--income.book-type-tab--active { background: #07C160; }
+.book-type-tab--expense.book-type-tab--active { background: #e74c3c; }
+.book-type-tab--payForward.book-type-tab--active { background: #f0ad4e; }
+.book-type-tab--payable.book-type-tab--active { background: #4a90d9; }
+
+.book-scope-bar {
+  display: flex;
+  background: #f0f0f0;
+  border-radius: 20rpx;
+  padding: 6rpx;
+  flex-shrink: 0;
+}
+.book-scope-tab {
+  width: 160rpx;
+  text-align: center;
+  padding: 16rpx 0;
+  font-size: 28rpx;
+  color: #999;
+  border-radius: 16rpx;
+  font-weight: 600;
+}
+.book-scope-tab--active {
+  background: #07C160;
+  color: #fff;
+  font-weight: 700;
+  box-shadow: 0 4rpx 16rpx rgba(7, 193, 96, 0.35);
+}
+.page--dark .book-scope-bar { background: #2a2a3a; }
+.page--dark .book-scope-tab--active { background: #07C160; color: #fff; }
+
+.book-amount-row {
+  display: flex;
+  align-items: center;
+  padding: 10rpx 0 20rpx;
+  border-bottom: 2rpx solid #f0f0f0;
+  margin-bottom: 20rpx;
+}
+
+.book-amount-left {
+  display: flex;
+  align-items: baseline;
+  flex-shrink: 0;
+}
+
+.book-yen {
+  font-size: 40rpx;
+  font-weight: 300;
+  color: #333;
+  margin-right: 8rpx;
+}
+
+
+/* 金额显示 */
+.book-amount-value {
+  font-size: 56rpx;
+  font-weight: 600;
+  color: #333;
+}
+
+/* 数字键盘 */
+.book-keypad {
+  padding: 8rpx 0 16rpx;
+}
+
+.book-keypad-row {
+  display: flex;
+  gap: 12rpx;
+  margin-bottom: 12rpx;
+}
+
+.book-key {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 80rpx;
+  background: #f5f5f5;
+  border-radius: 12rpx;
+  font-size: 36rpx;
+  font-weight: 500;
+  color: #333;
+}
+
+.book-key:active {
+  background: #e0e0e0;
+}
+
+.book-key--dot {
+  font-size: 40rpx;
+}
+
+.book-key--del {
+  background: #e8e8e8;
+}
+
+.page--dark .book-key {
+  background: #2a2a3a;
+  color: #e0e0e0;
+}
+.page--dark .book-key:active {
+  background: #3a3a4e;
+}
+.page--dark .book-key--del {
+  background: #333;
+}
+.page--dark .book-amount-value {
+  color: #e0e0e0;
+}
+
+.book-cat-select {
+  display: flex;
+  align-items: center;
+  gap: 8rpx;
+  padding: 18rpx 0;
+  border-bottom: 1rpx solid #f0f0f0;
+  margin-bottom: 16rpx;
+}
+.book-cat-select-label {
+  font-size: 24rpx;
+  color: #fff;
+  background: #4a90d9;
+  padding: 4rpx 14rpx;
+  border-radius: 8rpx;
+  font-weight: 500;
+}
+.book-cat-select-label:first-child {
+  background: #07C160;
+}
+.book-cat-select-sep {
+  font-size: 24rpx;
+  color: #ccc;
+}
+.book-cat-select-val {
+  flex: 1;
+  font-size: 26rpx;
+  color: #333;
+  font-weight: 500;
+}
+.book-cat-select-arrow {
+  font-size: 32rpx;
+  color: #ccc;
+  flex-shrink: 0;
+}
+
+.page--dark .book-cat-select { border-bottom-color: #333; }
+.page--dark .book-cat-select-val { color: #e0e0e0; }
+
+/* 分类选择面板 */
+.book-cat-panel {
+  position: fixed;
+  left: 0; right: 0; bottom: 0;
+  height: 60vh;
+  background: #fff;
+  border-radius: 32rpx 32rpx 0 0;
+  z-index: 1002;
+  display: flex;
+  flex-direction: column;
+  padding: 28rpx 28rpx 0;
+}
+.book-cat-panel-scope {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 20rpx;
+}
+.book-cat-panel-grid {
+  flex: 1;
+  margin-top: 20rpx;
+}
+.book-cat-panel-icons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16rpx;
+  padding-bottom: 40rpx;
+}
+.book-cat-panel-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8rpx;
+  width: calc((100% - 80rpx) / 6);
+  padding: 12rpx 0;
+}
+.book-cat-panel-emoji {
+  width: 72rpx;
+  height: 72rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f5f5f5;
+  border-radius: 18rpx;
+  font-size: 34rpx;
+}
+.book-cat-panel-name {
+  font-size: 20rpx;
+  color: #888;
+}
+
+.page--dark .book-cat-select { border-bottom-color: #333; }
+.page--dark .book-cat-panel { background: #1e1e2e; }
+.page--dark .book-cat-panel-emoji { background: #2a2a3a; }
+.page--dark .book-cat-panel-name { color: #aaa; }
+
+.book-note-input {
+  flex: 1;
+  min-width: 0;
+  font-size: 26rpx;
+  color: #999;
+  height: 48rpx;
+  text-align: right;
+  margin-left: 16rpx;
+}
+
+.book-date-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20rpx 0;
+  border-bottom: 1rpx solid #f0f0f0;
+  font-size: 28rpx;
+  color: #888;
+}
+.book-date-row picker {
+  width: 100%;
+}
+.book-date-picker {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+}
+
+.book-btn-row {
+  display: flex;
+  gap: 20rpx;
+  margin-top: auto;
+  padding: 20rpx 0 40rpx;
+}
+
+.book-btn-cancel {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24rpx 0;
+  border-radius: 16rpx;
+  font-size: 30rpx;
+  font-weight: 600;
+  background: #f5f5f5;
+  color: #888;
+}
+
+.book-btn-save {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24rpx 0;
+  border-radius: 16rpx;
+  font-size: 30rpx;
+  font-weight: 600;
+  background: linear-gradient(135deg, #4a90d9, #6c5ce7);
+  color: #fff;
+}
+
+/* ========== 深色模式 ========== */
+.page--dark .book-entry-card { background: #2a2a3a !important; }
+.page--dark .book-entry-text { color: #e0e0e0 !important; }
+.page--dark .book-sheet { background: #1e1e2e; }
+.page--dark .book-type-bar { background: #2a2a3a; }
+.page--dark .book-type-tab { background: #2a2a3a; color: #888; }
+.page--dark .book-type-bar { background: transparent; }
+.page--dark .book-type-tab--income.book-type-tab--active { background: #07C160; color: #fff; }
+.page--dark .book-type-tab--expense.book-type-tab--active { background: #e74c3c; color: #fff; }
+.page--dark .book-type-tab--payForward.book-type-tab--active { background: #f0ad4e; color: #fff; }
+.page--dark .book-type-tab--payable.book-type-tab--active { background: #4a90d9; color: #fff; }
+.page--dark .book-yen { color: #e0e0e0 !important; }
+.page--dark .book-amount-row { border-bottom-color: #333; }
+.page--dark .book-note-input { color: #aaa; }
+.page--dark .book-date-row { border-bottom-color: #333; }
+.page--dark .book-date-row { color: #aaa; }
+.page--dark .book-btn-cancel { background: #2a2a3a; color: #aaa; }
