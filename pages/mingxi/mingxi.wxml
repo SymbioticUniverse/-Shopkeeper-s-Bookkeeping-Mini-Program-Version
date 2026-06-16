@@ -483,7 +483,7 @@
           <view class="report-chart-block">
             <canvas type="2d" id="lineChart" class="report-canvas" bindtouchstart="onChartTap"></canvas>
           </view>
-          <text class="report-chart-label">收入 / 支出柱状图</text>
+          <text class="report-chart-label">{{reportType === 0 ? '个人' : '公司'}} · 收入 / 支出柱状图</text>
           <view class="report-chart-block">
             <canvas type="2d" id="barChart" class="report-canvas"></canvas>
           </view>
