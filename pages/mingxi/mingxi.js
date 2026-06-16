@@ -746,9 +746,8 @@ Page({
   },
 
   // ---- Canvas 折线图 ----
-  computeChartData(scope) {
-    let items = this.data.detailItems || []
-    if (scope) items = items.filter(item => item.scope === scope)
+  computeChartData() {
+    const items = this.data.detailItems || []
     const period = this.data.reportPeriod
     const groups = {}
     const now = new Date()
@@ -757,20 +756,23 @@ Page({
     const today = now.getDate()
 
     const getKey = (item) => {
-      const dateStr = item.date
+      const dateStr = item.date // "YYYY-MM-DD" or "MM月DD日"
       if (period === 0 || period === 3) {
+        // 月度/日度: 按天
         const match = dateStr.match(/(\d+)月(\d+)日/)
         if (match) return String(parseInt(match[2]))
         const m2 = dateStr.match(/(\d+)-(\d+)-(\d+)/)
         if (m2) return String(parseInt(m2[3]))
         return dateStr
       } else if (period === 1) {
+        // 季度: 按月
         const match = dateStr.match(/(\d+)月/)
         if (match) return match[1] + '月'
         const m2 = dateStr.match(/(\d+)-(\d+)/)
         if (m2) return parseInt(m2[2]) + '月'
         return dateStr
       } else {
+        // 年度: 按季度
         const match = dateStr.match(/(\d+)月/)
         if (match) {
           const m = parseInt(match[1])
@@ -796,25 +798,7 @@ Page({
       else groups[key].expense += amt
     })
 
-    const entries = Object.entries(groups)
-    if (entries.length === 0) {
-      // Placeholder: generate zero-data labels for current period
-      const labels = []
-      if (period === 0 || period === 3) {
-        const pickerDate = this.data.reportPickerDate
-        const [y, m] = (pickerDate || '').split('-').map(Number)
-        const daysInMonth = y && m ? new Date(y, m, 0).getDate() : 30
-        const maxDay = (y === thisYear && m === thisMonth) ? today : daysInMonth
-        for (let d = 1; d <= maxDay; d++) labels.push(String(d))
-      } else if (period === 1) {
-        for (let mn = 1; mn <= 3; mn++) labels.push(mn + '月')
-      } else {
-        labels.push('Q1', 'Q2', 'Q3', 'Q4')
-      }
-      return labels.map(label => ({ label, income: 0, expense: 0, receivable: 0, payable: 0, net: 0 }))
-    }
-
-    return entries.map(([label, v]) => ({
+    return Object.entries(groups).map(([label, v]) => ({
       label,
       income: Math.round(v.income * 100) / 100,
       expense: Math.round(v.expense * 100) / 100,
@@ -833,28 +817,13 @@ Page({
     ctx.fillStyle = '#ffffff'
     ctx.fillRect(0, 0, w, h)
 
-    if (!chartData || chartData.length === 0) {
-      ctx.fillStyle = '#bbb'
-      ctx.font = '13px sans-serif'
-      ctx.textAlign = 'center'
-      ctx.fillText('暂无数据', w / 2, h / 2)
-      return
-    }
-
-    // Title
-    const scopeLabel = this.data.reportType === 0 ? '个人' : '公司'
-    ctx.fillStyle = '#666'
-    ctx.font = '11px sans-serif'
-    ctx.textAlign = 'left'
-    ctx.fillText(scopeLabel + ' · 收支趋势', ml, 14)
-
     // Find Y range
     const nets = chartData.map(d => d.net)
     const maxAbs = Math.max(Math.abs(Math.max(...nets)), Math.abs(Math.min(...nets)), 1)
     const yMax = Math.ceil(maxAbs / 1000) * 1000 + 1000
     const yMin = -yMax
 
-    function toX(i) { return ml + (i / Math.max(1, chartData.length - 1)) * pw }
+    function toX(i) { return ml + (i / (chartData.length - 1)) * pw }
     function toY(v) { return mt + ph / 2 - (v / yMax) * (ph / 2) }
     const zeroY = mt + ph / 2
 
@@ -1032,32 +1001,15 @@ Page({
     ctx.fillStyle = '#ffffff'
     ctx.fillRect(0, 0, w, h)
 
-    // Title
-    const scopeLabel = this.data.reportType === 0 ? '个人' : '公司'
-    ctx.fillStyle = '#666'
-    ctx.font = '11px sans-serif'
-    ctx.textAlign = 'left'
-    ctx.fillText(scopeLabel + ' · 收入 / 支出', ml, 14)
-
-    if (!chartData || chartData.length === 0) {
-      ctx.fillStyle = '#bbb'
-      ctx.font = '13px sans-serif'
-      ctx.textAlign = 'center'
-      ctx.fillText('暂无数据', w / 2, h / 2)
-      return
-    }
-
-    // Y range — adaptive scale
+    // Y range
     const maxVal = Math.max(
       Math.max(...chartData.map(d => d.income)),
       Math.max(...chartData.map(d => d.expense)),
       1
     )
-    const step = maxVal <= 50 ? 10 : maxVal <= 500 ? 50 : maxVal <= 2000 ? 200 : 1000
-    const yMax = Math.ceil(maxVal / step) * step + step
+    const yMax = Math.ceil(maxVal / 1000) * 1000 + 1000
 
-    const n = Math.max(1, chartData.length)
-    const barW = Math.max(3, pw / n * 0.4)
+    const barW = Math.max(3, pw / chartData.length * 0.4)
     const gap = barW * 0.25
     const groupW = barW * 2 + gap
     const padX = groupW / 2
@@ -1072,21 +1024,20 @@ Page({
     ctx.font = '9px sans-serif'
     ctx.textAlign = 'right'
     const steps = 4
-    const fmtVal = (v) => v >= 1000 ? (v / 1000).toFixed(1) + 'k' : String(Math.round(v))
     for (let i = 0; i <= steps; i++) {
       const val = (yMax / steps) * i
       const gy = toY(val)
       ctx.strokeStyle = 'rgba(0,0,0,0.06)'
       ctx.lineWidth = 1
       ctx.beginPath(); ctx.moveTo(ml, gy); ctx.lineTo(w - mr, gy); ctx.stroke()
-      ctx.fillText(fmtVal(val), ml - 6, gy + 3)
+      ctx.fillText((val / 1000).toFixed(1) + 'k', ml - 6, gy + 3)
     }
 
     // X labels
     ctx.fillStyle = '#a0a0a0'
     ctx.textAlign = 'center'
-    const xStep = Math.max(1, Math.floor(chartData.length / 7))
-    for (let i = 0; i < chartData.length; i += xStep) {
+    const step = Math.max(1, Math.floor(chartData.length / 7))
+    for (let i = 0; i < chartData.length; i += step) {
       ctx.fillText(chartData[i].label, toX(i), h - 4)
     }
 
@@ -1103,12 +1054,12 @@ Page({
     }
     ctx.setLineDash([])
 
-    // Bars
+    // Bars — both rise from bottom
     for (let i = 0; i < chartData.length; i++) {
       const { income, expense } = chartData[i]
       const cx = toX(i)
-      const incomeH = Math.max(0, Math.min((income / yMax) * ph, ph))
-      const expenseH = Math.max(0, Math.min((expense / yMax) * ph, ph))
+      const incomeH = Math.max(1, (income / yMax) * ph)
+      const expenseH = Math.max(1, (expense / yMax) * ph)
 
       // Income bar (left side)
       ctx.fillStyle = '#00d042'
@@ -1133,9 +1084,8 @@ Page({
   },
 
   // ---- 饼状图 ----
-  computePieData(scope) {
-    let items = this.data.detailItems || []
-    if (scope) items = items.filter(item => item.scope === scope)
+  computePieData() {
+    const items = this.data.detailItems || []
     const incomeMap = {}
     const expenseMap = {}
     const TOP_N = 6
@@ -1153,7 +1103,6 @@ Page({
     const topThenOther = (map) => {
       const list = Object.entries(map).map(([name, value]) => ({ name, value: Math.round(value * 100) / 100 }))
       list.sort((a, b) => b.value - a.value)
-      if (list.length === 0) return [{ name: '暂无数据', value: 1 }]
       const top = list.slice(0, TOP_N)
       const rest = list.slice(TOP_N).reduce((s, it) => s + it.value, 0)
       if (rest > 0) top.push({ name: '其他', value: Math.round(rest * 100) / 100 })
@@ -1304,8 +1253,7 @@ Page({
   },
 
   initPieCharts() {
-    const scope = this.data.reportType === 0 ? 'personal' : 'company'
-    const pieData = this.computePieData(scope)
+    const pieData = this.computePieData()
     const palette = ['#007aff', '#ff9500', '#af52de', '#34c759', '#ff3b30', '#ffcc00', '#8e8e93']
     const selected = this._pieSelected || {}
 
@@ -1355,8 +1303,7 @@ Page({
         let h = res[0].height || 200
         const dpr = wx.getSystemInfoSync().pixelRatio || 2
 
-        const scope = this.data.reportType === 0 ? 'personal' : 'company'
-        const chartData = this.computeChartData(scope)
+        const chartData = this.computeChartData()
 
         if (w < 10 || h < 10) {
           const query2 = this.createSelectorQuery()
@@ -1453,8 +1400,7 @@ Page({
             canvas.height = h * dpr
             ctx.scale(dpr, dpr)
 
-            const scope = this.data.reportType === 0 ? 'personal' : 'company'
-            const chartData = this.computeChartData(scope)
+            const chartData = this.computeChartData()
             this.drawStockChart(ctx, w, h, chartData)
           }).exec()
           return
@@ -1464,8 +1410,7 @@ Page({
         canvas.height = h * dpr
         ctx.scale(dpr, dpr)
 
-        const scope = this.data.reportType === 0 ? 'personal' : 'company'
-        const chartData = this.computeChartData(scope)
+        const chartData = this.computeChartData()
         this.drawStockChart(ctx, w, h, chartData)
       })
   },
