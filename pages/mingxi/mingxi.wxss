@@ -6701,3 +6701,362 @@ page {
 .cat-modal-btn--confirm {
   color: #4a90d9;
 }
+
+/* 联系我们获好礼页 */
+.contact-gift-card {
+  overflow: hidden;
+}
+
+.contact-gift-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  padding: 24rpx 28rpx;
+}
+
+.contact-gift-info {
+  align-items: center;
+  margin-bottom: 28rpx;
+}
+
+.contact-gift-info-title {
+  display: block;
+  font-size: 34rpx;
+  font-weight: 500;
+  color: #000;
+  text-align: center;
+  margin-bottom: 12rpx;
+}
+
+.contact-gift-info-desc {
+  display: block;
+  font-size: 24rpx;
+  color: #a0a0a0;
+  text-align: center;
+  line-height: 1.6;
+}
+
+.contact-gift-form {
+  margin-bottom: 28rpx;
+}
+
+.contact-gift-textarea {
+  width: 100%;
+  height: 200rpx;
+  background: #f5f6f8;
+  border-radius: 16rpx;
+  padding: 20rpx 24rpx;
+  font-size: 28rpx;
+  color: #333;
+  box-sizing: border-box;
+  margin-bottom: 20rpx;
+}
+
+.contact-gift-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 88rpx;
+  background: linear-gradient(135deg, #4a90d9, #357abd);
+  border-radius: 16rpx;
+}
+
+.contact-gift-btn text {
+  font-size: 30rpx;
+  font-weight: 500;
+  color: #fff;
+}
+
+.contact-gift-links {
+  background: #f5f6f8;
+  border-radius: 16rpx;
+  padding: 24rpx;
+}
+
+.contact-gift-links-title {
+  display: block;
+  font-size: 26rpx;
+  font-weight: 500;
+  color: #333;
+  margin-bottom: 16rpx;
+}
+
+.contact-gift-link-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14rpx 0;
+}
+
+.contact-gift-link-item + .contact-gift-link-item {
+  border-top: 1rpx solid #e8e8e8;
+}
+
+.contact-gift-link-label {
+  font-size: 26rpx;
+  color: #666;
+}
+
+.contact-gift-link-value {
+  font-size: 26rpx;
+  color: #4a90d9;
+}
+
+/* 设置页 */
+.settings-card {
+  overflow: hidden;
+}
+
+.settings-scroll {
+  flex: 1;
+  min-height: 0;
+  padding: 16rpx 28rpx;
+}
+
+.settings-group {
+  margin-bottom: 28rpx;
+  padding: 0 60rpx 0 8rpx;
+}
+
+.settings-group-title {
+  display: block;
+  font-size: 24rpx;
+  color: #a0a0a0;
+  padding: 0 8rpx 12rpx 8rpx;
+}
+
+.settings-item {
+  display: flex;
+  align-items: center;
+  padding: 24rpx 20rpx;
+  background: #fff;
+  border-radius: 0;
+}
+
+.settings-item + .settings-item {
+  border-top: 1rpx solid #f0f0f0;
+}
+
+.settings-item:first-child {
+  border-radius: 16rpx 16rpx 0 0;
+}
+
+.settings-item--last {
+  border-radius: 0 0 16rpx 16rpx;
+}
+
+.settings-item:first-child:last-child {
+  border-radius: 16rpx;
+}
+
+.settings-item-label {
+  flex: 1;
+  font-size: 28rpx;
+  color: #333;
+}
+
+.settings-item-value {
+  font-size: 26rpx;
+  color: #a0a0a0;
+  margin-right: 8rpx;
+}
+
+.settings-item-value--warn {
+  color: #ff3b30;
+}
+
+.settings-item-arrow {
+  font-size: 28rpx;
+  color: #ccc;
+}
+
+/* ======== 深色模式 ======== */
+.page--dark {
+  background: linear-gradient(to top, #1a1a2e 0%, #16213e 37%, #1a1a3e 62%, #16213e 100%);
+}
+
+/* 卡片 */
+.page--dark .card,
+.page--dark .my-card {
+  background: rgba(30, 30, 46, 0.92) !important;
+}
+
+/* 标题文字 */
+.page--dark .tab-label-active,
+.page--dark .card-title,
+.page--dark .my-item-title,
+.page--dark .my-nickname,
+.page--dark .custom-cat-title,
+.page--dark .settings-item-label,
+.page--dark .settings-group-title,
+.page--dark .contact-gift-info-title,
+.page--dark .contact-gift-links-title,
+.page--dark .contact-gift-link-label,
+.page--dark .report-date-text,
+.page--dark .report-period-text--active,
+.page--dark .detail-date-text,
+.page--dark .bill-item-title,
+.page--dark .settle-item-title,
+.page--dark .vip-detail-name,
+.page--dark .vip-detail-price,
+.page--dark .company-boss-title,
+.page--dark .company-employee-success-title,
+.page--dark .export-bill-section-label,
+.page--dark .export-bill-format-label,
+.page--dark .export-bill-range-label,
+.page--dark .my-login-text,
+.page--dark .notify-text,
+.page--dark .audit-item-name {
+  color: #e0e0e0 !important;
+}
+
+/* 次要文字 */
+.page--dark .my-item-sub,
+.page--dark .card-subtitle,
+.page--dark .settings-item-value,
+.page--dark .contact-gift-info-desc,
+.page--dark .contact-gift-link-value,
+.page--dark .bill-item-sub,
+.page--dark .settle-item-sub,
+.page--dark .notify-time,
+.page--dark .audit-status,
+.page--dark .detail-date-label,
+.page--dark .report-date-label,
+.page--dark .export-bill-grid-text {
+  color: #888 !important;
+}
+
+/* 普通文字 */
+.page--dark .tab-label {
+  color: #888;
+}
+
+/* 设置条目 */
+.page--dark .settings-item {
+  background: #2a2a3a !important;
+}
+.page--dark .settings-item + .settings-item {
+  border-top-color: #333 !important;
+}
+
+/* 输入框 */
+.page--dark .contact-gift-textarea,
+.page--dark .contact-gift-links {
+  background: #2a2a3a;
+}
+.page--dark .contact-gift-textarea {
+  color: #e0e0e0;
+}
+
+/* 分割线 */
+.page--dark .divider,
+.page--dark .custom-cat-divider,
+.page--dark .my-group + .my-group {
+  border-top-color: #333 !important;
+}
+.page--dark .contact-gift-link-item + .contact-gift-link-item {
+  border-top-color: #333 !important;
+}
+
+/* 按钮 */
+.page--dark .contact-gift-btn {
+  background: linear-gradient(135deg, #5a9fe8, #4a7fc4);
+}
+
+/* 弹窗/模态 */
+.page--dark .popup-mask {
+  background: rgba(0, 0, 0, 0.6);
+}
+.page--dark .popup-card,
+.page--dark .cat-modal,
+.page--dark .bill-modal {
+  background: #1e1e2e;
+}
+.page--dark .popup-card-title,
+.page--dark .cat-modal-title,
+.page--dark .bill-modal-title {
+  color: #e0e0e0;
+}
+
+/* 我的页分组 */
+.page--dark .my-item {
+  background: #2a2a3a !important;
+}
+.page--dark .my-item + .my-item {
+  border-top-color: #333 !important;
+}
+
+/* VIP 卡片 */
+.page--dark .vip-card-single,
+.page--dark .vip-detail-body,
+.page--dark .vip-card-detail {
+  background: #2a2a3a !important;
+}
+
+/* header */
+.page--dark .header {
+  background: transparent;
+}
+
+/* 卡片玻璃效果 */
+.page--dark .glass-card {
+  background: rgba(30, 30, 46, 0.85);
+}
+
+/* 明细/结清条目 */
+.page--dark .bill-item,
+.page--dark .settle-item {
+  background: #2a2a3a !important;
+}
+.page--dark .bill-item + .bill-item,
+.page--dark .settle-item + .settle-item {
+  border-top-color: #333 !important;
+}
+
+/* 报表期间栏 */
+.page--dark .report-period-bar {
+  background: #2a2a3a;
+}
+.page--dark .report-period-item--active {
+  background: #4a7fc4;
+}
+
+/* 隐私政策页 */
+.privacy-policy-body {
+  padding: 8rpx 0 40rpx 0;
+}
+
+.privacy-policy-update {
+  display: block;
+  font-size: 24rpx;
+  color: #a0a0a0;
+  margin-bottom: 28rpx;
+}
+
+.privacy-policy-section {
+  display: block;
+  font-size: 30rpx;
+  font-weight: 500;
+  color: #333;
+  margin-bottom: 12rpx;
+  margin-top: 24rpx;
+}
+
+.privacy-policy-text {
+  display: block;
+  font-size: 26rpx;
+  color: #666;
+  line-height: 1.8;
+  margin-bottom: 8rpx;
+}
+
+.page--dark .privacy-policy-section {
+  color: #e0e0e0;
+}
+.page--dark .privacy-policy-text {
+  color: #888;
+}
+.page--dark .privacy-policy-update {
+  color: #888;
+}

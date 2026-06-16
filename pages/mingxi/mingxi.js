@@ -1,7 +1,143 @@
+// 多语言翻译表
+const LANG_TABLE = {
+  tab_detail:       { 'zh-CN': '明细',     'zh-TW': '明細',     'ja-JP': '明細',     'en-US': 'Details' },
+  tab_report:       { 'zh-CN': '报表',     'zh-TW': '報表',     'ja-JP': 'レポート', 'en-US': 'Reports' },
+  tab_book:         { 'zh-CN': '记账',     'zh-TW': '記賬',     'ja-JP': '記帳',     'en-US': 'Book' },
+  tab_settle:       { 'zh-CN': '结清',     'zh-TW': '結清',     'ja-JP': '精算',     'en-US': 'Settle' },
+  tab_my:           { 'zh-CN': '我的',     'zh-TW': '我的',     'ja-JP': 'マイ',     'en-US': 'My' },
+  my_login_register:  { 'zh-CN': '登录/注册',  'zh-TW': '登錄/註冊',  'ja-JP': 'ログイン',     'en-US': 'Login / Register' },
+  my_login_text:      { 'zh-CN': '登录 / 注册', 'zh-TW': '登錄 / 註冊', 'ja-JP': 'ログイン / 登録', 'en-US': 'Login / Register' },
+  vip_title:          { 'zh-CN': '升级为VIP',   'zh-TW': '升級為VIP',  'ja-JP': 'VIPにアップグレード', 'en-US': 'Upgrade to VIP' },
+  vip_sub:            { 'zh-CN': '畅享更多高级功能', 'zh-TW': '暢享更多高級功能', 'ja-JP': 'より多くの機能を楽しむ', 'en-US': 'Enjoy more advanced features' },
+  vip_subscribe:      { 'zh-CN': '升级订阅版',   'zh-TW': '升級訂閱版', 'ja-JP': 'サブスクリプション', 'en-US': 'Subscribe' },
+  my_link_company:    { 'zh-CN': '链接公司',   'zh-TW': '鏈接公司',   'ja-JP': '会社リンク',   'en-US': 'Link Company' },
+  my_invite_employee: { 'zh-CN': '邀请员工',   'zh-TW': '邀請員工',   'ja-JP': '従業員招待',   'en-US': 'Invite Employee' },
+  my_audit:           { 'zh-CN': '审核',       'zh-TW': '審核',       'ja-JP': '審査',         'en-US': 'Audit' },
+  my_notify:          { 'zh-CN': '通知',       'zh-TW': '通知',       'ja-JP': '通知',         'en-US': 'Notifications' },
+  my_share_ledger:    { 'zh-CN': '链接公司共享同一账本', 'zh-TW': '鏈接公司共享同一賬本', 'ja-JP': '会社と帳簿を共有', 'en-US': 'Share Ledger with Company' },
+  my_share_sub:       { 'zh-CN': '随时记账再也不忘', 'zh-TW': '隨時記賬再也不會忘', 'ja-JP': 'いつでも記帳', 'en-US': 'Never forget to bookkeep' },
+  my_export:          { 'zh-CN': '导出账单',   'zh-TW': '導出賬單',   'ja-JP': '帳票出力',     'en-US': 'Export Bills' },
+  my_export_sub:      { 'zh-CN': '一键导出',   'zh-TW': '一鍵導出',   'ja-JP': 'ワンクリック出力', 'en-US': 'One-click Export' },
+  my_contact:         { 'zh-CN': '联系我们获好礼', 'zh-TW': '聯繫我們獲好禮', 'ja-JP': 'お問い合わせ', 'en-US': 'Contact Us for Gifts' },
+  my_contact_sub:     { 'zh-CN': '提意见赠会员', 'zh-TW': '提意見贈會員', 'ja-JP': '意見でVIP進呈', 'en-US': 'Feedback for VIP' },
+  my_settings:        { 'zh-CN': '设置',       'zh-TW': '設置',       'ja-JP': '設定',         'en-US': 'Settings' },
+  custom_overview_title:   { 'zh-CN': '自定义简览页', 'zh-TW': '自定義簡覽頁', 'ja-JP': 'カスタム概要', 'en-US': 'Custom Overview' },
+  custom_overview_sub:     { 'zh-CN': '新简览',       'zh-TW': '新簡覽',       'ja-JP': '新概要',       'en-US': 'New Overview' },
+  custom_cat_title:    { 'zh-CN': '自定义分类', 'zh-TW': '自定義分類', 'ja-JP': 'カスタム分類', 'en-US': 'Custom Category' },
+  custom_cat_sub:      { 'zh-CN': '新分类',     'zh-TW': '新分類',     'ja-JP': '新分類',       'en-US': 'New Category' },
+  export_title:       { 'zh-CN': '导出账单',   'zh-TW': '導出賬單',   'ja-JP': '帳票出力',     'en-US': 'Export Bills' },
+  audit_title:      { 'zh-CN': '审核',        'zh-TW': '審核',        'ja-JP': '審査',         'en-US': 'Audit' },
+  notify_title:     { 'zh-CN': '通知',        'zh-TW': '通知',        'ja-JP': '通知',         'en-US': 'Notifications' },
+  contact_title:      { 'zh-CN': '联系我们获好礼', 'zh-TW': '聯繫我們獲好禮', 'ja-JP': 'お問い合わせ', 'en-US': 'Contact Us for Gifts' },
+  contact_info_title: { 'zh-CN': '提意见，赠 VIP 会员', 'zh-TW': '提意見，贈 VIP 會員', 'ja-JP': '意見でVIP進呈', 'en-US': 'Submit Feedback, Get VIP' },
+  contact_info_desc:  { 'zh-CN': '您的每一条建议我们都认真对待，提交有效反馈即可获赠 VIP 会员体验', 'zh-TW': '您的每一條建議我們都認真對待，提交有效反饋即可獲贈 VIP 會員體驗', 'ja-JP': 'ご意見を真摯に受け止め、有効なフィードバックにはVIP会員権を進呈します', 'en-US': 'We take every suggestion seriously. Submit valid feedback to receive a VIP membership trial.' },
+  contact_placeholder:{ 'zh-CN': '请在此输入您的意见或建议...', 'zh-TW': '請在此輸入您的意見或建議...', 'ja-JP': 'ご意見・ご提案を入力してください...', 'en-US': 'Please enter your feedback or suggestions...' },
+  contact_submit:     { 'zh-CN': '提交反馈',   'zh-TW': '提交反饋',   'ja-JP': '送信',         'en-US': 'Submit Feedback' },
+  contact_other:      { 'zh-CN': '其他联系方式', 'zh-TW': '其他聯繫方式', 'ja-JP': 'その他の連絡先', 'en-US': 'Other Contact Methods' },
+  contact_email_label:{ 'zh-CN': '官方邮箱',   'zh-TW': '官方郵箱',   'ja-JP': '公式メール',   'en-US': 'Official Email' },
+  settings_title:     { 'zh-CN': '设置',       'zh-TW': '設置',       'ja-JP': '設定',         'en-US': 'Settings' },
+  settings_general:   { 'zh-CN': '通用',       'zh-TW': '通用',       'ja-JP': '一般',         'en-US': 'General' },
+  settings_language:  { 'zh-CN': '语言',       'zh-TW': '語言',       'ja-JP': '言語',         'en-US': 'Language' },
+  settings_darkmode:  { 'zh-CN': '深色模式',   'zh-TW': '深色模式',   'ja-JP': 'ダークモード', 'en-US': 'Dark Mode' },
+  settings_privacy:   { 'zh-CN': '隐私与安全', 'zh-TW': '隱私與安全', 'ja-JP': 'プライバシー', 'en-US': 'Privacy & Security' },
+  settings_privacy_item:  { 'zh-CN': '隐私设置', 'zh-TW': '隱私設置', 'ja-JP': 'プライバシー設定', 'en-US': 'Privacy Settings' },
+  settings_security:  { 'zh-CN': '账号安全',   'zh-TW': '賬號安全',   'ja-JP': 'セキュリティ', 'en-US': 'Account Security' },
+  settings_ledger:    { 'zh-CN': '修改公司关系', 'zh-TW': '修改公司關係', 'ja-JP': '会社関係変更', 'en-US': 'Modify Company' },
+  settings_ledger_personal: { 'zh-CN': '个人账本', 'zh-TW': '個人賬本', 'ja-JP': '個人帳簿', 'en-US': 'Personal Ledger' },
+  settings_ledger_personal_val: { 'zh-CN': '请先注册或加入公司', 'zh-TW': '請先註冊或加入公司', 'ja-JP': '登録または会社に参加してください', 'en-US': 'Register or Join a Company' },
+  settings_rechoose_company: { 'zh-CN': '重新选择公司', 'zh-TW': '重新選擇公司', 'ja-JP': '会社を再選択', 'en-US': 'Re-choose Company' },
+  settings_rechoose_hint:    { 'zh-CN': '更换绑定的公司', 'zh-TW': '更換綁定的公司', 'ja-JP': '会社を変更', 'en-US': 'Switch company' },
+  settings_dissolve: { 'zh-CN': '解散公司',   'zh-TW': '解散公司',   'ja-JP': '会社解散',     'en-US': 'Dissolve Company' },
+  settings_dissolve_hint: { 'zh-CN': '不可撤销', 'zh-TW': '不可撤銷', 'ja-JP': '取消不可',   'en-US': 'Irreversible' },
+  settings_other:     { 'zh-CN': '其他',       'zh-TW': '其他',       'ja-JP': 'その他',       'en-US': 'Other' },
+  settings_clear_cache:   { 'zh-CN': '清除缓存', 'zh-TW': '清除緩存', 'ja-JP': 'キャッシュ削除', 'en-US': 'Clear Cache' },
+  settings_about:     { 'zh-CN': '关于我们',   'zh-TW': '關於我們',   'ja-JP': 'アプリ情報',   'en-US': 'About' },
+  settings_logout:    { 'zh-CN': '退出登录',   'zh-TW': '退出登錄',   'ja-JP': 'ログアウト',   'en-US': 'Log Out' },
+  detail_personal_ledger: { 'zh-CN': '个人账本', 'zh-TW': '個人賬本', 'ja-JP': '個人帳簿', 'en-US': 'Personal Ledger' },
+  detail_company_ledger:  { 'zh-CN': '公司账本', 'zh-TW': '公司賬本', 'ja-JP': '会社帳簿', 'en-US': 'Company Ledger' },
+  report_title:     { 'zh-CN': '报表',     'zh-TW': '報表',     'ja-JP': 'レポート', 'en-US': 'Reports' },
+  book_income:      { 'zh-CN': '收入',     'zh-TW': '收入',     'ja-JP': '収入',     'en-US': 'Income' },
+  book_expense:     { 'zh-CN': '支出',     'zh-TW': '支出',     'ja-JP': '支出',     'en-US': 'Expense' },
+  book_transfer:    { 'zh-CN': '转账',     'zh-TW': '轉賬',     'ja-JP': '振替',     'en-US': 'Transfer' },
+  detail_period_month:  { 'zh-CN': '月度', 'zh-TW': '月度', 'ja-JP': '月次', 'en-US': 'Monthly' },
+  detail_period_quarter:{ 'zh-CN': '季度', 'zh-TW': '季度', 'ja-JP': '四半期', 'en-US': 'Quarterly' },
+  detail_period_year:   { 'zh-CN': '年度', 'zh-TW': '年度', 'ja-JP': '年次', 'en-US': 'Yearly' },
+  detail_period_day:    { 'zh-CN': '日度', 'zh-TW': '日度', 'ja-JP': '日次', 'en-US': 'Daily' },
+  report_quarter_q1:   { 'zh-CN': '1季度',   'zh-TW': '1季度',   'ja-JP': 'Q1',   'en-US': 'Q1' },
+  report_quarter_q2:   { 'zh-CN': '2季度',   'zh-TW': '2季度',   'ja-JP': 'Q2',   'en-US': 'Q2' },
+  report_quarter_q3:   { 'zh-CN': '3季度',   'zh-TW': '3季度',   'ja-JP': 'Q3',   'en-US': 'Q3' },
+  report_quarter_q4:   { 'zh-CN': '4季度',   'zh-TW': '4季度',   'ja-JP': 'Q4',   'en-US': 'Q4' },
+  lang_zhcn: { 'zh-CN': '简体中文', 'zh-TW': '簡體中文', 'ja-JP': '簡体字中国語', 'en-US': 'Simplified Chinese' },
+  lang_zhtw: { 'zh-CN': '繁體中文', 'zh-TW': '繁體中文', 'ja-JP': '繁体字中国語', 'en-US': 'Traditional Chinese' },
+  lang_jajp: { 'zh-CN': '日本語',   'zh-TW': '日本語',   'ja-JP': '日本語',       'en-US': 'Japanese' },
+  lang_enus: { 'zh-CN': 'English',  'zh-TW': 'English',  'ja-JP': 'English',      'en-US': 'English' },
+  dark_system:  { 'zh-CN': '跟随系统', 'zh-TW': '跟隨系統', 'ja-JP': 'システム連動', 'en-US': 'Follow System' },
+  dark_light:   { 'zh-CN': '浅色模式', 'zh-TW': '淺色模式', 'ja-JP': 'ライトモード', 'en-US': 'Light Mode' },
+  dark_dark:    { 'zh-CN': '深色模式', 'zh-TW': '深色模式', 'ja-JP': 'ダークモード', 'en-US': 'Dark Mode' },
+  toast_lang_changed:    { 'zh-CN': '语言已切换',    'zh-TW': '語言已切換',    'ja-JP': '言語切替完了',   'en-US': 'Language changed' },
+  toast_dev:             { 'zh-CN': '功能开发中',    'zh-TW': '功能開發中',    'ja-JP': '開発中',          'en-US': 'Coming soon' },
+  toast_feedback_ok:     { 'zh-CN': '感谢您的反馈！VIP 会员已赠送', 'zh-TW': '感謝您的反饋！VIP 會員已贈送', 'ja-JP': 'ご意見ありがとう！VIP進呈', 'en-US': 'Thanks for your feedback! VIP granted.' },
+  toast_input_required:  { 'zh-CN': '请输入您的意见或建议', 'zh-TW': '請輸入您的意見或建議', 'ja-JP': 'ご意見を入力してください', 'en-US': 'Please enter your feedback' },
+  toast_no_company:      { 'zh-CN': '请先注册公司', 'zh-TW': '請先註冊公司', 'ja-JP': '先に会社登録を', 'en-US': 'Please register a company first' },
+  toast_approved:        { 'zh-CN': '已通过',       'zh-TW': '已通過',       'ja-JP': '承認済',       'en-US': 'Approved' },
+  toast_rejected:        { 'zh-CN': '已拒绝',       'zh-TW': '已拒絕',       'ja-JP': '拒否済',       'en-US': 'Rejected' },
+  toast_logged_out:      { 'zh-CN': '已退出登录',    'zh-TW': '已退出登錄',    'ja-JP': 'ログアウト完了',  'en-US': 'Logged out' },
+  toast_left_company:    { 'zh-CN': '已退出公司',    'zh-TW': '已退出公司',    'ja-JP': '会社退出完了',    'en-US': 'Left company' },
+  toast_dissolved:       { 'zh-CN': '公司已解散',    'zh-TW': '公司已解散',    'ja-JP': '会社解散完了',    'en-US': 'Company dissolved' },
+  toast_cache_cleared:   { 'zh-CN': '缓存已清除',    'zh-TW': '緩存已清除',    'ja-JP': 'キャッシュ削除完了', 'en-US': 'Cache cleared' },
+  modal_clear_cache_title:   { 'zh-CN': '清除缓存',   'zh-TW': '清除緩存',   'ja-JP': 'キャッシュ削除', 'en-US': 'Clear Cache' },
+  modal_clear_cache_content: { 'zh-CN': '确定要清除本地缓存数据吗？', 'zh-TW': '確定要清除本地緩存數據嗎？', 'ja-JP': 'ローカルキャッシュを削除しますか？', 'en-US': 'Clear local cache data?' },
+  modal_logout_title:   { 'zh-CN': '退出登录',   'zh-TW': '退出登錄',   'ja-JP': 'ログアウト',   'en-US': 'Log Out' },
+  modal_logout_content: { 'zh-CN': '确定要退出当前账号吗？', 'zh-TW': '確定要退出當前賬號嗎？', 'ja-JP': '現在のアカウントからログアウトしますか？', 'en-US': 'Log out of current account?' },
+  modal_leave_company_title: { 'zh-CN': '退出公司', 'zh-TW': '退出公司', 'ja-JP': '会社退出', 'en-US': 'Leave Company' },
+  modal_leave_company_content: { 'zh-CN': '退出后你将无法查看公司账本，确定退出吗？', 'zh-TW': '退出後將無法查看公司賬本，確定退出嗎？', 'ja-JP': '退出後は会社帳簿を閲覧できません。よろしいですか？', 'en-US': 'You will lose access to company ledger. Confirm?' },
+  modal_dissolve_title: { 'zh-CN': '解散公司', 'zh-TW': '解散公司', 'ja-JP': '会社解散', 'en-US': 'Dissolve Company' },
+  modal_dissolve_content: { 'zh-CN': '解散后所有员工将无法查看公司账本，此操作不可撤销，确定解散吗？', 'zh-TW': '解散後所有員工將無法查看公司賬本，此操作不可撤銷，確定解散嗎？', 'ja-JP': '解散後は全従業員が会社帳簿を閲覧できなくなります。取消不可、解散しますか？', 'en-US': 'All employees will lose access. This is irreversible. Confirm?' },
+  notify_no_data:   { 'zh-CN': '暂无通知',    'zh-TW': '暫無通知',    'ja-JP': '通知なし',     'en-US': 'No notifications' },
+  notify_delete:    { 'zh-CN': '删除',        'zh-TW': '刪除',        'ja-JP': '削除',         'en-US': 'Delete' },
+  audit_no_data:    { 'zh-CN': '暂无审核',    'zh-TW': '暫無審核',    'ja-JP': '審査なし',     'en-US': 'No pending audits' },
+  audit_approve:    { 'zh-CN': '通过',        'zh-TW': '通過',        'ja-JP': '承認',         'en-US': 'Approve' },
+  audit_reject:     { 'zh-CN': '拒绝',        'zh-TW': '拒絕',        'ja-JP': '拒否',         'en-US': 'Reject' },
+  audit_status_approved: { 'zh-CN': '已通过', 'zh-TW': '已通過', 'ja-JP': '承認済', 'en-US': 'Approved' },
+  audit_status_rejected: { 'zh-CN': '已拒绝', 'zh-TW': '已拒絕', 'ja-JP': '拒否済', 'en-US': 'Rejected' },
+  login_wx_btn:     { 'zh-CN': '微信一键登录', 'zh-TW': '微信一鍵登錄', 'ja-JP': 'WeChatログイン', 'en-US': 'WeChat Login' },
+  login_agreement:  { 'zh-CN': '登录即代表同意《用户协议》和《隐私政策》', 'zh-TW': '登錄即代表同意《用戶協議》和《隱私政策》', 'ja-JP': 'ログインで利用規約とプライバシーポリシーに同意', 'en-US': 'By logging in, you agree to the User Agreement and Privacy Policy.' },
+  login_other:      { 'zh-CN': '其他登录方式', 'zh-TW': '其他登錄方式', 'ja-JP': '他のログイン方法', 'en-US': 'Other Login Methods' },
+  company_boss_title:   { 'zh-CN': '我是老板',   'zh-TW': '我是老闆',   'ja-JP': '経営者',     'en-US': 'I am the Boss' },
+  company_employee_title: { 'zh-CN': '我是员工', 'zh-TW': '我是員工',   'ja-JP': '従業員',     'en-US': 'I am an Employee' },
+  company_name_label:  { 'zh-CN': '公司名称',   'zh-TW': '公司名稱',   'ja-JP': '会社名',       'en-US': 'Company Name' },
+  company_uid_label:   { 'zh-CN': 'UID 码',     'zh-TW': 'UID 碼',     'ja-JP': 'UIDコード',   'en-US': 'UID Code' },
+  company_join_btn:    { 'zh-CN': '一键加入公司', 'zh-TW': '一鍵加入公司', 'ja-JP': '会社に参加', 'en-US': 'Join Company' },
+  company_create_btn:  { 'zh-CN': '确认创建',   'zh-TW': '確認創建',   'ja-JP': '作成確認',     'en-US': 'Create' },
+  company_employee_success_title: { 'zh-CN': '已链接公司', 'zh-TW': '已鏈接公司', 'ja-JP': '会社リンク済', 'en-US': 'Company Linked' },
+  company_employee_success_role:  { 'zh-CN': '员工', 'zh-TW': '員工', 'ja-JP': '従業員', 'en-US': 'Employee' },
+  export_from:        { 'zh-CN': '从',         'zh-TW': '從',         'ja-JP': 'から',         'en-US': 'From' },
+  export_to:          { 'zh-CN': '到',         'zh-TW': '到',         'ja-JP': 'まで',         'en-US': 'To' },
+  export_format:      { 'zh-CN': '导出格式',   'zh-TW': '導出格式',   'ja-JP': '出力形式',     'en-US': 'Format' },
+  export_section_personal: { 'zh-CN': '个人总账本', 'zh-TW': '個人總賬本', 'ja-JP': '個人総勘定元帳', 'en-US': 'Personal Ledger' },
+  export_section_company:  { 'zh-CN': '公司总账本', 'zh-TW': '公司總賬本', 'ja-JP': '会社総勘定元帳', 'en-US': 'Company Ledger' },
+  export_btn:         { 'zh-CN': '一键导出',   'zh-TW': '一鍵導出',   'ja-JP': 'ワンクリック出力', 'en-US': 'Export' },
+  settle_personal:  { 'zh-CN': '个人',     'zh-TW': '個人',     'ja-JP': '個人',     'en-US': 'Personal' },
+  settle_company:   { 'zh-CN': '公司',     'zh-TW': '公司',     'ja-JP': '会社',     'en-US': 'Company' },
+}
+function getTLang(lang) {
+  const r = {}
+  for (const k of Object.keys(LANG_TABLE)) {
+    r[k] = (LANG_TABLE[k][lang] || LANG_TABLE[k]['zh-CN'] || k)
+  }
+  return r
+}
+function getLangLabel(lang) {
+  const map = { 'zh-CN': '简体中文', 'zh-TW': '繁體中文', 'ja-JP': '日本語', 'en-US': 'English' }
+  return map[lang] || '简体中文'
+}
+
 Page({
   data: {
+    t: {},
     showHeader: true,
     showOverview: true, // 简览页 vs 明细页
+    isDarkMode: false, // 深色模式
     currentTab: 0,
     tabs: [
       { text: '明细' },
@@ -98,6 +234,18 @@ Page({
     showExportBill: false, // 导出账单页
     showAuditPage: false, // 审核页
     showNotifyPage: false, // 通知页
+    showContactPage: false, // 联系我们获好礼页
+    contactFeedback: '', // 反馈内容
+    showSettingsPage: false, // 设置页
+    showPrivacyPage: false, // 隐私设置页
+    showPrivacyPolicyPage: false, // 隐私政策页
+    privacyAllowAnalytics: true,
+    privacyAllowCrashReport: true,
+    settingsLedgerRole: 'personal', // 当前账本角色: personal/boss/employee
+    settingsLanguage: 'zh-CN', // 语言设置
+    settingsLanguageLabel: '简体中文',
+    settingsDarkMode: 'system', // 深色模式: system/light/dark
+    settingsDarkModeLabel: '跟随系统',
     auditList: [],
     notifyList: [],
     hasPendingAudit: false,
@@ -427,6 +575,18 @@ Page({
       reportQuarterMultiIndex: [yearIdx, Math.floor((m - 1) / 3)],
       reportSelectedYear: y,
     })
+    // 初始化多语言
+    const lang = wx.getStorageSync('appLanguage') || 'zh-CN'
+    this._applyLanguage(lang)
+    // 初始化深色模式
+    const darkMode = wx.getStorageSync('appDarkMode') || 'system'
+    let isDark = false
+    if (darkMode === 'system') {
+      isDark = (wx.getSystemInfoSync().theme === 'dark')
+    } else {
+      isDark = (darkMode === 'dark')
+    }
+    this.setData({ isDarkMode: isDark })
     const savedUser = wx.getStorageSync('userInfo')
     if (savedUser) {
       this.setData({ isLoggedIn: true, userInfo: savedUser })
@@ -441,6 +601,50 @@ Page({
       wx.setStorageSync('auditCleaned', true)
     }
     this.updateAuditBadge()
+  },
+
+  _applyLanguage(lang) {
+    const t = getTLang(lang)
+    const set = { t }
+    // 更新 Tab 栏
+    set['tabs[0].text'] = t.tab_detail
+    set['tabs[1].text'] = t.tab_report
+    set['tabs[2].text'] = t.tab_book
+    set['tabs[3].text'] = t.tab_settle
+    set['tabs[4].text'] = t.tab_my
+    // 更新卡片标题
+    set['cardSets[0][0].title'] = t.detail_personal_ledger
+    set['cardSets[0][1].title'] = t.detail_company_ledger
+    set['cardSets[1][0].title'] = t.report_title
+    set['cardSets[2][0].title'] = t.book_income
+    set['cardSets[2][1].title'] = t.book_expense
+    set['cardSets[2][2].title'] = t.book_transfer
+    set['cardSets[3][0].title'] = t.tab_settle
+    set['cardSets[4][0].title'] = t.tab_my
+    // 更新报表卡片标题
+    set['reportCards[0].title'] = t.report_title
+    set['reportCards[1].title'] = t.report_title
+    set['reportCards[2].title'] = t.report_title
+    set['reportCards[3].title'] = t.report_title
+    set['reportCards[4].title'] = t.report_title
+    set['reportCards[5].title'] = t.report_title
+    // 更新报表周期标签
+    set['reportPeriods[0]'] = t.detail_period_month
+    set['reportPeriods[1]'] = t.detail_period_quarter
+    set['reportPeriods[2]'] = t.detail_period_year
+    set['reportPeriods[3]'] = t.detail_period_day
+    // 季度选项
+    set['quarterOptions[0]'] = t.report_quarter_q1
+    set['quarterOptions[1]'] = t.report_quarter_q2
+    set['quarterOptions[2]'] = t.report_quarter_q3
+    set['quarterOptions[3]'] = t.report_quarter_q4
+    set['reportQuarterRange[1][0]'] = t.report_quarter_q1
+    set['reportQuarterRange[1][1]'] = t.report_quarter_q2
+    set['reportQuarterRange[1][2]'] = t.report_quarter_q3
+    set['reportQuarterRange[1][3]'] = t.report_quarter_q4
+    // 语言标签
+    set.settingsLanguageLabel = getLangLabel(lang)
+    this.setData(set)
   },
 
   _syncOverviewCards() {
@@ -1818,6 +2022,200 @@ Page({
 
   onExportBillBack() {
     this.setData({ showExportBill: false })
+  },
+
+  onContactEntry() {
+    this.setData({ showContactPage: true, contactFeedback: '' })
+  },
+
+  onContactBack() {
+    this.setData({ showContactPage: false })
+  },
+
+  onContactInput(e) {
+    this.setData({ contactFeedback: e.detail.value })
+  },
+
+  onContactSubmit() {
+    const text = (this.data.contactFeedback || '').trim()
+    if (!text) {
+      wx.showToast({ title: '请输入您的意见或建议', icon: 'none' })
+      return
+    }
+    // 存储反馈
+    const feedbackList = wx.getStorageSync('feedbackList') || []
+    feedbackList.unshift({ id: Date.now(), text, time: new Date().toLocaleString() })
+    wx.setStorageSync('feedbackList', feedbackList)
+    wx.showToast({ title: '感谢您的反馈！VIP 会员已赠送', icon: 'success' })
+    this.setData({ contactFeedback: '' })
+  },
+
+  onSettingsEntry() {
+    const saved = wx.getStorageSync('companyInfo')
+    const ledgerRole = saved && saved.companyRole ? saved.companyRole : 'personal'
+    const lang = wx.getStorageSync('appLanguage') || 'zh-CN'
+    const langLabel = getLangLabel(lang)
+    const darkMode = wx.getStorageSync('appDarkMode') || 'system'
+    const darkLabels = { system: this.data.t.dark_system || '跟随系统', light: this.data.t.dark_light || '浅色模式', dark: this.data.t.dark_dark || '深色模式' }
+    const darkLabel = darkLabels[darkMode] || '跟随系统'
+    this._applyLanguage(lang)
+    this.setData({ showSettingsPage: true, settingsLedgerRole: ledgerRole, settingsLanguage: lang, settingsLanguageLabel: langLabel, settingsDarkMode: darkMode, settingsDarkModeLabel: darkLabel })
+  },
+
+  onSettingsBack() {
+    this.setData({ showSettingsPage: false })
+  },
+
+  onPrivacyBack() {
+    this.setData({ showPrivacyPage: false })
+  },
+
+  onPrivacyToggle(e) {
+    const { key } = e.currentTarget.dataset
+    const field = key === 'allowAnalytics' ? 'privacyAllowAnalytics' : 'privacyAllowCrashReport'
+    const val = !this.data[field]
+    this.setData({ [field]: val })
+    wx.setStorageSync(`privacy_${key}`, val)
+    wx.showToast({ title: val ? '已开启' : '已关闭', icon: 'success' })
+  },
+
+  onPrivacyClearData() {
+    wx.showModal({
+      title: '清除数据',
+      content: '此操作将清除所有本地记录，包括账目、分类、设置等。数据不可恢复，确定继续吗？',
+      success: (res) => {
+        if (res.confirm) {
+          wx.clearStorageSync()
+          this.setData({ showPrivacyPage: false, isLoggedIn: false, userInfo: null })
+          wx.showToast({ title: '数据已清除', icon: 'success' })
+        }
+      }
+    })
+  },
+
+  onPrivacyExportData() {
+    wx.showToast({ title: '数据导出功能开发中', icon: 'none' })
+  },
+
+  onPrivacyPolicyView() {
+    this.setData({ showPrivacyPolicyPage: true })
+  },
+
+  onPrivacyPolicyBack() {
+    this.setData({ showPrivacyPolicyPage: false })
+  },
+
+  onSettingsTap(e) {
+    const { action } = e.currentTarget.dataset
+    switch (action) {
+      case 'language':
+        wx.showActionSheet({
+          itemList: ['简体中文', '繁體中文', '日本語', 'English'],
+          success: (res) => {
+            const langMap = { 0: 'zh-CN', 1: 'zh-TW', 2: 'ja-JP', 3: 'en-US' }
+            const code = langMap[res.tapIndex]
+            wx.setStorageSync('appLanguage', code)
+            this._applyLanguage(code)
+            this.setData({ settingsLanguage: code })
+            wx.showToast({ title: getTLang(code).toast_lang_changed, icon: 'success' })
+          }
+        })
+        break
+      case 'darkMode':
+        wx.showActionSheet({
+          itemList: [this.data.t.dark_system, this.data.t.dark_light, this.data.t.dark_dark],
+          success: (res) => {
+            const modeMap = { 0: 'system', 1: 'light', 2: 'dark' }
+            const labelMap = { 0: this.data.t.dark_system, 1: this.data.t.dark_light, 2: this.data.t.dark_dark }
+            const mode = modeMap[res.tapIndex]
+            wx.setStorageSync('appDarkMode', mode)
+            const dark = mode === 'dark' || (mode === 'system' && wx.getSystemInfoSync().theme === 'dark')
+            this.setData({ settingsDarkMode: mode, settingsDarkModeLabel: labelMap[res.tapIndex], isDarkMode: dark })
+          }
+        })
+        break
+      case 'privacy':
+        this.setData({
+          showPrivacyPage: true,
+          privacyAllowAnalytics: wx.getStorageSync('privacy_allowAnalytics') !== false,
+          privacyAllowCrashReport: wx.getStorageSync('privacy_allowCrashReport') !== false
+        })
+        break
+      case 'security':
+        wx.showToast({ title: '账号安全开发中', icon: 'none' })
+        break
+      case 'registerOrJoin':
+        if (!this.data.isLoggedIn) {
+          wx.showModal({
+            title: '提示',
+            content: '请先注册并登录，再加入公司',
+            confirmText: '去注册',
+            success: (res) => {
+              if (res.confirm) {
+                this.setData({ showSettingsPage: false })
+                // 回到我的页面，用户可看到登录/注册入口
+              }
+            }
+          })
+        } else {
+          this.setData({ showSettingsPage: false, showCompanyShare: true, companyShareStep: 0, companyRole: 'employee', employeeUid: '' })
+        }
+        break
+      case 'rechooseCompany':
+        wx.showModal({
+          title: '重新选择公司',
+          content: '将清除当前公司绑定并重新选择，确定继续吗？',
+          success: (res) => {
+            if (res.confirm) {
+              wx.removeStorageSync('companyInfo')
+              this.setData({ showSettingsPage: false, showCompanyShare: true, companyShareStep: 1, companyRole: 'employee', employeeUid: '' })
+              wx.showToast({ title: '请重新选择公司', icon: 'none' })
+            }
+          }
+        })
+        break
+      case 'dissolveCompany':
+        wx.showModal({
+          title: '解散公司',
+          content: '解散后所有员工将无法查看公司账本，此操作不可撤销，确定解散吗？',
+          success: (res) => {
+            if (res.confirm) {
+              wx.removeStorageSync('companyInfo')
+              wx.removeStorageSync('auditList')
+              this.setData({ settingsLedgerRole: 'personal', showSettingsPage: false, hasPendingAudit: false })
+              wx.showToast({ title: '公司已解散', icon: 'success' })
+            }
+          }
+        })
+        break
+      case 'clearCache':
+        wx.showModal({
+          title: '清除缓存',
+          content: '确定要清除本地缓存数据吗？',
+          success: (res) => {
+            if (res.confirm) {
+              wx.showToast({ title: '缓存已清除', icon: 'success' })
+            }
+          }
+        })
+        break
+      case 'about':
+        wx.showToast({ title: '关于我们开发中', icon: 'none' })
+        break
+      case 'logout':
+        wx.showModal({
+          title: '退出登录',
+          content: '确定要退出当前账号吗？',
+          success: (res) => {
+            if (res.confirm) {
+              wx.removeStorageSync('userInfo')
+              this.setData({ isLoggedIn: false, userInfo: null, showSettingsPage: false })
+              wx.showToast({ title: '已退出登录', icon: 'success' })
+            }
+          }
+        })
+        break
+    }
   },
 
   onExportPeriodTap(e) {

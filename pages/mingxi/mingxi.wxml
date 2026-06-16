@@ -1,4 +1,4 @@
-<view class="page">
+<view class="page {{isDarkMode ? 'page--dark' : ''}}">
   <!-- 标题栏 -->
   <view class="header">
     <view class="header-left" wx:if="{{showOverview && !showCustomOverview && !showCustomCategory}}">
@@ -30,7 +30,7 @@
             <view class="custom-cat-back" bindtap="onExitEditMode">
               <view class="custom-cat-back-arrow"></view>
             </view>
-            <text class="custom-cat-title">自定义简览页</text>
+            <text class="custom-cat-title">{{t.custom_overview_title}}</text>
           </view>
           <scroll-view class="custom-edit-canvas" scroll-y enhanced show-scrollbar="{{false}}">
             <!-- 占1格卡片 -->
@@ -565,7 +565,7 @@
           <view class="custom-cat-back" bindtap="onVipBack">
             <view class="custom-cat-back-arrow"></view>
           </view>
-          <text class="custom-cat-title">升级订阅版</text>
+          <text class="custom-cat-title">{{t.vip_subscribe}}</text>
         </view>
         <!-- 缩略图视图 -->
         <view class="vip-thumb-scroll" wx:if="{{vipDetailId < 0}}">
@@ -632,7 +632,7 @@
           <view class="custom-cat-back" bindtap="onCustomCategoryBack">
             <view class="custom-cat-back-arrow"></view>
           </view>
-          <text class="custom-cat-title">自定义分类</text>
+          <text class="custom-cat-title">{{t.custom_cat_title}}</text>
         </view>
         <view class="custom-cat-divider"></view>
         <view class="custom-cat-body">
@@ -714,7 +714,7 @@
           <view class="custom-cat-back" bindtap="onLoginBack">
             <view class="custom-cat-back-arrow"></view>
           </view>
-          <text class="custom-cat-title">登录/注册</text>
+          <text class="custom-cat-title">{{t.my_login_text}}</text>
         </view>
         <view class="custom-cat-divider"></view>
         <view class="login-body">
@@ -763,7 +763,7 @@
           <view class="custom-cat-back" bindtap="onCompanyShareBack">
             <view class="custom-cat-back-arrow"></view>
           </view>
-          <text class="custom-cat-title">链接公司</text>
+          <text class="custom-cat-title">{{t.my_link_company}}</text>
         </view>
         <view class="custom-cat-divider"></view>
         <view class="company-share-body" wx:if="{{companyShareStep === 0}}">
@@ -864,7 +864,7 @@
           <view class="custom-cat-back" bindtap="onExportBillBack">
             <view class="custom-cat-back-arrow"></view>
           </view>
-          <text class="custom-cat-title">导出账单</text>
+          <text class="custom-cat-title">{{t.export_title}}</text>
         </view>
         <view class="custom-cat-divider"></view>
         <view class="report-period-bar">
@@ -941,7 +941,7 @@
           <view class="custom-cat-back" bindtap="onAuditBack">
             <view class="custom-cat-back-arrow"></view>
           </view>
-          <text class="custom-cat-title">审核</text>
+          <text class="custom-cat-title">{{t.audit_title}}</text>
         </view>
         <view class="custom-cat-divider"></view>
         <scroll-view class="audit-scroll" scroll-y enhanced show-scrollbar="{{false}}">
@@ -970,13 +970,173 @@
           </view>
         </scroll-view>
       </view>
+      <!-- 联系我们获好礼页 -->
+      <view class="card grid-span-3 my-card contact-gift-card" wx:elif="{{showContactPage}}">
+        <view class="custom-cat-header">
+          <view class="custom-cat-back" bindtap="onContactBack">
+            <view class="custom-cat-back-arrow"></view>
+          </view>
+          <text class="custom-cat-title">{{t.contact_title}}</text>
+        </view>
+        <view class="custom-cat-divider"></view>
+        <view class="contact-gift-body">
+          <view class="contact-gift-info">
+            <text class="contact-gift-info-title">{{t.contact_info_title}}</text>
+            <text class="contact-gift-info-desc">{{t.contact_info_desc}}</text>
+          </view>
+          <view class="contact-gift-form">
+            <textarea class="contact-gift-textarea" placeholder="{{t.contact_placeholder}}" value="{{contactFeedback}}" bindinput="onContactInput" maxlength="500" auto-height="false"></textarea>
+            <view class="contact-gift-btn" bindtap="onContactSubmit">
+              <text>{{t.contact_submit}}</text>
+            </view>
+          </view>
+          <view class="contact-gift-links">
+            <text class="contact-gift-links-title">{{t.contact_other}}</text>
+            <view class="contact-gift-link-item">
+              <text class="contact-gift-link-label">{{t.contact_email_label}}</text>
+              <text class="contact-gift-link-value">feedback@opc-book.com</text>
+            </view>
+            <view class="contact-gift-link-item">
+              <text class="contact-gift-link-label">微信公众号</text>
+              <text class="contact-gift-link-value">公私OPC记账</text>
+            </view>
+          </view>
+        </view>
+      </view>
+      <!-- 隐私政策页 -->
+      <view class="card grid-span-3 my-card privacy-card" wx:elif="{{showPrivacyPolicyPage}}">
+        <view class="custom-cat-header">
+          <view class="custom-cat-back" bindtap="onPrivacyPolicyBack">
+            <view class="custom-cat-back-arrow"></view>
+          </view>
+          <text class="custom-cat-title">隐私政策</text>
+        </view>
+        <view class="custom-cat-divider"></view>
+        <scroll-view class="settings-scroll" scroll-y enhanced show-scrollbar="{{false}}">
+          <view class="privacy-policy-body">
+            <text class="privacy-policy-update">更新日期：2026年06月16日</text>
+            <text class="privacy-policy-section">一、信息收集</text>
+            <text class="privacy-policy-text">我们仅收集实现"公私 OPC 记账"基本功能所必需的信息，包括：您主动录入的账目数据（金额、分类、日期、备注）；您的登录凭证（手机号或微信授权信息）；设备基础信息（系统版本、语言偏好）。</text>
+            <text class="privacy-policy-section">二、信息使用</text>
+            <text class="privacy-policy-text">您的账目数据仅存储在本地设备，用于为您提供记账、报表、结清等核心功能。我们不会将您的账目数据上传至服务器，也不会用于任何商业目的。</text>
+            <text class="privacy-policy-section">三、数据存储与安全</text>
+            <text class="privacy-policy-text">所有账目数据默认存储在您的设备本地。加入企业版后，部分协作数据（如公司账本）将通过加密传输同步至云端。您可以通过"设置-隐私设置"随时关闭数据收集或清除本地数据。</text>
+            <text class="privacy-policy-section">四、您的权利</text>
+            <text class="privacy-policy-text">您有权随时查看、导出或删除您的数据。您可以在隐私设置中管理数据收集偏好，在设置中退出登录或解散/退出公司。</text>
+            <text class="privacy-policy-section">五、联系我们</text>
+            <text class="privacy-policy-text">如有任何隐私相关问题，请通过"我的-联系我们获好礼"提交反馈，或发送邮件至 feedback@opc-book.com。</text>
+          </view>
+        </scroll-view>
+      </view>
+      <!-- 隐私设置页 -->
+      <view class="card grid-span-3 my-card privacy-card" wx:elif="{{showPrivacyPage}}">
+        <view class="custom-cat-header">
+          <view class="custom-cat-back" bindtap="onPrivacyBack">
+            <view class="custom-cat-back-arrow"></view>
+          </view>
+          <text class="custom-cat-title">隐私设置</text>
+        </view>
+        <view class="custom-cat-divider"></view>
+        <scroll-view class="settings-scroll" scroll-y enhanced show-scrollbar="{{false}}">
+          <view class="settings-group">
+            <view class="settings-group-title">数据收集</view>
+            <view class="settings-item">
+              <text class="settings-item-label">使用数据收集</text>
+              <text class="settings-item-value" bindtap="onPrivacyToggle" data-key="allowAnalytics">{{privacyAllowAnalytics ? '已开启' : '已关闭'}}</text>
+            </view>
+            <view class="settings-item settings-item--last">
+              <text class="settings-item-label">崩溃报告</text>
+              <text class="settings-item-value" bindtap="onPrivacyToggle" data-key="allowCrashReport">{{privacyAllowCrashReport ? '已开启' : '已关闭'}}</text>
+            </view>
+          </view>
+          <view class="settings-group">
+            <view class="settings-group-title">隐私政策</view>
+            <view class="settings-item settings-item--last" bindtap="onPrivacyPolicyView">
+              <text class="settings-item-label">查看隐私政策</text>
+              <text class="settings-item-arrow">〉</text>
+            </view>
+          </view>
+        </scroll-view>
+      </view>
+      <!-- 设置页 -->
+      <view class="card grid-span-3 my-card settings-card" wx:elif="{{showSettingsPage}}">
+        <view class="custom-cat-header">
+          <view class="custom-cat-back" bindtap="onSettingsBack">
+            <view class="custom-cat-back-arrow"></view>
+          </view>
+          <text class="custom-cat-title">{{t.settings_title}}</text>
+        </view>
+        <view class="custom-cat-divider"></view>
+        <scroll-view class="settings-scroll" scroll-y enhanced show-scrollbar="{{false}}">
+          <view class="settings-group">
+            <view class="settings-group-title">{{t.settings_general}}</view>
+            <view class="settings-item" bindtap="onSettingsTap" data-action="language">
+              <text class="settings-item-label">{{t.settings_language}}</text>
+              <text class="settings-item-value">{{settingsLanguageLabel || '简体中文'}}</text>
+              <text class="settings-item-arrow">〉</text>
+            </view>
+            <view class="settings-item" bindtap="onSettingsTap" data-action="darkMode">
+              <text class="settings-item-label">{{t.settings_darkmode}}</text>
+              <text class="settings-item-value">{{settingsDarkModeLabel || '跟随系统'}}</text>
+              <text class="settings-item-arrow">〉</text>
+            </view>
+          </view>
+          <view class="settings-group">
+            <view class="settings-group-title">{{t.settings_privacy}}</view>
+            <view class="settings-item" bindtap="onSettingsTap" data-action="privacy">
+              <text class="settings-item-label">{{t.settings_privacy_item}}</text>
+              <text class="settings-item-arrow">〉</text>
+            </view>
+            <view class="settings-item" bindtap="onSettingsTap" data-action="security">
+              <text class="settings-item-label">{{t.settings_security}}</text>
+              <text class="settings-item-arrow">〉</text>
+            </view>
+          </view>
+          <view class="settings-group">
+            <view class="settings-group-title">修改公司关系</view>
+            <view class="settings-item" wx:if="{{settingsLedgerRole === 'personal'}}" bindtap="onSettingsTap" data-action="registerOrJoin">
+              <text class="settings-item-label">{{t.settings_ledger_personal}}</text>
+              <text class="settings-item-value settings-item-value--warn">{{t.settings_ledger_personal_val}}</text>
+              <text class="settings-item-arrow">〉</text>
+            </view>
+            <view class="settings-item settings-item--warn" wx:if="{{settingsLedgerRole === 'employee'}}" bindtap="onSettingsTap" data-action="rechooseCompany">
+              <text class="settings-item-label">重新选择公司</text>
+              <text class="settings-item-value settings-item-value--warn">更换绑定的公司</text>
+              <text class="settings-item-arrow">〉</text>
+            </view>
+            <view class="settings-item settings-item--warn settings-item--last" wx:if="{{settingsLedgerRole === 'boss'}}" bindtap="onSettingsTap" data-action="dissolveCompany">
+              <text class="settings-item-label">{{t.settings_dissolve}}</text>
+              <text class="settings-item-value settings-item-value--warn">{{t.settings_dissolve_hint}}</text>
+              <text class="settings-item-arrow">〉</text>
+            </view>
+          </view>
+          <view class="settings-group">
+            <view class="settings-group-title">{{t.settings_other}}</view>
+            <view class="settings-item" bindtap="onSettingsTap" data-action="clearCache">
+              <text class="settings-item-label">{{t.settings_clear_cache}}</text>
+              <text class="settings-item-value settings-item-value--warn">12.5MB</text>
+              <text class="settings-item-arrow">〉</text>
+            </view>
+            <view class="settings-item" bindtap="onSettingsTap" data-action="about">
+              <text class="settings-item-label">{{t.settings_about}}</text>
+              <text class="settings-item-value">v1.0.0</text>
+              <text class="settings-item-arrow">〉</text>
+            </view>
+            <view class="settings-item settings-item--last" bindtap="onSettingsTap" data-action="logout">
+              <text class="settings-item-label">{{t.settings_logout}}</text>
+              <text class="settings-item-value settings-item-value--warn"></text>
+              <text class="settings-item-arrow">〉</text>
+            </view>
+          </view>
+        </scroll-view>
+      </view>
       <!-- 通知页 -->
       <view class="card grid-span-3 my-card notify-card" wx:elif="{{showNotifyPage}}">
         <view class="custom-cat-header">
           <view class="custom-cat-back" bindtap="onNotifyBack">
             <view class="custom-cat-back-arrow"></view>
           </view>
-          <text class="custom-cat-title">通知</text>
+          <text class="custom-cat-title">{{t.notify_title}}</text>
         </view>
         <view class="custom-cat-divider"></view>
         <scroll-view class="notify-scroll" scroll-y enhanced show-scrollbar="{{false}}">
@@ -998,7 +1158,7 @@
       <!-- 正常我的页面 -->
       <view class="card grid-span-3 my-card" wx:else>
         <view class="my-profile">
-          <text class="my-login-text" bindtap="onLoginEntry" wx:if="{{isLoggedIn === false}}">登录/注册</text>
+          <text class="my-login-text" bindtap="onLoginEntry" wx:if="{{isLoggedIn === false}}">{{t.my_login_register}}</text>
           <text class="my-nickname" bindtap="onLogout" wx:else>{{userInfo.nickName}}</text>
           <image class="my-avatar" src="{{userInfo.avatarUrl}}" wx:if="{{isLoggedIn && userInfo.avatarUrl}}" mode="aspectFill"></image>
           <view class="my-avatar" wx:else></view>
@@ -1007,25 +1167,25 @@
           <view class="my-item" bindtap="onVipEntry">
             <view class="my-item-icon icon-vip"></view>
             <view class="my-item-body">
-              <text class="my-item-title">升级为VIP</text>
-              <text class="my-item-sub">畅享更多高级功能</text>
+              <text class="my-item-title">{{t.vip_title}}</text>
+              <text class="my-item-sub">{{t.vip_sub}}</text>
             </view>
             <text class="my-item-arrow">〉</text>
           </view>
           <view class="my-icon-row">
-            <view class="my-icon-item" bindtap="onLinkCompany"><view class="my-icon-circle icon-link"></view><text class="my-icon-label">链接公司</text></view>
-            <view class="my-icon-item" bindtap="onInviteEmployee"><view class="my-icon-circle icon-invite"></view><text class="my-icon-label">邀请员工</text></view>
+            <view class="my-icon-item" bindtap="onLinkCompany"><view class="my-icon-circle icon-link"></view><text class="my-icon-label">{{t.my_link_company}}</text></view>
+            <view class="my-icon-item" bindtap="onInviteEmployee"><view class="my-icon-circle icon-invite"></view><text class="my-icon-label">{{t.my_invite_employee}}</text></view>
             <view class="my-icon-item" bindtap="onAuditEntry">
               <view class="my-icon-circle icon-audit" style="position:relative">
                 <view class="notify-badge" wx:if="{{hasPendingAudit}}"></view>
               </view>
-              <text class="my-icon-label">审核</text>
+              <text class="my-icon-label">{{t.my_audit}}</text>
             </view>
             <view class="my-icon-item" bindtap="onNotifyEntry">
               <view class="my-icon-circle icon-notify" style="position:relative">
                 <view class="notify-badge" wx:if="{{hasUnreadNotify}}"></view>
               </view>
-              <text class="my-icon-label">通知</text>
+              <text class="my-icon-label">{{t.my_notify}}</text>
             </view>
           </view>
         </view>
@@ -1033,48 +1193,48 @@
           <view class="my-item" bindtap="onCustomOverviewEntry">
             <view class="my-item-icon icon-custom-view"></view>
             <view class="my-item-body">
-              <text class="my-item-title">自定义简览页</text>
-              <text class="my-item-sub">新简览</text>
+              <text class="my-item-title">{{t.custom_overview_title}}</text>
+              <text class="my-item-sub">{{t.custom_overview_sub}}</text>
             </view>
             <text class="my-item-arrow">〉</text>
           </view>
           <view class="my-item" bindtap="onCustomCategoryEntry">
             <view class="my-item-icon icon-custom-cat"></view>
             <view class="my-item-body">
-              <text class="my-item-title">自定义分类</text>
-              <text class="my-item-sub">新分类</text>
+              <text class="my-item-title">{{t.custom_cat_title}}</text>
+              <text class="my-item-sub">{{t.custom_cat_sub}}</text>
             </view>
             <text class="my-item-arrow">〉</text>
           </view>
           <view class="my-item" bindtap="onCompanyShareEntry">
             <view class="my-item-icon icon-share"></view>
             <view class="my-item-body">
-              <text class="my-item-title">链接公司共享同一账本</text>
-              <text class="my-item-sub">随时记账再也不忘</text>
+              <text class="my-item-title">{{t.my_share_ledger}}</text>
+              <text class="my-item-sub">{{t.my_share_sub}}</text>
             </view>
             <text class="my-item-arrow">〉</text>
           </view>
           <view class="my-item" bindtap="onExportBillEntry">
             <view class="my-item-icon icon-export"></view>
             <view class="my-item-body">
-              <text class="my-item-title">导出账单</text>
-              <text class="my-item-sub">一键导出</text>
+              <text class="my-item-title">{{t.my_export}}</text>
+              <text class="my-item-sub">{{t.my_export_sub}}</text>
             </view>
             <text class="my-item-arrow">〉</text>
           </view>
         </view>
         <view class="my-group">
-          <view class="my-item">
+          <view class="my-item" bindtap="onContactEntry">
             <view class="my-item-icon icon-contact"></view>
             <view class="my-item-body">
-              <text class="my-item-title">联系我们获好礼</text>
-              <text class="my-item-sub">提意见赠会员</text>
+              <text class="my-item-title">{{t.my_contact}}</text>
+              <text class="my-item-sub">{{t.my_contact_sub}}</text>
             </view>
             <text class="my-item-arrow">〉</text>
           </view>
-          <view class="my-item my-item-last">
+          <view class="my-item my-item-last" bindtap="onSettingsEntry">
             <view class="my-item-icon icon-settings"></view>
-            <view class="my-item-body"><text class="my-item-title">设置</text></view>
+            <view class="my-item-body"><text class="my-item-title">{{t.my_settings}}</text></view>
             <text class="my-item-arrow">〉</text>
           </view>
         </view>
