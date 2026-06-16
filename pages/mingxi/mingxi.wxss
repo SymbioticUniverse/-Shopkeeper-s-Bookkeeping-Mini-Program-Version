@@ -365,6 +365,11 @@ page {
   font-weight: 500;
   color: #000;
 }
+.my-nickname {
+  font-size: 32rpx;
+  font-weight: 500;
+  color: #000;
+}
 .my-avatar {
   width: 86rpx;
   height: 86rpx;
@@ -1534,6 +1539,237 @@ page {
   letter-spacing: 2rpx;
 }
 
+/* ---- 登录/注册页 ---- */
+.login-card {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.login-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 24rpx 36rpx 16rpx;
+  min-height: 0;
+}
+
+.login-spacer {
+  flex: 1;
+  min-height: 0;
+}
+
+.login-form-wrap {
+  flex-shrink: 0;
+}
+
+.login-label {
+  font-size: 28rpx;
+  font-weight: 500;
+  color: #1a1a1a;
+  margin-bottom: 12rpx;
+}
+
+.login-phone-section {
+  margin-bottom: 16rpx;
+}
+
+.login-phone-row {
+  display: flex;
+  align-items: center;
+  background: rgba(0,0,0,0.04);
+  border-radius: 16rpx;
+  padding: 0 20rpx;
+  height: 88rpx;
+}
+
+.login-phone-prefix {
+  font-size: 30rpx;
+  font-weight: 500;
+  color: #333;
+  margin-right: 20rpx;
+  flex-shrink: 0;
+}
+
+.login-phone-input {
+  flex: 1;
+  font-size: 30rpx;
+  height: 88rpx;
+}
+
+.login-code-section {
+  margin-bottom: 28rpx;
+}
+
+.login-code-row {
+  display: flex;
+  align-items: center;
+  background: rgba(0,0,0,0.04);
+  border-radius: 16rpx;
+  padding: 0 20rpx;
+  height: 88rpx;
+}
+
+.login-code-input {
+  flex: 1;
+  font-size: 30rpx;
+  height: 88rpx;
+}
+
+.login-code-btn {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 24rpx;
+  height: 56rpx;
+  background: #000;
+  border-radius: 12rpx;
+}
+
+.login-code-btn text {
+  font-size: 24rpx;
+  font-weight: 500;
+  color: #fff;
+  white-space: nowrap;
+}
+
+.login-code-btn--counting {
+  background: #aaa;
+}
+
+.login-submit-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 88rpx;
+  background: #000;
+  border-radius: 16rpx;
+  margin-bottom: 32rpx;
+}
+
+.login-submit-btn text {
+  font-size: 32rpx;
+  font-weight: 500;
+  color: #fff;
+  letter-spacing: 2rpx;
+}
+
+.login-divider {
+  display: flex;
+  align-items: center;
+  margin-bottom: 28rpx;
+}
+
+.login-divider-line {
+  flex: 1;
+  height: 1rpx;
+  background: #e0e0e0;
+}
+
+.login-divider-text {
+  font-size: 24rpx;
+  color: #999;
+  margin: 0 20rpx;
+  flex-shrink: 0;
+}
+
+.login-wx-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  padding: 0;
+  margin-bottom: 16rpx;
+}
+
+.login-wx-btn::after {
+  border: none;
+}
+
+.login-wx-icon {
+  width: 88rpx;
+  height: 88rpx;
+  border-radius: 50%;
+  background: #07C160;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 16rpx;
+  position: relative;
+}
+
+.login-wx-icon-inner {
+  width: 36rpx;
+  height: 30rpx;
+  background: #fff;
+  border-radius: 18rpx 18rpx 18rpx 6rpx;
+  position: relative;
+}
+
+.login-wx-icon-inner::after {
+  content: '';
+  position: absolute;
+  right: -6rpx;
+  bottom: -2rpx;
+  width: 10rpx;
+  height: 10rpx;
+  background: #fff;
+  border-radius: 50%;
+}
+
+.login-wx-text {
+  font-size: 24rpx;
+  font-weight: 500;
+  color: #666;
+}
+
+.login-agreement {
+  display: flex;
+  justify-content: center;
+  margin-top: auto;
+  padding-bottom: 8rpx;
+}
+
+.login-agreement text {
+  font-size: 22rpx;
+  color: #bbb;
+}
+
+/* ---- 链接公司共享同一账本 ---- */
+.company-share-card {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.company-share-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 24rpx;
+  padding: 0 36rpx;
+  min-height: 0;
+}
+
+.company-share-btn {
+  width: 100%;
+  height: 88rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #000;
+  border-radius: 16rpx;
+  font-size: 32rpx;
+  font-weight: 500;
+  color: #fff;
+  letter-spacing: 2rpx;
+}
+
 /* ---- 自定义简览页 ---- */
 .custom-overview-body {
   flex: 1;
@@ -2563,6 +2799,11 @@ page {
   margin-bottom: 28rpx;
 }
 .my-login-text {
+  font-size: 32rpx;
+  font-weight: 500;
+  color: #000;
+}
+.my-nickname {
   font-size: 32rpx;
   font-weight: 500;
   color: #000;
@@ -3731,6 +3972,237 @@ page {
 
 .vip-confirm-text {
   font-size: 28rpx;
+  font-weight: 500;
+  color: #fff;
+  letter-spacing: 2rpx;
+}
+
+/* ---- 登录/注册页 ---- */
+.login-card {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.login-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 24rpx 36rpx 16rpx;
+  min-height: 0;
+}
+
+.login-spacer {
+  flex: 1;
+  min-height: 0;
+}
+
+.login-form-wrap {
+  flex-shrink: 0;
+}
+
+.login-label {
+  font-size: 28rpx;
+  font-weight: 500;
+  color: #1a1a1a;
+  margin-bottom: 12rpx;
+}
+
+.login-phone-section {
+  margin-bottom: 16rpx;
+}
+
+.login-phone-row {
+  display: flex;
+  align-items: center;
+  background: rgba(0,0,0,0.04);
+  border-radius: 16rpx;
+  padding: 0 20rpx;
+  height: 88rpx;
+}
+
+.login-phone-prefix {
+  font-size: 30rpx;
+  font-weight: 500;
+  color: #333;
+  margin-right: 20rpx;
+  flex-shrink: 0;
+}
+
+.login-phone-input {
+  flex: 1;
+  font-size: 30rpx;
+  height: 88rpx;
+}
+
+.login-code-section {
+  margin-bottom: 28rpx;
+}
+
+.login-code-row {
+  display: flex;
+  align-items: center;
+  background: rgba(0,0,0,0.04);
+  border-radius: 16rpx;
+  padding: 0 20rpx;
+  height: 88rpx;
+}
+
+.login-code-input {
+  flex: 1;
+  font-size: 30rpx;
+  height: 88rpx;
+}
+
+.login-code-btn {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 24rpx;
+  height: 56rpx;
+  background: #000;
+  border-radius: 12rpx;
+}
+
+.login-code-btn text {
+  font-size: 24rpx;
+  font-weight: 500;
+  color: #fff;
+  white-space: nowrap;
+}
+
+.login-code-btn--counting {
+  background: #aaa;
+}
+
+.login-submit-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 88rpx;
+  background: #000;
+  border-radius: 16rpx;
+  margin-bottom: 32rpx;
+}
+
+.login-submit-btn text {
+  font-size: 32rpx;
+  font-weight: 500;
+  color: #fff;
+  letter-spacing: 2rpx;
+}
+
+.login-divider {
+  display: flex;
+  align-items: center;
+  margin-bottom: 28rpx;
+}
+
+.login-divider-line {
+  flex: 1;
+  height: 1rpx;
+  background: #e0e0e0;
+}
+
+.login-divider-text {
+  font-size: 24rpx;
+  color: #999;
+  margin: 0 20rpx;
+  flex-shrink: 0;
+}
+
+.login-wx-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  padding: 0;
+  margin-bottom: 16rpx;
+}
+
+.login-wx-btn::after {
+  border: none;
+}
+
+.login-wx-icon {
+  width: 88rpx;
+  height: 88rpx;
+  border-radius: 50%;
+  background: #07C160;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 16rpx;
+  position: relative;
+}
+
+.login-wx-icon-inner {
+  width: 36rpx;
+  height: 30rpx;
+  background: #fff;
+  border-radius: 18rpx 18rpx 18rpx 6rpx;
+  position: relative;
+}
+
+.login-wx-icon-inner::after {
+  content: '';
+  position: absolute;
+  right: -6rpx;
+  bottom: -2rpx;
+  width: 10rpx;
+  height: 10rpx;
+  background: #fff;
+  border-radius: 50%;
+}
+
+.login-wx-text {
+  font-size: 24rpx;
+  font-weight: 500;
+  color: #666;
+}
+
+.login-agreement {
+  display: flex;
+  justify-content: center;
+  margin-top: auto;
+  padding-bottom: 8rpx;
+}
+
+.login-agreement text {
+  font-size: 22rpx;
+  color: #bbb;
+}
+
+/* ---- 链接公司共享同一账本 ---- */
+.company-share-card {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.company-share-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 24rpx;
+  padding: 0 36rpx;
+  min-height: 0;
+}
+
+.company-share-btn {
+  width: 100%;
+  height: 88rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #000;
+  border-radius: 16rpx;
+  font-size: 32rpx;
   font-weight: 500;
   color: #fff;
   letter-spacing: 2rpx;

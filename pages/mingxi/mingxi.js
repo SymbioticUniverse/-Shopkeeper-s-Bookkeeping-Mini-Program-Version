@@ -78,6 +78,15 @@ Page({
     modalEdit: {},
     // VIP 升级页
     showVipPage: false,
+    // 登录状态
+    isLoggedIn: false,
+    userInfo: null,
+    showLoginPage: false,
+    showCompanyShare: false,
+    loginPhone: '',
+    loginCode: '',
+    loginCodeSending: false,
+    loginCodeCountdown: 0,
     showCustomOverview: false,
     showCustomCategory: false, // 自定义分类页
     // 添加分类弹窗
@@ -383,6 +392,10 @@ Page({
       reportQuarterMultiIndex: [yearIdx, Math.floor((m - 1) / 3)],
       reportSelectedYear: y,
     })
+    const savedUser = wx.getStorageSync('userInfo')
+    if (savedUser) {
+      this.setData({ isLoggedIn: true, userInfo: savedUser })
+    }
     this.updateReportDate()
     this.initDetailItems()
     this.initSettleItems()
@@ -1646,6 +1659,14 @@ Page({
     this.setData({ showCustomCategory: false })
   },
 
+  onCompanyShareEntry() {
+    this.setData({ showCompanyShare: true })
+  },
+
+  onCompanyShareBack() {
+    this.setData({ showCompanyShare: false })
+  },
+
   onCatTabChange(e) {
     const { scope, tab } = e.currentTarget.dataset
     if (scope === 'personal') {
@@ -2219,6 +2240,85 @@ Page({
     this.setData({
       showPopup: false,
       ghostDrag: { visible: false, x: 0, y: 0, templateId: '', name: '', slotHover: -1, template: null },
+    })
+  },
+
+  // ---- 登录/注册 ----
+  onLoginEntry() {
+    this.setData({ showLoginPage: true })
+  },
+
+  onLoginBack() {
+    this.setData({ showLoginPage: false })
+  },
+
+  onLoginPhoneInput(e) {
+    this.setData({ loginPhone: e.detail.value })
+  },
+
+  onLoginCodeInput(e) {
+    this.setData({ loginCode: e.detail.value })
+  },
+
+  onSendCode() {
+    if (this.data.loginCodeSending) return
+    const phone = this.data.loginPhone
+    if (!/^1[3-9]\d{9}$/.test(phone)) {
+      wx.showToast({ title: '请输入正确的手机号', icon: 'none' })
+      return
+    }
+    this.setData({ loginCodeSending: true, loginCodeCountdown: 60 })
+    wx.showToast({ title: '验证码已发送', icon: 'success' })
+    const timer = setInterval(() => {
+      const count = this.data.loginCodeCountdown - 1
+      if (count <= 0) {
+        clearInterval(timer)
+        this.setData({ loginCodeSending: false, loginCodeCountdown: 0 })
+      } else {
+        this.setData({ loginCodeCountdown: count })
+      }
+    }, 1000)
+  },
+
+  onPhoneLogin() {
+    const { loginPhone, loginCode } = this.data
+    if (!/^1[3-9]\d{9}$/.test(loginPhone)) {
+      wx.showToast({ title: '请输入正确的手机号', icon: 'none' })
+      return
+    }
+    if (loginCode.length !== 6) {
+      wx.showToast({ title: '请输入6位验证码', icon: 'none' })
+      return
+    }
+    // 模拟验证：任意6位数字即可
+    const userInfo = { nickName: loginPhone.slice(0, 3) + '****' + loginPhone.slice(-4), avatarUrl: '' }
+    this.setData({ isLoggedIn: true, userInfo, showLoginPage: false, loginPhone: '', loginCode: '' })
+    wx.setStorageSync('userInfo', userInfo)
+    wx.showToast({ title: '登录成功', icon: 'success' })
+  },
+
+  onWxLogin(e) {
+    if (e.detail.userInfo) {
+      const userInfo = e.detail.userInfo
+      this.setData({ isLoggedIn: true, userInfo, showLoginPage: false })
+      wx.setStorageSync('userInfo', userInfo)
+      wx.showToast({ title: '登录成功', icon: 'success' })
+    } else {
+      wx.showToast({ title: '授权已取消', icon: 'none' })
+    }
+  },
+
+  onLogout() {
+    wx.showModal({
+      title: '退出登录',
+      content: '确定要退出登录吗？',
+      success: (res) => {
+        if (res.confirm) {
+          this.setData({ isLoggedIn: false, userInfo: null })
+          wx.removeStorageSync('userInfo')
+          wx.showToast({ title: '已退出登录', icon: 'none' })
+        }
+      }
     })
   },
 

@@ -708,11 +708,76 @@
           </view>
         </view>
       </view>
+      <!-- 登录/注册页 -->
+      <view class="card grid-span-3 my-card login-card" wx:elif="{{showLoginPage}}">
+        <view class="custom-cat-header">
+          <view class="custom-cat-back" bindtap="onLoginBack">
+            <view class="custom-cat-back-arrow"></view>
+          </view>
+          <text class="custom-cat-title">登录/注册</text>
+        </view>
+        <view class="custom-cat-divider"></view>
+        <view class="login-body">
+          <view class="login-spacer"></view>
+          <view class="login-form-wrap">
+            <view class="login-phone-section">
+              <text class="login-label">手机号</text>
+              <view class="login-phone-row">
+                <text class="login-phone-prefix">+86</text>
+                <input class="login-phone-input" type="number" maxlength="11" placeholder="请输入手机号" value="{{loginPhone}}" bindinput="onLoginPhoneInput"/>
+              </view>
+            </view>
+            <view class="login-code-section">
+              <text class="login-label">验证码</text>
+              <view class="login-code-row">
+                <input class="login-code-input" type="number" maxlength="6" placeholder="请输入验证码" value="{{loginCode}}" bindinput="onLoginCodeInput"/>
+                <view class="login-code-btn {{loginCodeSending ? 'login-code-btn--counting' : ''}}" bindtap="onSendCode">
+                  <text>{{loginCodeCountdown > 0 ? loginCodeCountdown + 's' : '获取验证码'}}</text>
+                </view>
+              </view>
+            </view>
+            <view class="login-submit-btn" bindtap="onPhoneLogin">
+              <text>登录 / 注册</text>
+            </view>
+            <view class="login-divider">
+              <view class="login-divider-line"></view>
+              <text class="login-divider-text">其他登录方式</text>
+              <view class="login-divider-line"></view>
+            </view>
+            <button class="login-wx-btn" open-type="getUserInfo" bindgetuserinfo="onWxLogin">
+              <view class="login-wx-icon">
+                <view class="login-wx-icon-inner"></view>
+              </view>
+              <text class="login-wx-text">微信一键登录</text>
+            </button>
+          </view>
+          <view class="login-spacer"></view>
+          <view class="login-agreement">
+            <text>登录即代表同意《用户协议》和《隐私政策》</text>
+          </view>
+        </view>
+      </view>
+      <!-- 链接公司共享同一账本 -->
+      <view class="card grid-span-3 my-card company-share-card" wx:elif="{{showCompanyShare}}">
+        <view class="custom-cat-header">
+          <view class="custom-cat-back" bindtap="onCompanyShareBack">
+            <view class="custom-cat-back-arrow"></view>
+          </view>
+          <text class="custom-cat-title">链接公司</text>
+        </view>
+        <view class="custom-cat-divider"></view>
+        <view class="company-share-body">
+          <view class="company-share-btn">我是老板</view>
+          <view class="company-share-btn">我是员工</view>
+        </view>
+      </view>
       <!-- 正常我的页面 -->
       <view class="card grid-span-3 my-card" wx:else>
         <view class="my-profile">
-          <text class="my-login-text">登录/注册</text>
-          <view class="my-avatar"></view>
+          <text class="my-login-text" bindtap="onLoginEntry" wx:if="{{isLoggedIn === false}}">登录/注册</text>
+          <text class="my-nickname" bindtap="onLogout" wx:else>{{userInfo.nickName}}</text>
+          <image class="my-avatar" src="{{userInfo.avatarUrl}}" wx:if="{{isLoggedIn && userInfo.avatarUrl}}" mode="aspectFill"></image>
+          <view class="my-avatar" wx:else></view>
         </view>
         <view class="my-group">
           <view class="my-item" bindtap="onVipEntry">
@@ -747,7 +812,7 @@
             </view>
             <text class="my-item-arrow">〉</text>
           </view>
-          <view class="my-item">
+          <view class="my-item" bindtap="onCompanyShareEntry">
             <view class="my-item-icon icon-share"></view>
             <view class="my-item-body">
               <text class="my-item-title">链接公司共享同一账本</text>
