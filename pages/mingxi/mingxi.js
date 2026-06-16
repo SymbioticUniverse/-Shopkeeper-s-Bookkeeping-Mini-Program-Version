@@ -436,6 +436,10 @@ Page({
     this.initSettleItems()
     this._syncOverviewCards()
     this.updateNotifyBadge()
+    if (!wx.getStorageSync('auditCleaned')) {
+      wx.removeStorageSync('auditList')
+      wx.setStorageSync('auditCleaned', true)
+    }
     this.updateAuditBadge()
   },
 
