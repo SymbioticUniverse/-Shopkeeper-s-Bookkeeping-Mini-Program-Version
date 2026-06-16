@@ -83,12 +83,47 @@ Page({
     userInfo: null,
     showLoginPage: false,
     showCompanyShare: false,
+    companyShareStep: 0,
+    companyRole: '',
+    companyUid: '',
+    companyName: '',
+    companyBossTitle: '',
+    employeeUid: '',
     loginPhone: '',
     loginCode: '',
     loginCodeSending: false,
     loginCodeCountdown: 0,
     showCustomOverview: false,
     showCustomCategory: false, // 自定义分类页
+    showExportBill: false, // 导出账单页
+    showAuditPage: false, // 审核页
+    showNotifyPage: false, // 通知页
+    auditList: [],
+    notifyList: [],
+    hasPendingAudit: false,
+    notifySwipeId: '',
+    notifyTouchStartX: 0,
+    notifyTouchStartY: 0,
+    hasUnreadNotify: false,
+    exportPeriod: 0, // 0月度/1季度/2年度/3日度
+    exportFormatOptions: ['.PDF', '.CSV', '.EXCEL'],
+    exportFormatIndex: 0,
+    exportDateFrom: '',
+    exportDateTo: '',
+    exportPersonalItems: [
+      { key: 'personal_advance', label: '个人垫付款', checked: true },
+      { key: 'personal_payable', label: '个人应付款', checked: true },
+      { key: 'personal_inout', label: '个人收支款', checked: true },
+      { key: 'personal_report', label: '个人报表导出', checked: true },
+    ],
+    exportCompanyItems: [
+      { key: 'company_advance', label: '公司垫付款', checked: true },
+      { key: 'company_payable', label: '公司应付款', checked: true },
+      { key: 'company_inout', label: '公司收支款', checked: true },
+      { key: 'company_report', label: '公司报表导出', checked: true },
+    ],
+    exportPersonalAll: true,
+    exportCompanyAll: true,
     // 添加分类弹窗
     showCatModal: false,
     catModalScope: 'personal',
@@ -98,8 +133,8 @@ Page({
     customCards: [], // 自定义简览页已添加的卡片列表
     overviewCards: [], // 简览页实际渲染的卡片（从存储同步或默认）
     defaultOverviewCards: [
-      { id: 'd_personal', name: '个人账本', subtitle: '日常收支', span: 1, type: 'personal' },
-      { id: 'd_company', name: '共生宇宙公司账本', subtitle: '经营收支', span: 2, type: 'company' },
+      { id: 'd_personal', name: '个人账本', subtitle: '日常收支', span: 1, type: 'overview_personal' },
+      { id: 'd_company', name: '共生宇宙公司账本', subtitle: '经营收支', span: 2, type: 'overview_company' },
     ],
     // 槽位拖放对话框
     showSlotModal: false,
@@ -400,6 +435,8 @@ Page({
     this.initDetailItems()
     this.initSettleItems()
     this._syncOverviewCards()
+    this.updateNotifyBadge()
+    this.updateAuditBadge()
   },
 
   _syncOverviewCards() {
@@ -1659,12 +1696,256 @@ Page({
     this.setData({ showCustomCategory: false })
   },
 
+  // ---- 导出账单 ----
+  // ---- 我的页图标入口 ----
+  onLinkCompany() {
+    this.setData({ showCompanyShare: true, companyShareStep: 1, companyRole: 'employee', employeeUid: '' })
+  },
+
+  onInviteEmployee() {
+    const saved = wx.getStorageSync('companyInfo')
+    if (saved && saved.companyRole === 'boss') {
+      this.setData({
+        showCompanyShare: true,
+        companyShareStep: 2,
+        companyRole: 'boss',
+        companyUid: saved.companyUid || '',
+        companyName: saved.companyName || '',
+        companyBossTitle: saved.companyBossTitle || '',
+      })
+    } else {
+      this.setData({ showCompanyShare: true, companyShareStep: 1, companyRole: 'boss', companyUid: '', companyName: '', companyBossTitle: '' })
+    }
+  },
+
+  onAuditEntry() {
+    const saved = wx.getStorageSync('companyInfo')
+    if (!saved || saved.companyRole !== 'boss' || !saved.companyUid) {
+      wx.showToast({ title: '请先注册公司', icon: 'none' })
+    }
+    const list = wx.getStorageSync('auditList') || []
+    this.setData({ showAuditPage: true, auditList: list })
+  },
+
+  onAuditBack() {
+    this.setData({ showAuditPage: false })
+  },
+
+  onAuditApprove(e) {
+    const { id } = e.currentTarget.dataset
+    const list = this.data.auditList.map(item => item.id === id ? { ...item, status: 'approved' } : item)
+    wx.setStorageSync('auditList', list)
+    this.setData({ auditList: list })
+    this.updateAuditBadge()
+    const notifyList = wx.getStorageSync('notifyList') || []
+    notifyList.unshift({ id: Date.now(), text: '审核通过加入公司', time: new Date().toLocaleDateString(), read: false })
+    wx.setStorageSync('notifyList', notifyList)
+    this.updateNotifyBadge()
+    wx.showToast({ title: '已通过', icon: 'success' })
+  },
+
+  onAuditReject(e) {
+    const { id } = e.currentTarget.dataset
+    const list = this.data.auditList.map(item => item.id === id ? { ...item, status: 'rejected' } : item)
+    wx.setStorageSync('auditList', list)
+    this.setData({ auditList: list })
+    this.updateAuditBadge()
+    wx.showToast({ title: '已拒绝', icon: 'none' })
+  },
+
+  updateAuditBadge() {
+    const list = wx.getStorageSync('auditList') || []
+    const hasPending = list.some(item => item.status === 'pending')
+    this.setData({ hasPendingAudit: hasPending })
+  },
+
+  onNotifyEntry() {
+    const list = wx.getStorageSync('notifyList') || []
+    this.setData({ showNotifyPage: true, notifyList: list })
+  },
+
+  onNotifyBack() {
+    this.setData({ showNotifyPage: false, notifySwipeId: '' })
+    this.updateNotifyBadge()
+  },
+
+  onNotifyRead(e) {
+    const { id } = e.currentTarget.dataset
+    const list = this.data.notifyList.map(item => item.id === id ? { ...item, read: true } : item)
+    wx.setStorageSync('notifyList', list)
+    this.setData({ notifyList: list })
+    this.updateNotifyBadge()
+  },
+
+  updateNotifyBadge() {
+    const list = wx.getStorageSync('notifyList') || []
+    const hasUnread = list.some(item => !item.read)
+    this.setData({ hasUnreadNotify: hasUnread })
+  },
+
+  onNotifyTouchStart(e) {
+    const t = e.touches[0]
+    this.setData({ notifyTouchStartX: t.clientX, notifyTouchStartY: t.clientY, notifySwipeId: '' })
+  },
+
+  onNotifyTouchMove(e) {
+    const t = e.touches[0]
+    const dx = t.clientX - this.data.notifyTouchStartX
+    const dy = t.clientY - this.data.notifyTouchStartY
+    if (Math.abs(dx) > Math.abs(dy) && dx < -40) {
+      this.setData({ notifySwipeId: e.currentTarget.dataset.id })
+    }
+  },
+
+  onNotifyTouchEnd() {
+    // keep swiped open
+  },
+
+  onNotifyDelete(e) {
+    const { id } = e.currentTarget.dataset
+    const list = this.data.notifyList.filter(item => item.id !== id)
+    wx.setStorageSync('notifyList', list)
+    this.setData({ notifyList: list, notifySwipeId: '' })
+  },
+
+  onExportBillEntry() {
+    this.setData({ showExportBill: true })
+  },
+
+  onExportBillBack() {
+    this.setData({ showExportBill: false })
+  },
+
+  onExportPeriodTap(e) {
+    const period = parseInt(e.currentTarget.dataset.period)
+    this.setData({ exportPeriod: period })
+  },
+
+  onExportFormatChange(e) {
+    this.setData({ exportFormatIndex: parseInt(e.detail.value) })
+  },
+
+  onExportDateFromChange(e) {
+    this.setData({ exportDateFrom: e.detail.value })
+  },
+
+  onExportDateToChange(e) {
+    this.setData({ exportDateTo: e.detail.value })
+  },
+
+  onExportPersonalToggle(e) {
+    const { key } = e.currentTarget.dataset
+    const items = this.data.exportPersonalItems.map(item =>
+      item.key === key ? { ...item, checked: !item.checked } : item
+    )
+    const all = items.every(i => i.checked)
+    this.setData({ exportPersonalItems: items, exportPersonalAll: all })
+  },
+
+  onExportCompanyToggle(e) {
+    const { key } = e.currentTarget.dataset
+    const items = this.data.exportCompanyItems.map(item =>
+      item.key === key ? { ...item, checked: !item.checked } : item
+    )
+    const all = items.every(i => i.checked)
+    this.setData({ exportCompanyItems: items, exportCompanyAll: all })
+  },
+
+  onExportPersonalAllToggle() {
+    const all = !this.data.exportPersonalAll
+    const items = this.data.exportPersonalItems.map(item => ({ ...item, checked: all }))
+    this.setData({ exportPersonalAll: all, exportPersonalItems: items })
+  },
+
+  onExportCompanyAllToggle() {
+    const all = !this.data.exportCompanyAll
+    const items = this.data.exportCompanyItems.map(item => ({ ...item, checked: all }))
+    this.setData({ exportCompanyAll: all, exportCompanyItems: items })
+  },
+
   onCompanyShareEntry() {
-    this.setData({ showCompanyShare: true })
+    const saved = wx.getStorageSync('companyInfo')
+    if (saved) {
+      this.setData({
+        showCompanyShare: true,
+        companyShareStep: 2,
+        companyRole: saved.companyRole || 'boss',
+        companyUid: saved.companyUid || '',
+        companyName: saved.companyName || '',
+        companyBossTitle: saved.companyBossTitle || '',
+      })
+    } else {
+      this.setData({ showCompanyShare: true, companyShareStep: 0 })
+    }
   },
 
   onCompanyShareBack() {
-    this.setData({ showCompanyShare: false })
+    const step = this.data.companyShareStep
+    if (step === 2) {
+      this.setData({ showCompanyShare: false })
+    } else if (step === 1) {
+      this.setData({ companyShareStep: 0 })
+    } else {
+      this.setData({ showCompanyShare: false })
+    }
+  },
+
+  onBossTap() {
+    this.setData({ companyShareStep: 1, companyRole: 'boss', companyUid: '', companyName: '', companyBossTitle: '' })
+  },
+
+  onEmployeeTap() {
+    this.setData({ companyShareStep: 1, companyRole: 'employee', employeeUid: '' })
+  },
+
+  onEmployeeUidInput(e) {
+    this.setData({ employeeUid: e.detail.value })
+  },
+
+  onEmployeeJoin() {
+    const { employeeUid } = this.data
+    if (!employeeUid.trim()) {
+      wx.showToast({ title: '请输入公司 UID 码', icon: 'none' })
+      return
+    }
+    const info = { companyUid: employeeUid.trim(), companyRole: 'employee' }
+    wx.setStorageSync('companyInfo', info)
+    wx.showToast({ title: '加入成功', icon: 'success' })
+    this.setData({ companyShareStep: 2 })
+  },
+
+  onCompanyNameInput(e) {
+    this.setData({ companyName: e.detail.value })
+  },
+
+  onCompanyBossTitleInput(e) {
+    this.setData({ companyBossTitle: e.detail.value })
+  },
+
+  onCreateUid() {
+    const uid = 'UID' + Date.now().toString(36).toUpperCase().slice(-8)
+    this.setData({ companyUid: uid })
+  },
+
+  onCompanyCreate() {
+    const { companyUid, companyName, companyBossTitle } = this.data
+    if (!companyUid) {
+      wx.showToast({ title: '请先生成 UID', icon: 'none' })
+      return
+    }
+    if (!companyName.trim()) {
+      wx.showToast({ title: '请输入公司名称', icon: 'none' })
+      return
+    }
+    const info = { companyUid, companyName: companyName.trim(), companyBossTitle: companyBossTitle.trim() || 'BOSS' }
+    wx.setStorageSync('companyInfo', info)
+    wx.showToast({ title: '创建成功', icon: 'success' })
+    this.setData({ companyShareStep: 2, companyName: info.companyName, companyBossTitle: info.companyBossTitle, companyUid: info.companyUid })
+  },
+
+  onShareCompany() {
+    // TODO: 分享功能
+    wx.showToast({ title: '分享功能开发中', icon: 'none' })
   },
 
   onCatTabChange(e) {

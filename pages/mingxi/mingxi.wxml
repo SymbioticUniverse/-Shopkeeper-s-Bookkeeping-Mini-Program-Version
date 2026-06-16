@@ -766,10 +766,234 @@
           <text class="custom-cat-title">链接公司</text>
         </view>
         <view class="custom-cat-divider"></view>
-        <view class="company-share-body">
-          <view class="company-share-btn">我是老板</view>
-          <view class="company-share-btn">我是员工</view>
+        <view class="company-share-body" wx:if="{{companyShareStep === 0}}">
+          <view class="company-share-btn" bindtap="onBossTap">我是老板</view>
+          <view class="company-share-btn" bindtap="onEmployeeTap">我是员工</view>
         </view>
+        <!-- 老板：创建公司表单 -->
+        <view class="company-boss-body" wx:elif="{{companyShareStep === 1 && companyRole === 'boss'}}">
+          <view class="company-boss-form">
+            <text class="company-boss-tip">检测到还未创建公司，填写后创建</text>
+            <view class="company-boss-field">
+              <text class="company-boss-label">公司名称</text>
+              <view class="company-boss-input-wrap">
+                <input class="company-boss-input" value="{{companyName}}" placeholder="请输入公司名称" bindinput="onCompanyNameInput"/>
+              </view>
+            </view>
+            <view class="company-boss-field">
+              <text class="company-boss-label">BOSS 称呼</text>
+              <view class="company-boss-input-wrap">
+                <input class="company-boss-input" value="{{companyBossTitle}}" placeholder="BOSS" bindinput="onCompanyBossTitleInput"/>
+              </view>
+            </view>
+            <view class="company-boss-field">
+              <text class="company-boss-label">UID 码</text>
+              <view class="company-boss-input-wrap">
+                <input class="company-boss-input" value="{{companyUid}}" placeholder="点击下方按钮生成" disabled/>
+              </view>
+            </view>
+            <text class="company-boss-note">注：企业版 UID 才可共享</text>
+            <view class="company-boss-uid-btn" bindtap="onCreateUid">创建专属 UID</view>
+          </view>
+          <view class="company-boss-submit" bindtap="onCompanyCreate">确认创建</view>
+        </view>
+        <!-- 员工：加入公司表单 -->
+        <view class="company-boss-body" wx:elif="{{companyShareStep === 1 && companyRole === 'employee'}}">
+          <view class="company-boss-form">
+            <text class="company-boss-tip">检测到还未加入公司，填写 UID 后加入</text>
+            <view class="company-boss-field">
+              <text class="company-boss-label">UID 码</text>
+              <view class="company-boss-input-wrap">
+                <input class="company-boss-input" value="{{employeeUid}}" placeholder="请输入公司 UID 码" bindinput="onEmployeeUidInput"/>
+              </view>
+            </view>
+            <view class="company-employee-note">
+              <text class="company-employee-note-text">加入企业后，获得个人版全部功能，</text>
+              <text class="company-employee-note-strong">无需再次开通</text>
+              <text class="company-employee-note-text">。</text>
+            </view>
+            <view class="company-employee-note">
+              <text class="company-employee-note-text">个人垫付款、采购款等垫资款将</text>
+              <text class="company-employee-note-strong">直接同步</text>
+              <text class="company-employee-note-text">到公司账本。</text>
+            </view>
+            <view class="company-employee-note">
+              <text class="company-employee-note-text">个人记录依旧保存在</text>
+              <text class="company-employee-note-strong">本地</text>
+              <text class="company-employee-note-text">，不会上传至公司。</text>
+            </view>
+          </view>
+          <view class="company-boss-submit" bindtap="onEmployeeJoin">一键加入公司</view>
+        </view>
+        <!-- 老板：创建成功 -->
+        <view class="company-boss-body" wx:elif="{{companyShareStep === 2 && companyRole === 'boss'}}">
+          <view class="company-boss-form">
+            <text class="company-boss-tip company-boss-success-tip">公司创建成功</text>
+            <view class="company-success-card">
+              <view class="company-success-row">
+                <text class="company-success-key">UID 码</text>
+                <text class="company-success-val">{{companyUid}}</text>
+              </view>
+              <text class="company-boss-note company-success-note">注：企业版 UID 才可共享</text>
+              <view class="company-success-row">
+                <text class="company-success-key">公司名称</text>
+                <text class="company-success-val">{{companyName}}</text>
+              </view>
+              <view class="company-success-row">
+                <text class="company-success-key">BOSS 称呼</text>
+                <text class="company-success-val">{{companyBossTitle || 'BOSS'}}</text>
+              </view>
+            </view>
+            <view class="company-share-action-btn" bindtap="onShareCompany">一键分享</view>
+          </view>
+        </view>
+        <!-- 员工：加入成功 -->
+        <view class="company-boss-body" wx:elif="{{companyShareStep === 2 && companyRole === 'employee'}}">
+          <view class="company-boss-form company-employee-success-form">
+            <text class="company-employee-success-role">员工</text>
+            <view class="company-employee-success-spacer"></view>
+            <text class="company-employee-success-title">已链接公司</text>
+            <view class="company-employee-success-spacer"></view>
+            <view class="company-employee-success-notes"><text class="company-employee-success-note-text">注：企业版员工个人记录依旧保存在</text><text class="company-employee-success-note-strong">本地</text><text class="company-employee-success-note-text">，不会上传至公司。个人垫付款，采购款等垫资款将</text><text class="company-employee-success-note-strong">直接同步</text><text class="company-employee-success-note-text">到公司账本。（非实时更新）加入企业后，获得个人版全部功能，</text><text class="company-employee-success-note-strong">无需再次开通</text><text class="company-employee-success-note-text">。公司端结清账单后，你需要确认资金是否到位，再点击</text><text class="company-employee-success-note-strong">确认结清</text><text class="company-employee-success-note-text">，一旦结清，公司则会认为你已经到账，为了避免后续纠纷，请一定要</text><text class="company-employee-success-note-strong">确认清楚</text><text class="company-employee-success-note-text">再点击结清。</text></view>
+          </view>
+        </view>
+      </view>
+      <!-- 导出账单 -->
+      <view class="card grid-span-3 my-card export-bill-card" wx:elif="{{showExportBill}}">
+        <view class="custom-cat-header">
+          <view class="custom-cat-back" bindtap="onExportBillBack">
+            <view class="custom-cat-back-arrow"></view>
+          </view>
+          <text class="custom-cat-title">导出账单</text>
+        </view>
+        <view class="custom-cat-divider"></view>
+        <view class="report-period-bar">
+          <view class="report-period-item {{exportPeriod === 0 ? 'report-period-item--active' : ''}}" bindtap="onExportPeriodTap" data-period="{{0}}">
+            <text class="report-period-text {{exportPeriod === 0 ? 'report-period-text--active' : ''}}">月度</text>
+          </view>
+          <view class="report-period-item {{exportPeriod === 1 ? 'report-period-item--active' : ''}}" bindtap="onExportPeriodTap" data-period="{{1}}">
+            <text class="report-period-text {{exportPeriod === 1 ? 'report-period-text--active' : ''}}">季度</text>
+          </view>
+          <view class="report-period-item {{exportPeriod === 2 ? 'report-period-item--active' : ''}}" bindtap="onExportPeriodTap" data-period="{{2}}">
+            <text class="report-period-text {{exportPeriod === 2 ? 'report-period-text--active' : ''}}">年度</text>
+          </view>
+          <view class="report-period-item {{exportPeriod === 3 ? 'report-period-item--active' : ''}}" bindtap="onExportPeriodTap" data-period="{{3}}">
+            <text class="report-period-text {{exportPeriod === 3 ? 'report-period-text--active' : ''}}">日度</text>
+          </view>
+        </view>
+        <view class="export-bill-body">
+          <!-- 日期范围 + 导出格式 -->
+          <view class="export-bill-top">
+            <view class="export-bill-range">
+              <text class="export-bill-range-label">从</text>
+              <picker mode="date" value="{{exportDateFrom}}" bindchange="onExportDateFromChange">
+                <view class="detail-date-box">
+                  <text class="report-date-text">{{exportDateFrom || '开始日期'}}</text>
+                  <view class="report-date-arrow"></view>
+                </view>
+              </picker>
+              <text class="export-bill-range-label">到</text>
+              <picker mode="date" value="{{exportDateTo}}" bindchange="onExportDateToChange">
+                <view class="detail-date-box">
+                  <text class="report-date-text">{{exportDateTo || '结束日期'}}</text>
+                  <view class="report-date-arrow"></view>
+                </view>
+              </picker>
+            </view>
+            <view class="export-bill-format">
+              <text class="export-bill-format-label">导出格式</text>
+              <picker mode="selector" range="{{exportFormatOptions}}" value="{{exportFormatIndex}}" bindchange="onExportFormatChange">
+                <view class="detail-date-box">
+                  <text class="report-date-text">{{exportFormatOptions[exportFormatIndex]}}</text>
+                  <view class="report-date-arrow"></view>
+                </view>
+              </picker>
+            </view>
+          </view>
+          <!-- 导出项目选择（可滚动） -->
+          <view class="export-bill-spacer"></view>
+          <scroll-view class="export-bill-scroll" scroll-y enhanced show-scrollbar="{{false}}">
+            <view class="export-bill-section-label {{exportPersonalAll ? 'export-bill-section-label--on' : ''}}" bindtap="onExportPersonalAllToggle">
+              <text>个人总账本</text>
+            </view>
+            <view class="export-bill-grid">
+              <view class="export-bill-grid-item {{item.checked ? 'export-bill-grid-item--on' : ''}}" wx:for="{{exportPersonalItems}}" wx:key="key" bindtap="onExportPersonalToggle" data-key="{{item.key}}">
+                <text class="export-bill-grid-text">{{item.label}}</text>
+              </view>
+            </view>
+            <view class="export-bill-section-label {{exportCompanyAll ? 'export-bill-section-label--on' : ''}}" bindtap="onExportCompanyAllToggle">
+              <text>公司总账本</text>
+            </view>
+            <view class="export-bill-grid">
+              <view class="export-bill-grid-item {{item.checked ? 'export-bill-grid-item--on' : ''}}" wx:for="{{exportCompanyItems}}" wx:key="key" bindtap="onExportCompanyToggle" data-key="{{item.key}}">
+                <text class="export-bill-grid-text">{{item.label}}</text>
+              </view>
+            </view>
+          </scroll-view>
+          <view class="export-bill-spacer"></view>
+          <!-- 导出按钮 -->
+          <view class="export-bill-btn"><text>一键导出</text></view>
+        </view>
+      </view>
+      <!-- 审核页 -->
+      <view class="card grid-span-3 my-card audit-card" wx:elif="{{showAuditPage}}">
+        <view class="custom-cat-header">
+          <view class="custom-cat-back" bindtap="onAuditBack">
+            <view class="custom-cat-back-arrow"></view>
+          </view>
+          <text class="custom-cat-title">审核</text>
+        </view>
+        <view class="custom-cat-divider"></view>
+        <scroll-view class="audit-scroll" scroll-y enhanced show-scrollbar="{{false}}">
+          <block wx:for="{{auditList}}" wx:key="id">
+            <view class="audit-item">
+              <view class="audit-item-left">
+                <view class="audit-avatar"></view>
+                <view class="audit-info">
+                  <text class="audit-name">{{item.name}}</text>
+                  <text class="audit-time">{{item.time}}</text>
+                </view>
+              </view>
+              <view class="audit-actions" wx:if="{{item.status === 'pending'}}">
+                <view class="audit-btn audit-btn--approve" bindtap="onAuditApprove" data-id="{{item.id}}">
+                  <text>通过</text>
+                </view>
+                <view class="audit-btn audit-btn--reject" bindtap="onAuditReject" data-id="{{item.id}}">
+                  <text>拒绝</text>
+                </view>
+              </view>
+              <text class="audit-status" wx:else>{{item.status === 'approved' ? '已通过' : '已拒绝'}}</text>
+            </view>
+          </block>
+          <view class="audit-empty" wx:if="{{auditList.length === 0}}">
+            <text>暂无审核</text>
+          </view>
+        </scroll-view>
+      </view>
+      <!-- 通知页 -->
+      <view class="card grid-span-3 my-card notify-card" wx:elif="{{showNotifyPage}}">
+        <view class="custom-cat-header">
+          <view class="custom-cat-back" bindtap="onNotifyBack">
+            <view class="custom-cat-back-arrow"></view>
+          </view>
+          <text class="custom-cat-title">通知</text>
+        </view>
+        <view class="custom-cat-divider"></view>
+        <scroll-view class="notify-scroll" scroll-y enhanced show-scrollbar="{{false}}">
+          <block wx:for="{{notifyList}}" wx:key="id">
+            <view class="notify-swipe {{notifySwipeId === item.id ? 'notify-swipe--open' : ''}}">
+              <view class="notify-delete" bindtap="onNotifyDelete" data-id="{{item.id}}"><text>删除</text></view>
+              <view class="notify-item {{notifySwipeId === item.id ? 'notify-item--open' : ''}}" bindtouchstart="onNotifyTouchStart" bindtouchmove="onNotifyTouchMove" bindtouchend="onNotifyTouchEnd" bindtap="onNotifyRead" data-id="{{item.id}}">
+                <view class="notify-dot" wx:if="{{!item.read}}"></view>
+                <text class="notify-text">{{item.text}}</text>
+                <text class="notify-time">{{item.time}}</text>
+              </view>
+            </view>
+          </block>
+          <view class="notify-empty" wx:if="{{notifyList.length === 0}}">
+            <text>暂无通知</text>
+          </view>
+        </scroll-view>
       </view>
       <!-- 正常我的页面 -->
       <view class="card grid-span-3 my-card" wx:else>
@@ -789,10 +1013,20 @@
             <text class="my-item-arrow">〉</text>
           </view>
           <view class="my-icon-row">
-            <view class="my-icon-item"><view class="my-icon-circle icon-link"></view><text class="my-icon-label">链接公司</text></view>
-            <view class="my-icon-item"><view class="my-icon-circle icon-invite"></view><text class="my-icon-label">邀请员工</text></view>
-            <view class="my-icon-item"><view class="my-icon-circle icon-audit"></view><text class="my-icon-label">审核</text></view>
-            <view class="my-icon-item"><view class="my-icon-circle icon-notify"></view><text class="my-icon-label">通知</text></view>
+            <view class="my-icon-item" bindtap="onLinkCompany"><view class="my-icon-circle icon-link"></view><text class="my-icon-label">链接公司</text></view>
+            <view class="my-icon-item" bindtap="onInviteEmployee"><view class="my-icon-circle icon-invite"></view><text class="my-icon-label">邀请员工</text></view>
+            <view class="my-icon-item" bindtap="onAuditEntry">
+              <view class="my-icon-circle icon-audit" style="position:relative">
+                <view class="notify-badge" wx:if="{{hasPendingAudit}}"></view>
+              </view>
+              <text class="my-icon-label">审核</text>
+            </view>
+            <view class="my-icon-item" bindtap="onNotifyEntry">
+              <view class="my-icon-circle icon-notify" style="position:relative">
+                <view class="notify-badge" wx:if="{{hasUnreadNotify}}"></view>
+              </view>
+              <text class="my-icon-label">通知</text>
+            </view>
           </view>
         </view>
         <view class="my-group">
@@ -820,7 +1054,7 @@
             </view>
             <text class="my-item-arrow">〉</text>
           </view>
-          <view class="my-item">
+          <view class="my-item" bindtap="onExportBillEntry">
             <view class="my-item-icon icon-export"></view>
             <view class="my-item-body">
               <text class="my-item-title">导出账单</text>
