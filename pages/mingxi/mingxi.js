@@ -220,7 +220,6 @@ Page({
     bookTypeLabel: '支出',
     showBookCatPanel: false,
     bookCatPanelData: [],
-    bookCategories: ['餐饮', '交通', '购物', '工资', '兼职', '房租', '通讯', '医疗', '外卖', '娱乐', '奖金', '打车', '水电', '零食'],
     // VIP 升级页
     showVipPage: false,
     // 登录状态
@@ -699,13 +698,14 @@ Page({
         canvas.height = h * dpr
         ctx.scale(dpr, dpr)
 
-        const data = this.generateMockData()
+        const ovScope = (card.type || '').includes('company') ? 'company' : 'personal'
+        const data = this._aggregateChartData(ovScope)
         if (card.previewStyle === 'chart_line') {
           this.drawStockChart(ctx, w, h, data)
         } else if (card.previewStyle === 'chart_bar') {
           this.drawBarChart(ctx, w, h, data)
         } else if (card.previewStyle === 'chart_pie') {
-          const pieData = this.generatePieData()
+          const pieData = this.generatePieData(ovScope)
           const palette = ['#007aff', '#ff9500', '#af52de', '#34c759', '#ff3b30', '#ffcc00', '#8e8e93']
           const halfW = w / 2
           this.drawPieChart(ctx, halfW, h, pieData.income, palette)
@@ -746,91 +746,102 @@ Page({
   },
 
   // ---- Canvas 折线图 ----
-  generateMockData() {
+  // 从真实记账数据聚合图表数据
+  _aggregateChartData(optScope) {
+    const stored = wx.getStorageSync('detailItems') || []
+    if (stored.length === 0) return []
+
     const period = this.data.reportPeriod
-    const data = []
-    const rand = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min
+    const scope = optScope || (this.data.reportType === 1 ? 'company' : 'personal')
     const now = new Date()
-    const today = now.getDate()
     const thisMonth = now.getMonth() + 1
     const thisYear = now.getFullYear()
 
-    if (period === 0) {
-      // 月度: 按当月实际天数，当月截至今
-      const pickerDate = this.data.reportPickerDate // "2026-06"
-      const [y, m] = pickerDate.split('-').map(Number)
-      const daysInMonth = new Date(y, m, 0).getDate()
-      const maxDay = (y === thisYear && m === thisMonth) ? today : daysInMonth
-      for (let d = 1; d <= maxDay; d++) {
-        const inc = rand(200, 3500)
-        const exp = rand(100, 3000)
-        const recv = rand(0, 2000)
-        const pay = rand(0, 2000)
-        data.push({ label: String(d), income: inc, expense: exp, receivable: recv, payable: pay, net: inc - exp })
+    // Build a map: label -> { income, expense, receivable, payable, net }
+    const map = {}
+
+    const addToLabel = (label, item) => {
+      if (!map[label]) map[label] = { label, income: 0, expense: 0, receivable: 0, payable: 0, net: 0 }
+      const amount = parseFloat(item.amount) || 0
+      if (item.type === 'in') {
+        map[label].income += amount
+      } else {
+        map[label].expense += amount
       }
-    } else if (period === 1) {
-      // 季度: 3个月，当季截至今
-      const pickerDate = this.data.reportPickerDate || `${thisYear}-${String(thisMonth).padStart(2, '0')}`
-      const [qy, qm] = pickerDate.split('-').map(Number)
-      const qStart = Math.floor((thisMonth - 1) / 3) * 3 + 1
-      const qMonths = [qStart, qStart + 1, qStart + 2]
-      const isCurrent = (qy === thisYear && qStart <= thisMonth)
-      for (const mn of qMonths) {
-        if (isCurrent && mn > thisMonth) break
-        const label = isCurrent ? `${mn}月` : `${qMonths.indexOf(mn) + 1}月`
-        const inc = rand(5000, 80000)
-        const exp = rand(3000, 70000)
-        const recv = rand(0, 30000)
-        const pay = rand(0, 30000)
-        data.push({ label: `${mn}月`, income: inc, expense: exp, receivable: recv, payable: pay, net: inc - exp })
-      }
-    } else if (period === 2) {
-      // 年度: 4个季度，当年截至今
-      const pickerDate = this.data.reportPickerDate || String(thisYear)
-      const [ay] = pickerDate.split('-').map(Number)
-      const curQuarter = Math.floor((thisMonth - 1) / 3) + 1
-      const quarters = ['Q1', 'Q2', 'Q3', 'Q4']
-      const maxQ = (ay === thisYear) ? curQuarter : 4
-      for (let qi = 0; qi < maxQ; qi++) {
-        const inc = rand(20000, 300000)
-        const exp = rand(15000, 250000)
-        const recv = rand(0, 100000)
-        const pay = rand(0, 100000)
-        data.push({ label: quarters[qi], income: inc, expense: exp, receivable: recv, payable: pay, net: inc - exp })
-      }
-    } else {
-      // 日度: 与月度一致
-      const pickerDate = this.data.reportPickerDate
-      const [y, m] = pickerDate.split('-').map(Number)
-      const daysInMonth = new Date(y, m, 0).getDate()
-      const maxDay = (y === thisYear && m === thisMonth) ? today : daysInMonth
-      for (let d = 1; d <= maxDay; d++) {
-        const inc = rand(200, 3500)
-        const exp = rand(100, 3000)
-        const recv = rand(0, 2000)
-        const pay = rand(0, 2000)
-        data.push({ label: String(d), income: inc, expense: exp, receivable: recv, payable: pay, net: inc - exp })
-      }
+      if (item.typeLabel === '垫付') map[label].receivable += amount
+      if (item.typeLabel === '应付') map[label].payable += amount
     }
+
+    stored.forEach(item => {
+      if ((item.scope || 'personal') !== scope) return
+      const d = new Date(item.date)
+      if (isNaN(d.getTime())) return
+      const y = d.getFullYear()
+      const m = d.getMonth() + 1
+      const day = d.getDate()
+
+      if (period === 0 || period === 3) {
+        // 月度/日度: 按天聚合
+        const pickerDate = this.data.reportPickerDate || `${thisYear}-${String(thisMonth).padStart(2, '0')}`
+        const [py, pm] = pickerDate.split('-').map(Number)
+        if (y === py && m === pm) {
+          addToLabel(String(day), item)
+        }
+      } else if (period === 1) {
+        // 季度: 按月聚合
+        const pickerDate = this.data.reportPickerDate || `${thisYear}-${String(thisMonth).padStart(2, '0')}`
+        const [qy] = pickerDate.split('-').map(Number)
+        const qStart = Math.floor((thisMonth - 1) / 3) * 3 + 1
+        if (y === qy && m >= qStart && m <= qStart + 2) {
+          addToLabel(`${m}月`, item)
+        }
+      } else if (period === 2) {
+        // 年度: 按季度聚合
+        const pickerDate = this.data.reportPickerDate || String(thisYear)
+        const [ay] = pickerDate.split('-').map(Number)
+        if (y === ay) {
+          const qi = Math.floor((m - 1) / 3)
+          const quarters = ['Q1', 'Q2', 'Q3', 'Q4']
+          addToLabel(quarters[qi], item)
+        }
+      }
+    })
+
+    const data = Object.values(map)
+    data.forEach(d => { d.net = d.income - d.expense })
+    // Sort by label
+    data.sort((a, b) => {
+      const na = parseInt(a.label), nb = parseInt(b.label)
+      if (!isNaN(na) && !isNaN(nb)) return na - nb
+      return a.label.localeCompare(b.label)
+    })
     return data
   },
 
   drawStockChart(ctx, w, h, chartData, selectedIdx) {
-    const ml = 42, mr = 14, mt = 24, mb = 24
-    const pw = w - ml - mr
-    const ph = h - mt - mb
-
     // Background
     ctx.fillStyle = '#ffffff'
     ctx.fillRect(0, 0, w, h)
 
-    // Find Y range
+    if (!chartData || chartData.length === 0) {
+      ctx.fillStyle = '#a0a0a0'
+      ctx.font = '12px sans-serif'
+      ctx.textAlign = 'center'
+      ctx.fillText('暂无数据', w / 2, h / 2)
+      return
+    }
+
+    const ml = 42, mr = 14, mt = 24, mb = 24
+    const pw = w - ml - mr
+    const ph = h - mt - mb
+
+    // Find Y range (adaptive)
     const nets = chartData.map(d => d.net)
     const maxAbs = Math.max(Math.abs(Math.max(...nets)), Math.abs(Math.min(...nets)), 1)
-    const yMax = Math.ceil(maxAbs / 1000) * 1000 + 1000
+    const yMax = maxAbs <= 10 ? 10 : maxAbs <= 100 ? Math.ceil(maxAbs / 10) * 10 : maxAbs <= 1000 ? Math.ceil(maxAbs / 100) * 100 : Math.ceil(maxAbs / 1000) * 1000
     const yMin = -yMax
 
-    function toX(i) { return ml + (i / (chartData.length - 1)) * pw }
+    function toX(i) { return ml + (i / Math.max(1, chartData.length - 1)) * pw }
     function toY(v) { return mt + ph / 2 - (v / yMax) * (ph / 2) }
     const zeroY = mt + ph / 2
 
@@ -874,7 +885,7 @@ Page({
     ctx.stroke()
 
     // Blocks + dots
-    const blockW = Math.max(2, pw / chartData.length * 0.28)
+    const blockW = Math.min(16, Math.max(2, pw / chartData.length * 0.28))
     for (let i = 0; i < chartData.length; i++) {
       const { income, expense, net } = chartData[i]
       const cx = toX(i)
@@ -1000,23 +1011,31 @@ Page({
 
   // ---- 柱状图 ----
   drawBarChart(ctx, w, h, chartData) {
-    const ml = 42, mr = 14, mt = 24, mb = 24
-    const pw = w - ml - mr
-    const ph = h - mt - mb
-
     // Background
     ctx.fillStyle = '#ffffff'
     ctx.fillRect(0, 0, w, h)
 
-    // Y range
+    if (!chartData || chartData.length === 0) {
+      ctx.fillStyle = '#a0a0a0'
+      ctx.font = '12px sans-serif'
+      ctx.textAlign = 'center'
+      ctx.fillText('暂无数据', w / 2, h / 2)
+      return
+    }
+
+    const ml = 42, mr = 14, mt = 24, mb = 24
+    const pw = w - ml - mr
+    const ph = h - mt - mb
+
+    // Y range (adaptive)
     const maxVal = Math.max(
       Math.max(...chartData.map(d => d.income)),
       Math.max(...chartData.map(d => d.expense)),
       1
     )
-    const yMax = Math.ceil(maxVal / 1000) * 1000 + 1000
+    const yMax = maxVal <= 10 ? 10 : maxVal <= 100 ? Math.ceil(maxVal / 10) * 10 : maxVal <= 1000 ? Math.ceil(maxVal / 100) * 100 : Math.ceil(maxVal / 1000) * 1000
 
-    const barW = Math.max(3, pw / chartData.length * 0.4)
+    const barW = Math.min(24, Math.max(3, pw / chartData.length * 0.4))
     const gap = barW * 0.25
     const groupW = barW * 2 + gap
     const padX = groupW / 2
@@ -1091,37 +1110,59 @@ Page({
   },
 
   // ---- 饼状图 ----
-  generatePieData() {
-    const data = this._sharedChartData || this.generateMockData()
-    const totalIncome = data.reduce((s, d) => s + d.income, 0)
-    const totalExpense = data.reduce((s, d) => s + d.expense, 0)
+  generatePieData(optScope) {
+    const stored = wx.getStorageSync('detailItems') || []
+    if (stored.length === 0) return { income: [], expense: [] }
 
-    const TOP_N = 6
+    const scope = optScope || (this.data.reportType === 1 ? 'company' : 'personal')
+    const period = this.data.reportPeriod
+    const now = new Date()
+    const thisMonth = now.getMonth() + 1
+    const thisYear = now.getFullYear()
 
-    // Power-law distribution: a few big items dominate, long tail of small ones
-    const genCatValues = (names, total) => {
-      const weights = names.map((_, i) => 1 / (i + 1) * (0.5 + Math.random() * 0.5))
-      const sum = weights.reduce((a, b) => a + b, 0)
-      return names.map((name, i) => ({
-        name,
-        value: Math.round(total * weights[i] / sum)
-      }))
-    }
+    // Filter items by scope and period, then aggregate by category
+    const incomeMap = {}
+    const expenseMap = {}
 
-    const incomeNames = ['工资', '兼职', '投资', '租金', '分红', '稿费', '奖金', '补贴', '退款', '理财']
-    const rawIncome = genCatValues(incomeNames, totalIncome)
+    const pickerDate = this.data.reportPickerDate || `${thisYear}-${String(thisMonth).padStart(2, '0')}`
 
-    const expenseNames = [
-      '餐饮', '交通', '购物', '娱乐', '房租', '水电', '通讯', '医疗', '教育', '健身',
-      '美容', '宠物', '旅行', '礼金', '数码', '家居', '汽车', '保险', '税费', '快递',
-      '零食', '水果', '烟酒', '咖啡', '外卖', '电影', '游戏', '音乐', '阅读', '摄影',
-      '母婴', '养老', '捐赠', '维修', '洗衣', '停车', '加油', '公交', '地铁', '打车',
-      '酒店', '门票', '签证', '代购', '会员', '存储', '打印', '文具', '绿植', '其他杂项',
-    ]
-    const rawExpense = genCatValues(expenseNames, totalExpense)
+    stored.forEach(item => {
+      if ((item.scope || 'personal') !== scope) return
 
-    const topThenOther = (items) => {
+      const d = new Date(item.date)
+      if (isNaN(d.getTime())) return
+      const y = d.getFullYear()
+      const m = d.getMonth() + 1
+
+      let inPeriod = false
+      if (period === 0 || period === 3) {
+        const [py, pm] = pickerDate.split('-').map(Number)
+        if (y === py && m === pm) inPeriod = true
+      } else if (period === 1) {
+        const [qy] = pickerDate.split('-').map(Number)
+        const qStart = Math.floor((thisMonth - 1) / 3) * 3 + 1
+        if (y === qy && m >= qStart && m <= qStart + 2) inPeriod = true
+      } else if (period === 2) {
+        const [ay] = pickerDate.split('-').map(Number)
+        if (y === ay) inPeriod = true
+      }
+
+      if (!inPeriod) return
+
+      const amount = parseFloat(item.amount) || 0
+      const cat = item.category || '未分类'
+
+      if (item.type === 'in') {
+        incomeMap[cat] = (incomeMap[cat] || 0) + amount
+      } else {
+        expenseMap[cat] = (expenseMap[cat] || 0) + amount
+      }
+    })
+
+    const toSegments = (map) => {
+      const items = Object.entries(map).map(([name, value]) => ({ name, value: Math.round(value) }))
       items.sort((a, b) => b.value - a.value)
+      const TOP_N = 6
       const top = items.slice(0, TOP_N)
       const rest = items.slice(TOP_N).reduce((s, it) => s + it.value, 0)
       if (rest > 0) top.push({ name: '其他', value: rest })
@@ -1129,14 +1170,24 @@ Page({
     }
 
     return {
-      income: topThenOther(rawIncome),
-      expense: topThenOther(rawExpense),
+      income: toSegments(incomeMap),
+      expense: toSegments(expenseMap),
     }
   },
 
   drawPieChart(ctx, w, h, segments, colors, selectedIdx) {
+    // Background
+    ctx.fillStyle = '#ffffff'
+    ctx.fillRect(0, 0, w, h)
+
     const total = segments.reduce((s, seg) => s + seg.value, 0)
-    if (total === 0) return
+    if (total === 0) {
+      ctx.fillStyle = '#a0a0a0'
+      ctx.font = '12px sans-serif'
+      ctx.textAlign = 'center'
+      ctx.fillText('暂无数据', w / 2, h / 2)
+      return
+    }
 
     const cx = w / 2
     const cy = h / 2
@@ -1322,7 +1373,7 @@ Page({
         let h = res[0].height || 200
         const dpr = wx.getSystemInfoSync().pixelRatio || 2
 
-        const chartData = this._sharedChartData || this.generateMockData()
+        const chartData = this._sharedChartData || this._aggregateChartData()
 
         if (w < 10 || h < 10) {
           const query2 = this.createSelectorQuery()
@@ -1419,7 +1470,7 @@ Page({
             canvas.height = h * dpr
             ctx.scale(dpr, dpr)
 
-            this._sharedChartData = this.generateMockData()
+            this._sharedChartData = this._aggregateChartData()
             console.log('Drawing chart with', this._sharedChartData.length, 'points, size:', w, h)
             this.drawStockChart(ctx, w, h, this._sharedChartData)
           }).exec()
@@ -1430,7 +1481,7 @@ Page({
         canvas.height = h * dpr
         ctx.scale(dpr, dpr)
 
-        this._sharedChartData = this.generateMockData()
+        this._sharedChartData = this._aggregateChartData()
         console.log('Drawing chart with', this._sharedChartData.length, 'points, size:', w, h)
         this.drawStockChart(ctx, w, h, this._sharedChartData)
       })
@@ -1445,6 +1496,9 @@ Page({
       currentReportCard: next,
       reportType: next % 2,
     })
+    this.initLineChart()
+    this.initBarChart()
+    this.initPieCharts()
   },
 
   // 切换报表周期
@@ -1661,6 +1715,11 @@ Page({
           return { ...item }
         })
         this.setData({ [itemsKey]: updated, modalItem: null })
+        if (modalFrom !== 'settle') {
+          wx.setStorageSync('detailItems', updated)
+          this._personalItems = updated.filter(it => (it.scope || 'personal') === 'personal')
+          this._companyItems = updated.filter(it => it.scope === 'company')
+        }
         wx.showToast({ title: '已保存', icon: 'success' })
       },
     })
@@ -1673,7 +1732,6 @@ Page({
     const type = e.currentTarget.dataset.type
     const now = new Date()
     const date = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
-    const cats = this.getBookCats(type)
     const typeLabelMap = { income: '收入', expense: '支出', payForward: '垫付', payable: '应付' }
     this.setData({
       showBookPopup: true,
@@ -1682,16 +1740,8 @@ Page({
       'bookForm.category': '',
       'bookForm.date': date,
       'bookForm.note': '',
-      bookCategories: cats,
       bookTypeLabel: typeLabelMap[type] || '支出',
     })
-  },
-
-  getBookCats(type) {
-    if (type === 'income') return ['工资', '兼职', '奖金', '稿费', '理财', '补贴', '股息']
-    if (type === 'payForward') return ['餐饮', '交通', '购物', '办公用品', '快递', '维修']
-    if (type === 'payable') return ['房租', '通讯', '水电', '物业', '贷款', '税务']
-    return ['餐饮', '交通', '购物', '房租', '通讯', '医疗', '外卖', '打车', '水电', '零食', '娱乐']
   },
 
   onBookScopeToggle(e) {
@@ -1717,7 +1767,6 @@ Page({
     this.setData({
       'bookForm.type': type,
       'bookForm.category': '',
-      bookCategories: this.getBookCats(type),
       bookTypeLabel: typeLabelMap[type] || '支出',
     })
     if (this.data.showBookCatPanel) this.refreshBookCatPanel()
@@ -1803,6 +1852,11 @@ Page({
     }
     const items = [newItem, ...this.data.detailItems]
     this.setData({ detailItems: items, showBookPopup: false })
+    wx.setStorageSync('detailItems', items)
+    // Update cache
+    const scope = this.data.bookScope
+    if (scope === 'personal') this._personalItems = items.filter(it => (it.scope || 'personal') === 'personal')
+    else this._companyItems = items.filter(it => it.scope === 'company')
     wx.showToast({ title: '记账成功', icon: 'success' })
   },
 
@@ -1906,6 +1960,11 @@ Page({
     const items = from === 'settle' ? 'settleItems' : 'detailItems'
     const list = this.data[items].filter(item => item.id !== id)
     this.setData({ [items]: list })
+    if (from === 'detail') {
+      wx.setStorageSync('detailItems', list)
+      this._personalItems = list.filter(it => (it.scope || 'personal') === 'personal')
+      this._companyItems = list.filter(it => it.scope === 'company')
+    }
   },
 
   goOverview() {
@@ -1975,79 +2034,23 @@ Page({
 
   initDetailItems() {
     const isCompany = this.data.detailType === 1
-    const personalPool = [
-      { cat: '餐饮', type: 'out', label: '支出' }, { cat: '工资', type: 'in', label: '收入' },
-      { cat: '交通', type: 'out', label: '支出' }, { cat: '购物', type: 'out', label: '垫付' },
-      { cat: '兼职', type: 'in', label: '收入' }, { cat: '房租', type: 'out', label: '应付' },
-      { cat: '投资', type: 'in', label: '收入' }, { cat: '通讯', type: 'out', label: '支出' },
-      { cat: '医疗', type: 'out', label: '应付' }, { cat: '奖金', type: 'in', label: '收入' },
-      { cat: '外卖', type: 'out', label: '垫付' }, { cat: '打车', type: 'out', label: '支出' },
-      { cat: '稿费', type: 'in', label: '收入' }, { cat: '水电', type: 'out', label: '应付' },
-      { cat: '理财', type: 'in', label: '收入' }, { cat: '零食', type: 'out', label: '支出' },
-      { cat: '快递', type: 'out', label: '垫付' }, { cat: '补贴', type: 'in', label: '垫付' },
-      { cat: '娱乐', type: 'out', label: '支出' }, { cat: '股息', type: 'in', label: '收入' },
-    ]
-    const companyPool = [
-      { cat: '采购', type: 'out', label: '垫付' }, { cat: '回款', type: 'in', label: '收入' },
-      { cat: '差旅', type: 'out', label: '应付' }, { cat: '营收', type: 'in', label: '收入' },
-      { cat: '招待', type: 'out', label: '垫付' }, { cat: '投资', type: 'in', label: '收入' },
-      { cat: '租金', type: 'out', label: '应付' }, { cat: '分红', type: 'in', label: '收入' },
-      { cat: '物料', type: 'out', label: '支出' }, { cat: '融资', type: 'in', label: '收入' },
-      { cat: '物流', type: 'out', label: '垫付' }, { cat: '咨询', type: 'in', label: '收入' },
-      { cat: '税费', type: 'out', label: '应付' }, { cat: '补贴', type: 'in', label: '收入' },
-      { cat: '维修', type: 'out', label: '支出' }, { cat: '软件', type: 'out', label: '应付' },
-      { cat: '保险', type: 'out', label: '支出' }, { cat: '培训', type: 'in', label: '垫付' },
-      { cat: '广告', type: 'out', label: '垫付' }, { cat: '利息', type: 'in', label: '收入' },
-    ]
-    const pool = isCompany ? companyPool : personalPool
-    const rand = (min, max) => (Math.random() * (max - min) + min).toFixed(2)
-    const minIn = isCompany ? 5000 : 200, maxIn = isCompany ? 50000 : 8000
-    const minOut = isCompany ? 500 : 20, maxOut = isCompany ? 20000 : 3000
-    const notes = ['午餐AA', '项目奖金', '打车去公司', '', '周末接单', '押一付三',
-      '基金分红', '', '挂号检查费', '季度绩效', '晚饭加奶茶', '去机场',
-      '投稿收入', '本月电费', '定期理财到期', '', '退货返款', '出差补贴',
-      '看电影', '分红到账']
-    const items = pool.map((item, i) => ({
-      id: i,
-      category: item.cat,
-      type: item.type,
-      typeLabel: item.label,
-      amount: item.type === 'in' ? rand(minIn, maxIn) : rand(minOut, maxOut),
-      date: `6月${10 + i}日`,
-      note: notes[i] || '',
-    }))
-    items.sort((a, b) => b.date.localeCompare(a.date))
-    this.setData({ detailItems: items })
-    // 分别缓存
-    if (isCompany) this._companyItems = items
-    else this._personalItems = items
+    const stored = wx.getStorageSync('detailItems') || []
+    // filter by scope: stored items have a 'scope' field ('personal' | 'company')
+    const filtered = stored.filter(item => (item.scope || 'personal') === (isCompany ? 'company' : 'personal'))
+    this.setData({ detailItems: filtered })
+    if (isCompany) this._companyItems = filtered
+    else this._personalItems = filtered
   },
 
   initSettleItems() {
     const isCompany = this.data.settleType === 1
-    const src = isCompany ? this._companyItems : this._personalItems
-    const settled = src ? src.filter(item => item.typeLabel === '垫付' || item.typeLabel === '应付') : []
-    if (settled.length > 0) {
-      this.setData({ settleItems: settled.map(item => ({ ...item })) })
-      return
-    }
-    // 缓存未命中或过滤为空时，直接生成 mock 数据
-    const rand = (min, max) => (Math.random() * (max - min) + min).toFixed(2)
-    const pool = isCompany
-      ? ['采购', '差旅', '招待', '租金', '物流', '税费', '软件', '广告']
-      : ['餐饮', '交通', '购物', '房租', '维修', '快递', '医疗', '数码']
-    const baseId = isCompany ? 9000 : 8000
-    const items = pool.map((cat, i) => {
-      const isIn = i < pool.length / 2
-      return {
-        id: baseId + i, category: cat, type: isIn ? 'in' : 'out',
-        typeLabel: isIn ? '垫付' : '应付',
-        amount: rand(isCompany ? 500 : 50, isCompany ? 20000 : 3000),
-        date: `6月${10 + i}日`,
-        note: '',
-      }
+    const stored = wx.getStorageSync('detailItems') || []
+    const filtered = stored.filter(item => {
+      const matchScope = (item.scope || 'personal') === (isCompany ? 'company' : 'personal')
+      const matchType = item.typeLabel === '垫付' || item.typeLabel === '应付'
+      return matchScope && matchType
     })
-    this.setData({ settleItems: items })
+    this.setData({ settleItems: filtered.map(item => ({ ...item })) })
   },
 
   // ---- 自定义分类 ----
