@@ -837,8 +837,9 @@ Page({
 
     // Find Y range (adaptive)
     const nets = chartData.map(d => d.net)
-    const maxAbs = Math.max(Math.abs(Math.max(...nets)), Math.abs(Math.min(...nets)), 1)
-    const yMax = maxAbs <= 10 ? 10 : maxAbs <= 100 ? Math.ceil(maxAbs / 10) * 10 : maxAbs <= 1000 ? Math.ceil(maxAbs / 100) * 100 : Math.ceil(maxAbs / 1000) * 1000
+    const rawMax = Math.max(Math.abs(Math.max(...nets)), Math.abs(Math.min(...nets)), 1)
+    const mag = Math.pow(10, Math.floor(Math.log10(rawMax)))
+    const yMax = Math.ceil(rawMax / mag) * mag
     const yMin = -yMax
 
     function toX(i) { return ml + (i / Math.max(1, chartData.length - 1)) * pw }
@@ -850,13 +851,19 @@ Page({
     ctx.font = '9px sans-serif'
     ctx.textAlign = 'right'
     const steps = 4
+    const fmtY = (v) => {
+      const abs = Math.abs(v)
+      if (abs >= 10000) return (v / 1000).toFixed(0) + 'k'
+      if (abs >= 1000) return (v / 1000).toFixed(1) + 'k'
+      return String(Math.round(v))
+    }
     for (let i = 0; i <= steps; i++) {
       const val = yMin + ((yMax - yMin) / steps) * i
       const gy = toY(val)
       ctx.strokeStyle = 'rgba(0,0,0,0.06)'
       ctx.lineWidth = 1
       ctx.beginPath(); ctx.moveTo(ml, gy); ctx.lineTo(w - mr, gy); ctx.stroke()
-      ctx.fillText((val / 1000).toFixed(1) + 'k', ml - 6, gy + 3)
+      ctx.fillText(fmtY(val), ml - 6, gy + 3)
     }
 
     // Zero line
@@ -885,7 +892,7 @@ Page({
     ctx.stroke()
 
     // Blocks + dots
-    const blockW = Math.min(16, Math.max(2, pw / chartData.length * 0.28))
+    const blockW = Math.min(6, Math.max(2, pw / chartData.length * 0.28))
     for (let i = 0; i < chartData.length; i++) {
       const { income, expense, net } = chartData[i]
       const cx = toX(i)
@@ -1033,9 +1040,10 @@ Page({
       Math.max(...chartData.map(d => d.expense)),
       1
     )
-    const yMax = maxVal <= 10 ? 10 : maxVal <= 100 ? Math.ceil(maxVal / 10) * 10 : maxVal <= 1000 ? Math.ceil(maxVal / 100) * 100 : Math.ceil(maxVal / 1000) * 1000
+    const mag = Math.pow(10, Math.floor(Math.log10(maxVal || 1)))
+    const yMax = Math.ceil(maxVal / mag) * mag
 
-    const barW = Math.min(24, Math.max(3, pw / chartData.length * 0.4))
+    const barW = Math.min(8, Math.max(2, pw / chartData.length * 0.4))
     const gap = barW * 0.25
     const groupW = barW * 2 + gap
     const padX = groupW / 2
@@ -1050,13 +1058,18 @@ Page({
     ctx.font = '9px sans-serif'
     ctx.textAlign = 'right'
     const steps = 4
+    const fmtY = (v) => {
+      if (v >= 10000) return (v / 1000).toFixed(0) + 'k'
+      if (v >= 1000) return (v / 1000).toFixed(1) + 'k'
+      return String(Math.round(v))
+    }
     for (let i = 0; i <= steps; i++) {
       const val = (yMax / steps) * i
       const gy = toY(val)
       ctx.strokeStyle = 'rgba(0,0,0,0.06)'
       ctx.lineWidth = 1
       ctx.beginPath(); ctx.moveTo(ml, gy); ctx.lineTo(w - mr, gy); ctx.stroke()
-      ctx.fillText((val / 1000).toFixed(1) + 'k', ml - 6, gy + 3)
+      ctx.fillText(fmtY(val), ml - 6, gy + 3)
     }
 
     // X labels
@@ -1401,13 +1414,39 @@ Page({
     if (!this._chartData || !this._chartLayout) return
     const { ml, pw } = this._chartLayout
     const data = this._chartData
+
+    clearTimeout(this._tooltipTimer)
+
+    // If tooltip already showing, dismiss it
+    if (this._tooltipIdx != null) {
+      this._tooltipIdx = null
+      this._redrawStockChart()
+      return
+    }
+
     const touch = e.touches[0]
     if (!touch) return
 
     let idx = Math.round(((touch.x - ml) / pw) * (data.length - 1))
     idx = Math.max(0, Math.min(data.length - 1, idx))
 
-    // Redraw with tooltip
+    // Only show if tap is reasonably close to a data point
+    const toX = (i) => ml + (i / Math.max(1, data.length - 1)) * pw
+    const dist = Math.abs(touch.x - toX(idx))
+    const maxDist = pw / Math.max(1, data.length) * 0.6
+    if (dist > maxDist) return
+
+    this._tooltipIdx = idx
+    this._redrawStockChart(idx)
+
+    this._tooltipTimer = setTimeout(() => {
+      this._tooltipIdx = null
+      this._redrawStockChart()
+    }, 3000)
+  },
+
+  _redrawStockChart(idx) {
+    const data = this._chartData
     const query = this.createSelectorQuery()
     query.select('#lineChart').fields({ node: true, size: true }).exec((res) => {
       if (!res || !res[0] || !res[0].node) return
@@ -1419,28 +1458,13 @@ Page({
       canvas.width = w * dpr
       canvas.height = h * dpr
       ctx.scale(dpr, dpr)
-      this.drawStockChart(ctx, w, h, data, idx)
+      this.drawStockChart(ctx, w, h, data, idx != null ? idx : undefined)
     })
-
-    clearTimeout(this._tooltipTimer)
-    this._tooltipTimer = setTimeout(() => {
-      const q = this.createSelectorQuery()
-      q.select('#lineChart').fields({ node: true, size: true }).exec((res) => {
-        if (!res || !res[0] || !res[0].node) return
-        const canvas = res[0].node
-        const ctx = canvas.getContext('2d')
-        const dpr = wx.getSystemInfoSync().pixelRatio || 2
-        const w = res[0].width || this._chartLayout.w
-        const h = res[0].height || this._chartLayout.h
-        canvas.width = w * dpr
-        canvas.height = h * dpr
-        ctx.scale(dpr, dpr)
-        this.drawStockChart(ctx, w, h, data)
-      })
-    }, 3000)
   },
 
   initLineChart() {
+    clearTimeout(this._tooltipTimer)
+    this._tooltipIdx = null
     const query = this.createSelectorQuery()
     query.select('#lineChart')
       .fields({ node: true, size: true })
