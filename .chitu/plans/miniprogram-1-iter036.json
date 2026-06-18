@@ -4,6 +4,9 @@
   "targetFiles": [
     ".chitu/interfaces/pages-mingxi-mingxi.js.json"
   ],
-  "steps": [],
+  "steps": [
+    "modified: .chitu/interfaces/pages-mingxi-mingxi.js.json",
+    "capability: 修复 app.js 接口文档：imports [\"utils/api\"] 匹配 require('./utils/api')，同时优化入口注释"
+  ],
   "createdAt": "2026-06-18T11:12:00.479Z"
 }
