@@ -1,7 +1,7 @@
 {
-  "file": ".chitu/interfaces/pages-mingxi-mingxi.js.json",
+  "file": ".chitu/plans/miniprogram-1-iter041.json",
   "exports": [],
   "imports": [],
   "capability": "app.js 新增 globalData 全局状态（lang/darkMode），冷启动云同步，imports 修正为 [\"utils/api\"]",
-  "updatedAt": "2026-06-18T11:52:33.172Z"
+  "updatedAt": "2026-06-18T11:52:33.173Z"
 }

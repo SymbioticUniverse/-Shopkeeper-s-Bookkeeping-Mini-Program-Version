@@ -1,7 +1,7 @@
 {
   "file": "app.js",
-  "exports": [],
-  "imports": [],
-  "capability": "mingxi.js 接口文档 imports 恢复为 [\"utils/api\"]，与源码 require('../../utils/api') 一致",
+  "exports": ["globalData"],
+  "imports": ["utils/api"],
+  "capability": "小程序入口：冷启动云同步 + globalData 全局状态（lang/darkMode），通过 api.syncFromCloud() 拉取全量数据到本地 Storage",
   "updatedAt": "2026-06-18T11:17:18.059Z"
 }

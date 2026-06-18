@@ -1,10 +1,17 @@
-# 迭代042 — 收尾清理
-
-## 未提交变更
-- [ ] `.chitu/interfaces/pages-mingxi-mingxi.js.json` — capability 文字精简（移除尾部 imports 核对注释）
-- [ ] `.chitu/plans/miniprogram-1-iter041.json` — 补全 steps
-- [ ] `.chitu/sessions/` — 提交或清理 session 记录
-- [ ] `.chitu/watchdog.json` — 提交或清理
-
-## 策略
-整理未提交变更，统一提交，标记项目交付完成。
+{
+  "project": "miniprogram-1",
+  "goal": "completed",
+  "targetFiles": [
+    ".chitu/interfaces/pages-mingxi-mingxi.js.json",
+    ".chitu/plans/miniprogram-1-iter041.json",
+    ".chitu/plans/miniprogram-1-iter042.json",
+    ".chitu/CHANGELOG.md"
+  ],
+  "steps": [
+    "fixed: .chitu/interfaces/pages-mingxi-mingxi.js.json — imports: [\"utils/api\"]，capability 移除尾部注释",
+    "fixed: .chitu/plans/miniprogram-1-iter041.json — 补全 steps",
+    "fixed: .chitu/CHANGELOG.md — 确认 mingxi imports 修复",
+    "capability: 迭代042收尾清理完成，mingxi.js 接口文档 imports 正确，全部项目已交付"
+  ],
+  "createdAt": "2026-06-18T11:44:00.000Z"
+}
