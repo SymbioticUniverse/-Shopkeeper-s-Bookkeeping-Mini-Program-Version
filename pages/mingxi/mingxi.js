@@ -1,3 +1,5 @@
+const api = require('../../utils/api')
+
 // 多语言翻译表
 const LANG_TABLE = {
   tab_detail:       { 'zh-CN': '明细',     'zh-TW': '明細',     'ja-JP': '明細',     'en-US': 'Details' },
@@ -586,10 +588,10 @@ Page({
       reportSelectedYear: y,
     })
     // 初始化多语言
-    const lang = wx.getStorageSync('appLanguage') || 'zh-CN'
+    const lang = api.getSetting('appLanguage') || 'zh-CN'
     this._applyLanguage(lang)
     // 初始化深色模式
-    const darkMode = wx.getStorageSync('appDarkMode') || 'system'
+    const darkMode = api.getSetting('appDarkMode') || 'system'
     let isDark = false
     if (darkMode === 'system') {
       isDark = (wx.getSystemInfoSync().theme === 'dark')
@@ -597,18 +599,23 @@ Page({
       isDark = (darkMode === 'dark')
     }
     this.setData({ isDarkMode: isDark })
-    const savedUser = wx.getStorageSync('userInfo')
+    const savedUser = api.getUserInfo()
     if (savedUser) {
       this.setData({ isLoggedIn: true, userInfo: savedUser })
     }
+    api.migrate()
+    const savedPCats = api.getCategories('personal')
+    const savedCCats = api.getCategories('company')
+    if (savedPCats && savedPCats.length) this.setData({ personalCategories: savedPCats })
+    if (savedCCats && savedCCats.length) this.setData({ companyCategories: savedCCats })
     this.updateReportDate()
     this.initDetailItems()
     this.initSettleItems()
     this._syncOverviewCards()
     this.updateNotifyBadge()
-    if (!wx.getStorageSync('auditCleaned')) {
-      wx.removeStorageSync('auditList')
-      wx.setStorageSync('auditCleaned', true)
+    if (!api.getSetting('auditCleaned')) {
+      api.removeAuditList()
+      api.saveSetting('auditCleaned', true)
     }
     this.updateAuditBadge()
   },
@@ -658,7 +665,7 @@ Page({
   },
 
   _syncOverviewCards() {
-    const saved = wx.getStorageSync('customOverviewCards')
+    const saved = api.getOverviewCards()
     if (saved && saved.length > 0) {
       const enriched = saved.map(card => {
         const tpl = this.data.customTemplates.find(t => t.type === card.type)
@@ -748,11 +755,11 @@ Page({
   // ---- Canvas 折线图 ----
   // 从真实记账数据聚合图表数据
   _aggregateChartData(optScope) {
-    const stored = wx.getStorageSync('detailItems') || []
+    const scope = optScope || (this.data.reportType === 1 ? 'company' : 'personal')
+    const stored = api.getItems(scope)
     if (stored.length === 0) return []
 
     const period = this.data.reportPeriod
-    const scope = optScope || (this.data.reportType === 1 ? 'company' : 'personal')
     const now = new Date()
     const thisMonth = now.getMonth() + 1
     const thisYear = now.getFullYear()
@@ -773,7 +780,6 @@ Page({
     }
 
     stored.forEach(item => {
-      if ((item.scope || 'personal') !== scope) return
       const d = new Date(item.date)
       if (isNaN(d.getTime())) return
       const y = d.getFullYear()
@@ -1126,10 +1132,10 @@ Page({
 
   // ---- 饼状图 ----
   generatePieData(optScope) {
-    const stored = wx.getStorageSync('detailItems') || []
+    const scope = optScope || (this.data.reportType === 1 ? 'company' : 'personal')
+    const stored = api.getItems(scope)
     if (stored.length === 0) return { income: [], expense: [] }
 
-    const scope = optScope || (this.data.reportType === 1 ? 'company' : 'personal')
     const period = this.data.reportPeriod
     const now = new Date()
     const thisMonth = now.getMonth() + 1
@@ -1142,7 +1148,6 @@ Page({
     const pickerDate = this.data.reportPickerDate || `${thisYear}-${String(thisMonth).padStart(2, '0')}`
 
     stored.forEach(item => {
-      if ((item.scope || 'personal') !== scope) return
 
       const d = new Date(item.date)
       if (isNaN(d.getTime())) return
@@ -1728,24 +1733,13 @@ Page({
       content: '确定要保存修改吗？',
       success: (res) => {
         if (!res.confirm) return
-        const updateCache = (arr) => {
-          const it = arr && arr.find(x => x.id === modalItem.id)
-          if (it) { it.category = modalEdit.category; it.amount = modalEdit.amount; it.note = modalEdit.note }
-        }
-        updateCache(this._personalItems)
-        updateCache(this._companyItems)
+        api.updateItem(modalItem.id, { category: modalEdit.category, amount: modalEdit.amount, note: modalEdit.note })
         const itemsKey = modalFrom === 'settle' ? 'settleItems' : 'detailItems'
-        const list = this.data[itemsKey]
-        const updated = list.map(item => {
+        const updated = this.data[itemsKey].map(item => {
           if (item.id === modalItem.id) return { ...item, category: modalEdit.category, amount: modalEdit.amount, note: modalEdit.note }
           return { ...item }
         })
         this.setData({ [itemsKey]: updated, modalItem: null })
-        if (modalFrom !== 'settle') {
-          wx.setStorageSync('detailItems', updated)
-          this._personalItems = updated.filter(it => (it.scope || 'personal') === 'personal')
-          this._companyItems = updated.filter(it => it.scope === 'company')
-        }
         wx.showToast({ title: '已保存', icon: 'success' })
       },
     })
@@ -1935,12 +1929,11 @@ Page({
       target: target || '',
       targetType: targetType || 'external',
     }
-    const allItems = wx.getStorageSync('detailItems') || []
-    allItems.unshift(newItem)
+    const scope = this.data.bookScope
 
     // 内部对象 + 垫付/应付 → 联动对面 scope
     if (targetType === 'internal' && (type === 'payForward' || type === 'payable')) {
-      const mirrorScope = this.data.bookScope === 'personal' ? 'company' : 'personal'
+      const mirrorScope = scope === 'personal' ? 'company' : 'personal'
       const mirrorTypeLabel = type === 'payForward' ? '应付' : '垫付'
       const mirrorType = type === 'payForward' ? 'out' : 'in'
       const mirrorItem = {
@@ -1952,20 +1945,17 @@ Page({
         amount: parseFloat(amount).toFixed(2),
         date: date,
         note: note || '',
-        target: this.data.bookScope === 'personal' ? '个人' : '公司',
+        target: scope === 'personal' ? '个人' : '公司',
         targetType: 'internal',
         linkedId: newItem.id,
       }
       newItem.linkedId = mirrorItem.id
-      allItems.unshift(mirrorItem)
+      api.addLinkedItems(scope, newItem, mirrorScope, mirrorItem)
+    } else {
+      api.addItem(scope, newItem)
     }
 
-    wx.setStorageSync('detailItems', allItems)
-    const filtered = allItems.filter(it => (it.scope || 'personal') === this.data.bookScope)
-    this.setData({ detailItems: filtered, showBookPopup: false })
-    const scope = this.data.bookScope
-    if (scope === 'personal') this._personalItems = allItems.filter(it => (it.scope || 'personal') === 'personal')
-    else this._companyItems = allItems.filter(it => it.scope === 'company')
+    this.setData({ detailItems: api.getItems(scope), showBookPopup: false })
     wx.showToast({ title: '记账成功', icon: 'success' })
   },
 
@@ -1981,17 +1971,12 @@ Page({
       content: '结清后将视为普通收支，确定吗？',
       success: (res) => {
         if (!res.confirm) return
-        const updateCache = (arr) => {
-          const it = arr && arr.find(x => x.id === id)
-          if (it) { it.typeLabel = it.type === 'in' ? '收入' : '支出'; it._open = false }
-        }
-        updateCache(this._personalItems)
-        updateCache(this._companyItems)
-
         const itemsKey = from === 'settle' ? 'settleItems' : 'detailItems'
-        const list = this.data[itemsKey]
-        const updated = list.map(item => {
-          if (item.id === id) return { ...item, typeLabel: item.type === 'in' ? '收入' : '支出', _open: false }
+        const found = this.data[itemsKey].find(item => item.id === id)
+        const newTypeLabel = found && found.type === 'in' ? '收入' : '支出'
+        api.updateItem(id, { typeLabel: newTypeLabel })
+        const updated = this.data[itemsKey].map(item => {
+          if (item.id === id) return { ...item, typeLabel: newTypeLabel, _open: false }
           return { ...item }
         })
         this.setData({ [itemsKey]: updated, modalItem: null })
@@ -2023,19 +2008,13 @@ Page({
       content: '作废后仍可取消作废，确定吗？',
       success: (res) => {
         if (!res.confirm) return
-        const updateCache = (arr) => {
-          const it = arr && arr.find(x => x.id === id)
-          if (it) { it._voided = true; it._open = false }
-        }
-        updateCache(this._personalItems)
-        updateCache(this._companyItems)
-        const items = from === 'settle' ? 'settleItems' : 'detailItems'
-        const list = this.data[items]
-        const updated = list.map(item => {
+        api.updateItem(id, { _voided: true })
+        const itemsKey = from === 'settle' ? 'settleItems' : 'detailItems'
+        const updated = this.data[itemsKey].map(item => {
           if (item.id === id) return { ...item, _voided: true, _open: false }
           return { ...item }
         })
-        this.setData({ [items]: updated, modalItem: null })
+        this.setData({ [itemsKey]: updated, modalItem: null })
       },
     })
   },
@@ -2048,32 +2027,22 @@ Page({
       content: '确定要恢复此记录吗？',
       success: (res) => {
         if (!res.confirm) return
-        const updateCache = (arr) => {
-          const it = arr && arr.find(x => x.id === id)
-          if (it) { it._voided = false; it._open = false }
-        }
-        updateCache(this._personalItems)
-        updateCache(this._companyItems)
-        const items = from === 'settle' ? 'settleItems' : 'detailItems'
-        const list = this.data[items]
-        const updated = list.map(item => {
+        api.updateItem(id, { _voided: false })
+        const itemsKey = from === 'settle' ? 'settleItems' : 'detailItems'
+        const updated = this.data[itemsKey].map(item => {
           if (item.id === id) return { ...item, _voided: false, _open: false }
           return { ...item }
         })
-        this.setData({ [items]: updated, modalItem: null })
+        this.setData({ [itemsKey]: updated, modalItem: null })
       },
     })
   },
 
   _removeItem(id, from) {
-    const items = from === 'settle' ? 'settleItems' : 'detailItems'
-    const list = this.data[items].filter(item => item.id !== id)
-    this.setData({ [items]: list })
-    if (from === 'detail') {
-      wx.setStorageSync('detailItems', list)
-      this._personalItems = list.filter(it => (it.scope || 'personal') === 'personal')
-      this._companyItems = list.filter(it => it.scope === 'company')
-    }
+    api.removeItem(id)
+    const itemsKey = from === 'settle' ? 'settleItems' : 'detailItems'
+    const list = this.data[itemsKey].filter(item => item.id !== id)
+    this.setData({ [itemsKey]: list })
   },
 
   goOverview() {
@@ -2142,23 +2111,15 @@ Page({
   },
 
   initDetailItems() {
-    const isCompany = this.data.detailType === 1
-    const stored = wx.getStorageSync('detailItems') || []
-    // filter by scope: stored items have a 'scope' field ('personal' | 'company')
-    const filtered = stored.filter(item => (item.scope || 'personal') === (isCompany ? 'company' : 'personal'))
-    this.setData({ detailItems: filtered })
-    if (isCompany) this._companyItems = filtered
-    else this._personalItems = filtered
+    const scope = this.data.detailType === 1 ? 'company' : 'personal'
+    const items = api.getItems(scope)
+    this.setData({ detailItems: items })
   },
 
   initSettleItems() {
-    const isCompany = this.data.settleType === 1
-    const stored = wx.getStorageSync('detailItems') || []
-    const filtered = stored.filter(item => {
-      const matchScope = (item.scope || 'personal') === (isCompany ? 'company' : 'personal')
-      const matchType = item.typeLabel === '垫付' || item.typeLabel === '应付'
-      return matchScope && matchType
-    })
+    const scope = this.data.settleType === 1 ? 'company' : 'personal'
+    const items = api.getItems(scope)
+    const filtered = items.filter(item => item.typeLabel === '垫付' || item.typeLabel === '应付')
     this.setData({ settleItems: filtered.map(item => ({ ...item })) })
   },
 
@@ -2178,7 +2139,7 @@ Page({
   },
 
   onInviteEmployee() {
-    const saved = wx.getStorageSync('companyInfo')
+    const saved = api.getCompanyInfo()
     if (saved && saved.companyRole === 'boss') {
       this.setData({
         showCompanyShare: true,
@@ -2194,11 +2155,11 @@ Page({
   },
 
   onAuditEntry() {
-    const saved = wx.getStorageSync('companyInfo')
+    const saved = api.getCompanyInfo()
     if (!saved || saved.companyRole !== 'boss' || !saved.companyUid) {
       wx.showToast({ title: '请先注册公司', icon: 'none' })
     }
-    const list = wx.getStorageSync('auditList') || []
+    const list = api.getAuditList()
     this.setData({ showAuditPage: true, auditList: list })
   },
 
@@ -2209,12 +2170,12 @@ Page({
   onAuditApprove(e) {
     const { id } = e.currentTarget.dataset
     const list = this.data.auditList.map(item => item.id === id ? { ...item, status: 'approved' } : item)
-    wx.setStorageSync('auditList', list)
+    api.saveAuditList(list)
     this.setData({ auditList: list })
     this.updateAuditBadge()
-    const notifyList = wx.getStorageSync('notifyList') || []
+    const notifyList = api.getNotifyList()
     notifyList.unshift({ id: Date.now(), text: '审核通过加入公司', time: new Date().toLocaleDateString(), read: false })
-    wx.setStorageSync('notifyList', notifyList)
+    api.saveNotifyList(notifyList)
     this.updateNotifyBadge()
     wx.showToast({ title: '已通过', icon: 'success' })
   },
@@ -2222,20 +2183,20 @@ Page({
   onAuditReject(e) {
     const { id } = e.currentTarget.dataset
     const list = this.data.auditList.map(item => item.id === id ? { ...item, status: 'rejected' } : item)
-    wx.setStorageSync('auditList', list)
+    api.saveAuditList(list)
     this.setData({ auditList: list })
     this.updateAuditBadge()
     wx.showToast({ title: '已拒绝', icon: 'none' })
   },
 
   updateAuditBadge() {
-    const list = wx.getStorageSync('auditList') || []
+    const list = api.getAuditList()
     const hasPending = list.some(item => item.status === 'pending')
     this.setData({ hasPendingAudit: hasPending })
   },
 
   onNotifyEntry() {
-    const list = wx.getStorageSync('notifyList') || []
+    const list = api.getNotifyList()
     this.setData({ showNotifyPage: true, notifyList: list })
   },
 
@@ -2247,13 +2208,13 @@ Page({
   onNotifyRead(e) {
     const { id } = e.currentTarget.dataset
     const list = this.data.notifyList.map(item => item.id === id ? { ...item, read: true } : item)
-    wx.setStorageSync('notifyList', list)
+    api.saveNotifyList(list)
     this.setData({ notifyList: list })
     this.updateNotifyBadge()
   },
 
   updateNotifyBadge() {
-    const list = wx.getStorageSync('notifyList') || []
+    const list = api.getNotifyList()
     const hasUnread = list.some(item => !item.read)
     this.setData({ hasUnreadNotify: hasUnread })
   },
@@ -2279,7 +2240,7 @@ Page({
   onNotifyDelete(e) {
     const { id } = e.currentTarget.dataset
     const list = this.data.notifyList.filter(item => item.id !== id)
-    wx.setStorageSync('notifyList', list)
+    api.saveNotifyList(list)
     this.setData({ notifyList: list, notifySwipeId: '' })
   },
 
@@ -2310,19 +2271,19 @@ Page({
       return
     }
     // 存储反馈
-    const feedbackList = wx.getStorageSync('feedbackList') || []
+    const feedbackList = api.getFeedbackList()
     feedbackList.unshift({ id: Date.now(), text, time: new Date().toLocaleString() })
-    wx.setStorageSync('feedbackList', feedbackList)
+    api.saveFeedbackList(feedbackList)
     wx.showToast({ title: '感谢您的反馈！VIP 会员已赠送', icon: 'success' })
     this.setData({ contactFeedback: '' })
   },
 
   onSettingsEntry() {
-    const saved = wx.getStorageSync('companyInfo')
+    const saved = api.getCompanyInfo()
     const ledgerRole = saved && saved.companyRole ? saved.companyRole : 'personal'
-    const lang = wx.getStorageSync('appLanguage') || 'zh-CN'
+    const lang = api.getSetting('appLanguage') || 'zh-CN'
     const langLabel = getLangLabel(lang)
-    const darkMode = wx.getStorageSync('appDarkMode') || 'system'
+    const darkMode = api.getSetting('appDarkMode') || 'system'
     const darkLabels = { system: this.data.t.dark_system || '跟随系统', light: this.data.t.dark_light || '浅色模式', dark: this.data.t.dark_dark || '深色模式' }
     const darkLabel = darkLabels[darkMode] || '跟随系统'
     const storageInfo = wx.getStorageInfoSync()
@@ -2344,7 +2305,7 @@ Page({
     const field = key === 'allowAnalytics' ? 'privacyAllowAnalytics' : 'privacyAllowCrashReport'
     const val = !this.data[field]
     this.setData({ [field]: val })
-    wx.setStorageSync(`privacy_${key}`, val)
+    api.saveSetting(`privacy_${key}`, val)
     wx.showToast({ title: val ? '已开启' : '已关闭', icon: 'success' })
   },
 
@@ -2387,7 +2348,7 @@ Page({
           success: (res) => {
             const langMap = { 0: 'zh-CN', 1: 'zh-TW', 2: 'ja-JP', 3: 'en-US' }
             const code = langMap[res.tapIndex]
-            wx.setStorageSync('appLanguage', code)
+            api.saveSetting('appLanguage', code)
             this._applyLanguage(code)
             this.setData({ settingsLanguage: code })
             wx.showToast({ title: getTLang(code).toast_lang_changed, icon: 'success' })
@@ -2401,7 +2362,7 @@ Page({
             const modeMap = { 0: 'system', 1: 'light', 2: 'dark' }
             const labelMap = { 0: this.data.t.dark_system, 1: this.data.t.dark_light, 2: this.data.t.dark_dark }
             const mode = modeMap[res.tapIndex]
-            wx.setStorageSync('appDarkMode', mode)
+            api.saveSetting('appDarkMode', mode)
             const dark = mode === 'dark' || (mode === 'system' && wx.getSystemInfoSync().theme === 'dark')
             this.setData({ settingsDarkMode: mode, settingsDarkModeLabel: labelMap[res.tapIndex], isDarkMode: dark })
           }
@@ -2410,8 +2371,8 @@ Page({
       case 'privacy':
         this.setData({
           showPrivacyPage: true,
-          privacyAllowAnalytics: wx.getStorageSync('privacy_allowAnalytics') !== false,
-          privacyAllowCrashReport: wx.getStorageSync('privacy_allowCrashReport') !== false
+          privacyAllowAnalytics: api.getSetting('privacy_allowAnalytics') !== false,
+          privacyAllowCrashReport: api.getSetting('privacy_allowCrashReport') !== false
         })
         break
       case 'security':
@@ -2440,7 +2401,7 @@ Page({
           content: '将清除当前公司绑定并重新选择，确定继续吗？',
           success: (res) => {
             if (res.confirm) {
-              wx.removeStorageSync('companyInfo')
+              api.removeCompanyInfo()
               this.setData({ showSettingsPage: false, showCompanyShare: true, companyShareStep: 1, companyRole: 'employee', employeeUid: '' })
               wx.showToast({ title: '请重新选择公司', icon: 'none' })
             }
@@ -2453,8 +2414,8 @@ Page({
           content: '解散后所有员工将无法查看公司账本，此操作不可撤销，确定解散吗？',
           success: (res) => {
             if (res.confirm) {
-              wx.removeStorageSync('companyInfo')
-              wx.removeStorageSync('auditList')
+              api.removeCompanyInfo()
+              api.removeAuditList()
               this.setData({ settingsLedgerRole: 'personal', showSettingsPage: false, hasPendingAudit: false })
               wx.showToast({ title: '公司已解散', icon: 'success' })
             }
@@ -2471,20 +2432,20 @@ Page({
           success: (res) => {
             if (res.confirm) {
               // 保留的用户设置
-              const lang = wx.getStorageSync('appLanguage')
-              const darkMode = wx.getStorageSync('appDarkMode')
-              const userInfo = wx.getStorageSync('userInfo')
-              const companyInfo = wx.getStorageSync('companyInfo')
-              const privacyAnalytics = wx.getStorageSync('privacy_allowAnalytics')
-              const privacyCrash = wx.getStorageSync('privacy_allowCrashReport')
+              const lang = api.getSetting('appLanguage')
+              const darkMode = api.getSetting('appDarkMode')
+              const userInfo = api.getUserInfo()
+              const companyInfo = api.getCompanyInfo()
+              const privacyAnalytics = api.getSetting('privacy_allowAnalytics')
+              const privacyCrash = api.getSetting('privacy_allowCrashReport')
               wx.clearStorageSync()
               // 恢复用户设置
-              if (lang) wx.setStorageSync('appLanguage', lang)
-              if (darkMode) wx.setStorageSync('appDarkMode', darkMode)
-              if (userInfo) wx.setStorageSync('userInfo', userInfo)
-              if (companyInfo) wx.setStorageSync('companyInfo', companyInfo)
-              if (privacyAnalytics !== undefined) wx.setStorageSync('privacy_allowAnalytics', privacyAnalytics)
-              if (privacyCrash !== undefined) wx.setStorageSync('privacy_allowCrashReport', privacyCrash)
+              if (lang) api.saveSetting('appLanguage', lang)
+              if (darkMode) api.saveSetting('appDarkMode', darkMode)
+              if (userInfo) api.saveUserInfo(userInfo)
+              if (companyInfo) api.saveCompanyInfo(companyInfo)
+              if (privacyAnalytics !== undefined) api.saveSetting('privacy_allowAnalytics', privacyAnalytics)
+              if (privacyCrash !== undefined) api.saveSetting('privacy_allowCrashReport', privacyCrash)
               wx.showToast({ title: '缓存已清除', icon: 'success' })
               // 刷新明细列表等数据
               this.initDetailItems()
@@ -2504,7 +2465,7 @@ Page({
           content: '确定要退出当前账号吗？',
           success: (res) => {
             if (res.confirm) {
-              wx.removeStorageSync('userInfo')
+              api.logout()
               this.setData({ isLoggedIn: false, userInfo: null, showSettingsPage: false })
               wx.showToast({ title: '已退出登录', icon: 'success' })
             }
@@ -2562,7 +2523,7 @@ Page({
   },
 
   onCompanyShareEntry() {
-    const saved = wx.getStorageSync('companyInfo')
+    const saved = api.getCompanyInfo()
     if (saved) {
       this.setData({
         showCompanyShare: true,
@@ -2607,7 +2568,7 @@ Page({
       return
     }
     const info = { companyUid: employeeUid.trim(), companyRole: 'employee' }
-    wx.setStorageSync('companyInfo', info)
+    api.saveCompanyInfo(info)
     wx.showToast({ title: '加入成功', icon: 'success' })
     this.setData({ companyShareStep: 2 })
   },
@@ -2636,7 +2597,7 @@ Page({
       return
     }
     const info = { companyUid, companyName: companyName.trim(), companyBossTitle: companyBossTitle.trim() || 'BOSS' }
-    wx.setStorageSync('companyInfo', info)
+    api.saveCompanyInfo(info)
     wx.showToast({ title: '创建成功', icon: 'success' })
     this.setData({ companyShareStep: 2, companyName: info.companyName, companyBossTitle: info.companyBossTitle, companyUid: info.companyUid })
   },
@@ -2697,10 +2658,12 @@ Page({
       emoji: catModalEmoji,
       inOut: 'out',
     }
+    const newList = [...list, newItem]
     this.setData({
-      [key]: [...list, newItem],
+      [key]: newList,
       showCatModal: false,
     })
+    api.saveCategories(catModalScope, newList)
     wx.showToast({ title: '已添加', icon: 'success' })
   },
 
@@ -2713,8 +2676,9 @@ Page({
       success(res) {
         if (!res.confirm) return
         const key = scope === 'personal' ? 'personalCategories' : 'companyCategories'
-        const list = that.data[key]
-        that.setData({ [key]: list.filter(item => item.id !== id) })
+        const updated = that.data[key].filter(item => item.id !== id)
+        that.setData({ [key]: updated })
+        api.saveCategories(scope, updated)
         wx.showToast({ title: '已删除', icon: 'success' })
       },
     })
@@ -2722,7 +2686,7 @@ Page({
 
   // ---- 自定义简览页 ----
   onCustomOverviewEntry() {
-    const saved = wx.getStorageSync('customOverviewCards') || []
+    const saved = api.getOverviewCards()
     const templates = this.data.customTemplates
     this.setData({
       showCustomOverview: true, showOverview: true,
@@ -2767,7 +2731,7 @@ Page({
   },
 
   onExitEditMode() {
-    wx.setStorageSync('customOverviewCards', this.data.customCards)
+    api.saveOverviewCards(this.data.customCards)
     this.setData({ showCustomOverview: false, showOverview: false, currentTab: 4 })
   },
 
@@ -3008,7 +2972,7 @@ Page({
         ordered.push({ ...slotCards[i], y: i * 120, x: 0 })
       }
     }
-    wx.setStorageSync('customOverviewCards', ordered)
+    api.saveOverviewCards(ordered)
     const colW = (this._grid && this._grid.colWidth) || 100
     const editCardWidths = ordered.map(c => Math.round(colW * (c.span || 1)))
     const enriched = ordered.map(card => {
@@ -3246,6 +3210,7 @@ Page({
       wx.showToast({ title: '请输入正确的手机号', icon: 'none' })
       return
     }
+    api.sendVerifyCode(phone)
     this.setData({ loginCodeSending: true, loginCodeCountdown: 60 })
     wx.showToast({ title: '验证码已发送', icon: 'success' })
     const timer = setInterval(() => {
@@ -3269,18 +3234,15 @@ Page({
       wx.showToast({ title: '请输入6位验证码', icon: 'none' })
       return
     }
-    // 模拟验证：任意6位数字即可
-    const userInfo = { nickName: loginPhone.slice(0, 3) + '****' + loginPhone.slice(-4), avatarUrl: '' }
+    const userInfo = api.loginByPhone(loginPhone, loginCode)
     this.setData({ isLoggedIn: true, userInfo, showLoginPage: false, loginPhone: '', loginCode: '' })
-    wx.setStorageSync('userInfo', userInfo)
     wx.showToast({ title: '登录成功', icon: 'success' })
   },
 
   onWxLogin(e) {
     if (e.detail.userInfo) {
-      const userInfo = e.detail.userInfo
+      const userInfo = api.loginByWechat(e.detail.userInfo)
       this.setData({ isLoggedIn: true, userInfo, showLoginPage: false })
-      wx.setStorageSync('userInfo', userInfo)
       wx.showToast({ title: '登录成功', icon: 'success' })
     } else {
       wx.showToast({ title: '授权已取消', icon: 'none' })
@@ -3294,7 +3256,7 @@ Page({
       success: (res) => {
         if (res.confirm) {
           this.setData({ isLoggedIn: false, userInfo: null })
-          wx.removeStorageSync('userInfo')
+          api.logout()
           wx.showToast({ title: '已退出登录', icon: 'none' })
         }
       }
