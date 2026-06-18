@@ -9,6 +9,14 @@
     "backend/src/migrate.js",
     "backend/src/middleware/auth.js"
   ],
-  "steps": [],
+  "steps": [
+    "modified: backend/package.json",
+    "created: backend/package-lock.json",
+    "modified: backend/src/app.js",
+    "modified: backend/src/db.js",
+    "modified: backend/src/migrate.js",
+    "modified: backend/src/middleware/auth.js",
+    "capability: 用户可运行 npm install && npm start 启动后端服务（路由占位，尚未实现具体业务逻辑）"
+  ],
   "createdAt": "2026-06-18T04:49:27.346Z"
 }

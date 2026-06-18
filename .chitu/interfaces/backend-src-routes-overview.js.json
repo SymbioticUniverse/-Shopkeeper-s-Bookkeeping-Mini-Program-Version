@@ -1,6 +1,8 @@
 {
-  "file": "components/navigation-bar/navigation-bar.js",
-  "exports": [],
+  "file": "backend/src/routes/overview.js",
+  "exports": [
+    "overview"
+  ],
   "imports": [],
   "capability": "",
   "updatedAt": "2026-06-18T04:49:36.349Z"

@@ -1,0 +1,9 @@
+{
+  "file": "backend/src/routes/auth.js",
+  "exports": [
+    "auth"
+  ],
+  "imports": [],
+  "capability": "用户可通过手机验证码或微信授权登录，获得 JWT token，后续使用 token 获取/更新/清除个人用户信息",
+  "updatedAt": "2026-06-18T04:50:35.541Z"
+}

@@ -1,0 +1,9 @@
+{
+  "file": "backend/src/routes/categories.js",
+  "exports": [
+    "categories"
+  ],
+  "imports": [],
+  "capability": "",
+  "updatedAt": "2026-06-18T04:49:36.348Z"
+}
