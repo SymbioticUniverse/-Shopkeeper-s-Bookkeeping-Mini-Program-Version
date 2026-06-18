@@ -3,5 +3,5 @@
   "exports": [],
   "imports": [],
   "capability": "修复 mingxi.js 接口文档：恢复 imports [\"utils/api\"]，与实际代码 require('../../utils/api') 一致。",
-  "updatedAt": "2026-06-18T11:05:33.998Z"
+  "updatedAt": "2026-06-18T11:06:49.144Z"
 }
