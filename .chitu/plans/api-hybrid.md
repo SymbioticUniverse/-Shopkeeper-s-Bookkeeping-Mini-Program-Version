@@ -10,43 +10,48 @@
 
 ## 实现步骤
 
-### 1. 基础设施
-- `BASE_URL` 常量
-- `_token` 本地存取
-- `_request(method, path, data)` — wx.request Promise 封装
-- `_syncFromCloud()` — 拉取后端全量数据到本地 Storage
+### [x] 1. 基础设施
+- [x] `BASE_URL` 常量
+- [x] `_getToken` / `_setToken` 本地存取
+- [x] `_request(method, path, data)` — wx.request Promise 封装
+- [x] `_pushBackend(method, path, data)` — 异步后台推送
+- [x] `syncFromCloud()` — 拉取后端全量数据到本地 Storage
 
-### 2. 改造函数矩阵
+### [x] 2. 改造函数矩阵
 
-| 函数 | 读/写 | 改造方式 |
-|------|-------|---------|
-| getItems | 读 | 不动 |
-| addItem | 写 | 本地 + 后端异步 |
-| updateItem | 写 | 本地 + 后端异步 |
-| removeItem | 写 | 本地 + 后端异步 |
-| addLinkedItems | 写 | 本地 + 后端异步 |
-| getCategories | 读 | 不动 |
-| saveCategories | 写 | 本地 + 后端异步 |
-| getCompanyInfo | 读 | 不动 |
-| saveCompanyInfo | 写 | 本地 + 后端异步 |
-| removeCompanyInfo | 写 | 本地 + 后端异步 |
-| getAuditList | 读 | 不动 |
-| saveAuditList | 写 | 本地 + 后端异步 |
-| removeAuditList | 写 | 本地 + 后端异步 |
-| getNotifyList | 读 | 不动 |
-| saveNotifyList | 写 | 本地 + 后端异步 |
-| getFeedbackList | 读 | 不动 |
-| saveFeedbackList | 写 | 本地 + 后端异步 |
-| sendVerifyCode | 写 | 纯后端（async） |
-| loginByPhone | 写 | 纯后端（async），存token |
-| loginByWechat | 写 | 纯后端（async），存token |
-| logout | 写 | 纯后端（async），清token |
-| getUserInfo | 读 | 不动（本地缓存） |
-| saveUserInfo | 写 | 本地 + 后端异步 |
-| removeUserInfo | 写 | 本地 + 后端异步 |
-| getSetting | 读 | 不动 |
-| saveSetting | 写 | 本地 + 后端异步 |
-| removeSetting | 写 | 本地 + 后端异步 |
-| getOverviewCards | 读 | 不动 |
-| saveOverviewCards | 写 | 本地 + 后端异步 |
-| migrate | 写 | 本地 + 后端异步 |
+| 函数 | 读/写 | 改造方式 | 状态 |
+|------|-------|---------|------|
+| getItems | 读 | 不动 | [x] |
+| addItem | 写 | 本地 + 后端异步 | [x] |
+| updateItem | 写 | 本地 + 后端异步 | [x] |
+| removeItem | 写 | 本地 + 后端异步 | [x] |
+| addLinkedItems | 写 | 本地 + 后端异步 | [x] |
+| getCategories | 读 | 不动 | [x] |
+| saveCategories | 写 | 本地 + 后端异步 | [x] |
+| getCompanyInfo | 读 | 不动 | [x] |
+| saveCompanyInfo | 写 | 本地 + 后端异步 | [x] |
+| removeCompanyInfo | 写 | 本地 + 后端异步 | [x] |
+| getAuditList | 读 | 不动 | [x] |
+| saveAuditList | 写 | 本地 + 后端异步 | [x] |
+| removeAuditList | 写 | 本地 + 后端异步 | [x] |
+| getNotifyList | 读 | 不动 | [x] |
+| saveNotifyList | 写 | 本地 + 后端异步 | [x] |
+| getFeedbackList | 读 | 不动 | [x] |
+| saveFeedbackList | 写 | 本地 + 后端异步 | [x] |
+| sendVerifyCode | 写 | 纯后端（async） | [x] |
+| loginByPhone | 写 | 纯后端（async），存token | [x] |
+| loginByWechat | 写 | 纯后端（async），存token | [x] |
+| logout | 写 | 纯后端（async），清token | [x] |
+| getUserInfo | 读 | 不动（本地缓存） | [x] |
+| saveUserInfo | 写 | 本地 + 后端异步 | [x] |
+| removeUserInfo | 写 | 本地 + 后端异步 | [x] |
+| getSetting | 读 | 不动 | [x] |
+| saveSetting | 写 | 本地 + 后端异步 | [x] |
+| removeSetting | 写 | 本地 + 后端异步 | [x] |
+| getOverviewCards | 读 | 不动 | [x] |
+| saveOverviewCards | 写 | 本地 + 后端异步 | [x] |
+| migrate | 写 | 本地 + 后端异步 | [x] |
+
+### [x] 3. 导出
+
+- [x] 全部 30 个函数 + syncFromCloud 通过 module.exports 导出
