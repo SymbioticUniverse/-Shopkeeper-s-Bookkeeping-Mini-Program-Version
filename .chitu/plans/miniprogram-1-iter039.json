@@ -7,6 +7,12 @@
     ".chitu/project-summary.md",
     ".chitu/checkpoint.json"
   ],
-  "steps": [],
+  "steps": [
+    "modified: .chitu/interfaces/pages-mingxi-mingxi.js.json",
+    "modified: .chitu/plans/miniprogram-1-iter038.json",
+    "modified: .chitu/project-summary.md",
+    "modified: .chitu/checkpoint.json",
+    "capability: 迭代038收尾：mingxi.js接口文档imports确认为[\"utils/api\"]，创建CHANGELOG.md记录交付状态。全部项目已交付"
+  ],
   "createdAt": "2026-06-18T11:19:01.399Z"
 }
