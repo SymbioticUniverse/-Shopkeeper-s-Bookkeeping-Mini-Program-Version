@@ -2,6 +2,6 @@
   "file": "backend/package.json",
   "exports": [],
   "imports": [],
-  "capability": "用户可运行 npm install && npm start 启动后端服务（路由占位，尚未实现具体业务逻辑）",
-  "updatedAt": "2026-06-18T04:49:35.970Z"
+  "capability": "用户可管理自定义分类、创建/加入/退出公司、老板审核员工申请（通过时自动通知）、查看通知列表",
+  "updatedAt": "2026-06-18T04:54:14.179Z"
 }

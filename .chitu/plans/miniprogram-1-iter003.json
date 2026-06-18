@@ -4,6 +4,9 @@
   "targetFiles": [
     "backend/src/routes/items.js"
   ],
-  "steps": [],
+  "steps": [
+    "modified: backend/src/routes/items.js",
+    "capability: 用户可创建/查询/更新/删除双账本账单，支持垫付应付联动事务写入"
+  ],
   "createdAt": "2026-06-18T04:51:45.193Z"
 }
