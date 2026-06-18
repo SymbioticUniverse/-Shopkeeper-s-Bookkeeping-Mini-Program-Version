@@ -1,4 +1,4 @@
-// app.js
+// app.js — 小程序入口：冷启动同步 + 全局数据管理
 const api = require('./utils/api')
 
 App({
