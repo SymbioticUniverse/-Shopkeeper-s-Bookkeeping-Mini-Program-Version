@@ -7,6 +7,12 @@
     "backend/src/routes/overview.js",
     "backend/src/routes/migrate.js"
   ],
-  "steps": [],
+  "steps": [
+    "modified: backend/src/routes/feedback.js",
+    "modified: backend/src/routes/settings.js",
+    "modified: backend/src/routes/overview.js",
+    "modified: backend/src/routes/migrate.js",
+    "capability: 用户可提交反馈、管理个人设置（语言/深色模式/隐私偏好等）、自定义简览卡片布局、执行旧数据迁移到云端"
+  ],
   "createdAt": "2026-06-18T04:55:45.330Z"
 }
