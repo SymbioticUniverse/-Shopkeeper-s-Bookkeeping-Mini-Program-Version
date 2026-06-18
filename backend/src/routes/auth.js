@@ -179,4 +179,4 @@ router.delete('/user-info', requireAuth, (req, res) => {
   res.json({ success: true })
 })
 
-module.exports = router
+module.exports = { auth: router }

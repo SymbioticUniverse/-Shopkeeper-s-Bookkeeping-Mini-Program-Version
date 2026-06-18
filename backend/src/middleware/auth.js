@@ -33,4 +33,4 @@ function requireAuth(req, res, next) {
   next()
 }
 
-module.exports = { requireAuth, generateToken, parseToken, JWT_SECRET }
+module.exports = { requireAuth, generateToken, parseToken, JWT_SECRET, auth: requireAuth }

@@ -75,4 +75,4 @@ function parseValue(raw) {
   }
 }
 
-module.exports = router
+module.exports = { settings: router }

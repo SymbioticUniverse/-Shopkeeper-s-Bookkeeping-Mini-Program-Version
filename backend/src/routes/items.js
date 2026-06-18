@@ -210,4 +210,4 @@ router.post('/linked', requireAuth, (req, res) => {
   }
 })
 
-module.exports = router
+module.exports = { items: router }
