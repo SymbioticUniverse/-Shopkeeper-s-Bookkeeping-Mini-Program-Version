@@ -2059,9 +2059,14 @@ Page({
   },
 
   _removeItem(id, from) {
-    api.removeItem(id)
     const itemsKey = from === 'settle' ? 'settleItems' : 'detailItems'
-    const list = this.data[itemsKey].filter(item => item.id !== id)
+    const found = this.data[itemsKey].find(item => item.id === id)
+    api.removeItem(id)
+    // 级联删除镜像记录
+    if (found && found.linkedId) {
+      api.removeItem(found.linkedId)
+    }
+    const list = this.data[itemsKey].filter(item => item.id !== id && item.id !== (found && found.linkedId))
     this.setData({ [itemsKey]: list })
   },
 
@@ -3296,6 +3301,8 @@ Page({
               detailItems: [],
               settleItems: [],
             })
+            // 清除全部本地数据，防止换号残留
+            wx.clearStorageSync()
             wx.showToast({ title: '已退出登录', icon: 'none' })
           })
         }

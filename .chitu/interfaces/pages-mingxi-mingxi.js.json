@@ -1,7 +1,7 @@
 {
   "file": "pages/mingxi/mingxi.js",
   "exports": [],
-  "imports": ["utils/api"],
-  "capability": "修复4个审计问题：(1) 结清/作废/反作废联动镜像记录，同步更新 linkedId 对面的 typeLabel/_voided 状态；(2) 登录成功后自动调用 syncFromCloud 拉取云端数据并刷新列表；(3) 退出登录清除全部本地 Storage 数据（账单/分类/公司/审核/通知/反馈/设置），清空页面状态避免换号数据残留；(4) 垫付/应付镜像 type 对称化，双方统一为 original='out' + mirror='in'",
-  "updatedAt": "2026-06-18T13:43:58.549Z"
+  "imports": [],
+  "capability": "删除记录时自动级联删除镜像记录；退出登录时清除全部本地Storage防止换号数据残留",
+  "updatedAt": "2026-06-18T14:59:18.466Z"
 }
