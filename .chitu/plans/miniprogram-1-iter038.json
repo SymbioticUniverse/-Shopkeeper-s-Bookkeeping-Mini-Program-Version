@@ -1,12 +1,18 @@
 {
   "project": "miniprogram-1",
-  "goal": "unknown",
+  "goal": "completed",
   "targetFiles": [
     ".chitu/interfaces/pages-mingxi-mingxi.js.json",
     ".chitu/plans/miniprogram-1-iter037.json",
     "app.js",
     ".chitu/paradigm.json"
   ],
-  "steps": [],
+  "steps": [
+    "modified: .chitu/interfaces/pages-mingxi-mingxi.js.json",
+    "modified: .chitu/plans/miniprogram-1-iter037.json",
+    "modified: app.js",
+    "modified: .chitu/paradigm.json",
+    "capability: mingxi.js 接口文档 imports 恢复为 [\"utils/api\"]，与源码 require('../../utils/api') 一致"
+  ],
   "createdAt": "2026-06-18T11:17:17.992Z"
 }

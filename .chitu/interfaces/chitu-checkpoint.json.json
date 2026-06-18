@@ -1,5 +1,5 @@
 {
-  "file": ".chitu/interfaces/pages-mingxi-mingxi.js.json",
+  "file": ".chitu/checkpoint.json",
   "exports": [],
   "imports": [],
   "capability": "迭代038收尾：mingxi.js接口文档imports确认为[\"utils/api\"]，创建CHANGELOG.md记录交付状态。全部项目已交付",
