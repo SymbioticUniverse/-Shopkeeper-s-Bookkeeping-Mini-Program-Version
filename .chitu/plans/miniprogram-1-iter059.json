@@ -1,0 +1,10 @@
+{
+  "project": "miniprogram-1",
+  "goal": "1. 登录异步调用 — 已修复。loginByPhone 和 loginByWechat 改为 .then() 链式调用，正确处理 Promise                                                                                                         \n  2. addLinkedItems 三",
+  "targetFiles": [
+    "pages/mingxi/mingxi.js",
+    "utils/api.js"
+  ],
+  "steps": [],
+  "createdAt": "2026-06-18T13:42:12.382Z"
+}

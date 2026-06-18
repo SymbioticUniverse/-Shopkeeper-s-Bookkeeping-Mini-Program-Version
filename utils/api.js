@@ -239,7 +239,19 @@ async function logout() {
     // 即使后端失败也清除本地状态
   }
   _setToken('')
-  wx.removeStorageSync('userInfo')
+  // 清除全部本地数据，避免换号登录看到残留
+  const keys = ['userInfo', 'personalItems', 'companyItems',
+    'personalCategories', 'companyCategories', 'companyInfo',
+    'auditList', 'notifyList', 'feedbackList', 'customOverviewCards']
+  for (const k of keys) {
+    wx.removeStorageSync(k)
+  }
+  // 清除所有设置项（语言、深色模式等）
+  const info = wx.getStorageInfoSync()
+  for (const k of info.keys) {
+    if (k === 'authToken') continue // _setToken 已处理
+    wx.removeStorageSync(k)
+  }
 }
 
 // ==================== 用户 ====================

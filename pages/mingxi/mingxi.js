@@ -1935,7 +1935,7 @@ Page({
     if (targetType === 'internal' && (type === 'payForward' || type === 'payable')) {
       const mirrorScope = scope === 'personal' ? 'company' : 'personal'
       const mirrorTypeLabel = type === 'payForward' ? '应付' : '垫付'
-      const mirrorType = type === 'payForward' ? 'out' : 'in'
+      const mirrorType = 'in'
       const mirrorItem = {
         id: Date.now() + 1,
         category: category,
@@ -1974,9 +1974,15 @@ Page({
         const itemsKey = from === 'settle' ? 'settleItems' : 'detailItems'
         const found = this.data[itemsKey].find(item => item.id === id)
         const newTypeLabel = found && found.type === 'in' ? '收入' : '支出'
+        // 更新原始记录
         api.updateItem(id, { typeLabel: newTypeLabel })
+        // 级联更新镜像记录
+        const mirrorId = found && found.linkedId
+        if (mirrorId) {
+          api.updateItem(mirrorId, { typeLabel: newTypeLabel })
+        }
         const updated = this.data[itemsKey].map(item => {
-          if (item.id === id) return { ...item, typeLabel: newTypeLabel, _open: false }
+          if (item.id === id || item.id === mirrorId) return { ...item, typeLabel: newTypeLabel, _open: false }
           return { ...item }
         })
         this.setData({ [itemsKey]: updated, modalItem: null })
@@ -2008,10 +2014,17 @@ Page({
       content: '作废后仍可取消作废，确定吗？',
       success: (res) => {
         if (!res.confirm) return
-        api.updateItem(id, { _voided: true })
         const itemsKey = from === 'settle' ? 'settleItems' : 'detailItems'
+        const found = this.data[itemsKey].find(item => item.id === id)
+        // 更新原始记录
+        api.updateItem(id, { _voided: true })
+        // 级联更新镜像记录
+        const mirrorId = found && found.linkedId
+        if (mirrorId) {
+          api.updateItem(mirrorId, { _voided: true })
+        }
         const updated = this.data[itemsKey].map(item => {
-          if (item.id === id) return { ...item, _voided: true, _open: false }
+          if (item.id === id || item.id === mirrorId) return { ...item, _voided: true, _open: false }
           return { ...item }
         })
         this.setData({ [itemsKey]: updated, modalItem: null })
@@ -2027,10 +2040,17 @@ Page({
       content: '确定要恢复此记录吗？',
       success: (res) => {
         if (!res.confirm) return
-        api.updateItem(id, { _voided: false })
         const itemsKey = from === 'settle' ? 'settleItems' : 'detailItems'
+        const found = this.data[itemsKey].find(item => item.id === id)
+        // 更新原始记录
+        api.updateItem(id, { _voided: false })
+        // 级联更新镜像记录
+        const mirrorId = found && found.linkedId
+        if (mirrorId) {
+          api.updateItem(mirrorId, { _voided: false })
+        }
         const updated = this.data[itemsKey].map(item => {
-          if (item.id === id) return { ...item, _voided: false, _open: false }
+          if (item.id === id || item.id === mirrorId) return { ...item, _voided: false, _open: false }
           return { ...item }
         })
         this.setData({ [itemsKey]: updated, modalItem: null })
@@ -3237,6 +3257,10 @@ Page({
     api.loginByPhone(loginPhone, loginCode).then(userInfo => {
       this.setData({ isLoggedIn: true, userInfo, showLoginPage: false, loginPhone: '', loginCode: '' })
       wx.showToast({ title: '登录成功', icon: 'success' })
+      // 登录后从云端同步数据
+      api.syncFromCloud().then(() => {
+        this.initDetailItems()
+      })
     }).catch(() => {
       wx.showToast({ title: '登录失败', icon: 'none' })
     })
@@ -3247,6 +3271,10 @@ Page({
       api.loginByWechat(e.detail.userInfo).then(userInfo => {
         this.setData({ isLoggedIn: true, userInfo, showLoginPage: false })
         wx.showToast({ title: '登录成功', icon: 'success' })
+        // 登录后从云端同步数据
+        api.syncFromCloud().then(() => {
+          this.initDetailItems()
+        })
       }).catch(() => {
         wx.showToast({ title: '登录失败', icon: 'none' })
       })
@@ -3261,9 +3289,15 @@ Page({
       content: '确定要退出登录吗？',
       success: (res) => {
         if (res.confirm) {
-          this.setData({ isLoggedIn: false, userInfo: null })
-          api.logout()
-          wx.showToast({ title: '已退出登录', icon: 'none' })
+          api.logout().then(() => {
+            this.setData({
+              isLoggedIn: false,
+              userInfo: null,
+              detailItems: [],
+              settleItems: [],
+            })
+            wx.showToast({ title: '已退出登录', icon: 'none' })
+          })
         }
       }
     })
