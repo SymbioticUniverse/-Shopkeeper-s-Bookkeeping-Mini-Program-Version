@@ -5,6 +5,10 @@
     "pages/mingxi/mingxi.js",
     "utils/api.js"
   ],
-  "steps": [],
+  "steps": [
+    "modified: pages/mingxi/mingxi.js",
+    "modified: utils/api.js",
+    "capability: 登录调用正确处理异步结果，关联账单写入不再触发后端 UNIQUE 约束"
+  ],
   "createdAt": "2026-06-18T13:13:32.584Z"
 }
