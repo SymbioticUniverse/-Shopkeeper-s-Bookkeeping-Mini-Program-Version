@@ -6,6 +6,11 @@
     "backend/src/routes/items.js",
     "backend/src/db.js"
   ],
-  "steps": [],
+  "steps": [
+    "modified: backend/src/routes/notify.js",
+    "modified: backend/src/routes/items.js",
+    "modified: backend/src/db.js",
+    "capability: 修复5个问题：通知POST先删后插消除跨用户覆盖+支持删除；PUT级联更新加事务保证原子性；amount返回String()匹配前端格式；旧库amount自动TEXT→REAL迁移"
+  ],
   "createdAt": "2026-06-18T15:39:25.447Z"
 }
