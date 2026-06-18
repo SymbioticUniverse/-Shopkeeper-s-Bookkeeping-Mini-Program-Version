@@ -4,6 +4,9 @@
   "targetFiles": [
     ".chitu/plans/backend-api.md"
   ],
-  "steps": [],
+  "steps": [
+    "modified: .chitu/plans/backend-api.md",
+    "capability: 用户可运行 npm install && npm start 启动完整后端服务，覆盖 API.md 全部 30 个接口：手机/微信登录认证、双账本 CRUD + 垫付应付联动事务、自定义分类管理、公司创建/加入/退出/解散、老板审核员工申请（通过/拒绝自动通知）、通知列表、反馈提交、用户设置、简览卡片布局、旧数据迁移"
+  ],
   "createdAt": "2026-06-18T04:58:07.931Z"
 }

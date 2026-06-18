@@ -1,5 +1,6 @@
 /**
  * 记账小程序后端 API 服务
+ * v1.0.0 — 覆盖 API.md 全部 30 个接口
  */
 const express = require('express')
 const { initSchema } = require('./db')
@@ -16,43 +17,43 @@ initSchema()
 // ==================== 路由注册 ====================
 
 // 认证
-const authRouter = require('./routes/auth')
+const { auth: authRouter } = require('./routes/auth')
 app.use('/api/auth', authRouter)
 
 // 账单
-const itemsRouter = require('./routes/items')
+const { items: itemsRouter } = require('./routes/items')
 app.use('/api/items', itemsRouter)
 
 // 分类
-const categoriesRouter = require('./routes/categories')
+const { categories: categoriesRouter } = require('./routes/categories')
 app.use('/api/categories', categoriesRouter)
 
 // 公司
-const companyRouter = require('./routes/company')
+const { company: companyRouter } = require('./routes/company')
 app.use('/api/company', companyRouter)
 
 // 审核
-const auditRouter = require('./routes/audit')
+const { audit: auditRouter } = require('./routes/audit')
 app.use('/api/audit', auditRouter)
 
 // 通知
-const notifyRouter = require('./routes/notify')
+const { notify: notifyRouter } = require('./routes/notify')
 app.use('/api/notify', notifyRouter)
 
 // 反馈
-const feedbackRouter = require('./routes/feedback')
+const { feedback: feedbackRouter } = require('./routes/feedback')
 app.use('/api/feedback', feedbackRouter)
 
 // 设置
-const settingsRouter = require('./routes/settings')
+const { settings: settingsRouter } = require('./routes/settings')
 app.use('/api/settings', settingsRouter)
 
 // 简览卡片
-const overviewRouter = require('./routes/overview')
+const { overview: overviewRouter } = require('./routes/overview')
 app.use('/api/overview', overviewRouter)
 
 // 数据迁移（一次性）
-const migrateRouter = require('./routes/migrate')
+const { migrate: migrateRouter } = require('./routes/migrate')
 app.use('/api', migrateRouter)
 
 // ==================== 启动 ====================

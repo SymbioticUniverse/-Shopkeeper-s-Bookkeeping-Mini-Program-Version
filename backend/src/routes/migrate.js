@@ -61,4 +61,4 @@ router.post('/migrate', requireAuth, (req, res) => {
   res.json({ success: true, migrated: count })
 })
 
-module.exports = router
+module.exports = { migrate: router }

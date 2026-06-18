@@ -1,0 +1,10 @@
+{
+  "project": "miniprogram-1",
+  "goal": "unknown",
+  "targetFiles": [
+    "backend/src/app.js",
+    "backend/src/routes/migrate.js"
+  ],
+  "steps": [],
+  "createdAt": "2026-06-18T05:02:04.914Z"
+}
