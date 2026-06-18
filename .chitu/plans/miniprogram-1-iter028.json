@@ -13,6 +13,18 @@
     "backend/src/routes/overview.js",
     "backend/src/routes/migrate.js"
   ],
-  "steps": [],
+  "steps": [
+    "modified: backend/src/routes/items.js",
+    "modified: backend/src/routes/auth.js",
+    "modified: backend/src/routes/categories.js",
+    "modified: backend/src/routes/company.js",
+    "modified: backend/src/routes/audit.js",
+    "modified: backend/src/routes/notify.js",
+    "modified: backend/src/routes/feedback.js",
+    "modified: backend/src/routes/settings.js",
+    "modified: backend/src/routes/overview.js",
+    "modified: backend/src/routes/migrate.js",
+    "capability: 完整审计 API.md 契约与后端实现的一致性：30/30 接口全部匹配，HTTP method、参数、认证流程、业务逻辑均已验证零偏差。"
+  ],
   "createdAt": "2026-06-18T10:39:05.377Z"
 }

@@ -1,0 +1,7 @@
+{
+  "file": ".chitu/plans/backend-audit.md",
+  "exports": [],
+  "imports": [],
+  "capability": "后端 30/30 接口全部通过 curl 运行时验证，审计计划 13 项全部标记完成。认证流程（验证码一次性→登录→token→logout→会话销毁）、双账本 CRUD+联动事务、公司 boss/employee 权限隔离、设置/通知/审核/反馈/简览所有模块均正常工作。",
+  "updatedAt": "2026-06-18T10:44:38.275Z"
+}
