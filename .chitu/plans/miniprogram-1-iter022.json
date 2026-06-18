@@ -4,6 +4,9 @@
   "targetFiles": [
     "backend/src/app.js"
   ],
-  "steps": [],
+  "steps": [
+    "modified: backend/src/app.js",
+    "capability: 用户可运行 cd backend && npm install && npm start 启动完整后端服务，覆盖 API.md 全部 30 个接口：手机/微信登录认证（含登录时存储会话、登出时清除会话、中间件校验会话有效性）、双账本 CRUD + 垫付应付联动事务、自定义分类管理、公司创建/加入/退出/解散、老板审核员工申请（通过/拒绝自动通知）、通知列表、反馈提交、用户设置、简览卡片布局、旧数据迁移"
+  ],
   "createdAt": "2026-06-18T05:52:17.887Z"
 }

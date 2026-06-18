@@ -1,0 +1,9 @@
+{
+  "project": "miniprogram-1",
+  "goal": "全部任务已完成，没有新的子目标。总结：\n\n- **11 个后端文件**覆盖 API.md 全部 30 个接口\n- **SQLite 11 张表**，JWT 认证 + 会话管理 + 事务联动均已就绪\n- 前端接入只需改 `utils/api.js` 的存储调用为 `wx.request`，页面零改动\n\n需要我做什么别的？比如帮你改造 `utils/api.js` 对接后端、写测试、或者部署配置？\n\n",
+  "targetFiles": [
+    "utils/api.js"
+  ],
+  "steps": [],
+  "createdAt": "2026-06-18T05:55:59.166Z"
+}
