@@ -6,6 +6,11 @@
     ".chitu/interfaces/pages-mingxi-mingxi.js.json",
     ".chitu/interfaces/utils-api.js.json"
   ],
-  "steps": [],
+  "steps": [
+    "modified: .chitu/interfaces/app.js.json",
+    "modified: .chitu/interfaces/pages-mingxi-mingxi.js.json",
+    "modified: .chitu/interfaces/utils-api.js.json",
+    "capability: 接口文档与源码一致：app.js 和 mingxi.js 的 imports 均已修正为 [\"utils/api\"]，utils/api.js 的 syncFromCloud 导出已清理，接口图准确反映依赖关系"
+  ],
   "createdAt": "2026-06-18T12:48:13.953Z"
 }
