@@ -2,6 +2,6 @@
   "file": ".chitu/interfaces/pages-mingxi-mingxi.js.json",
   "exports": [],
   "imports": [],
-  "capability": "接口文档 imports 字段与源码 require 一致：app.js 和 mingxi.js 的接口图正确反映对 utils/api 的依赖",
-  "updatedAt": "2026-06-18T13:14:37.240Z"
+  "capability": "接口文档 imports/exports 与源码一致：app.js 和 mingxi.js 的 imports 修正为 [\"utils/api\"]，utils/api.js 的同步导出名改为 syncFromCloud",
+  "updatedAt": "2026-06-18T13:15:23.283Z"
 }

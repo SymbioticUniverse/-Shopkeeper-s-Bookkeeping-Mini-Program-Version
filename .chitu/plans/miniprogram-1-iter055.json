@@ -5,6 +5,10 @@
     ".chitu/interfaces/app.js.json",
     ".chitu/interfaces/pages-mingxi-mingxi.js.json"
   ],
-  "steps": [],
+  "steps": [
+    "modified: .chitu/interfaces/app.js.json",
+    "modified: .chitu/interfaces/pages-mingxi-mingxi.js.json",
+    "capability: 接口文档 imports 字段与源码 require 一致：app.js 和 mingxi.js 的接口图正确反映对 utils/api 的依赖"
+  ],
   "createdAt": "2026-06-18T13:14:37.177Z"
 }
