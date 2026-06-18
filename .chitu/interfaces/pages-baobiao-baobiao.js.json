@@ -2,6 +2,6 @@
   "file": "pages/baobiao/baobiao.js",
   "exports": [],
   "imports": [],
-  "capability": "",
-  "updatedAt": "2026-06-18T11:01:11.698Z"
+  "capability": "报表 Tab 占位页：onShow 设置 custom-tab-bar selected=1，实际报表图表由 mingxi 页 Canvas 渲染",
+  "updatedAt": "2026-06-18T11:03:08.202Z"
 }

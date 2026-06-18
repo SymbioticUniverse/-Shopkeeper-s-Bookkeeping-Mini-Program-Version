@@ -2,6 +2,6 @@
   "file": "pages/personal-ledger/personal-ledger.js",
   "exports": [],
   "imports": [],
-  "capability": "",
-  "updatedAt": "2026-06-18T11:01:11.702Z"
+  "capability": "个人账本详情页（空壳），当前仅注册 Page，具体功能在对应 WXML/WXSS 中实现",
+  "updatedAt": "2026-06-18T11:03:08.202Z"
 }

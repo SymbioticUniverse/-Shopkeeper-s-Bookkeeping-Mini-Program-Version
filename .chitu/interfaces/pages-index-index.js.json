@@ -2,6 +2,6 @@
   "file": "pages/index/index.js",
   "exports": [],
   "imports": [],
-  "capability": "",
-  "updatedAt": "2026-06-18T11:01:11.699Z"
+  "capability": "小程序入口页，onLoad 时自动 redirect 到 /pages/mingxi/mingxi（主明细页）",
+  "updatedAt": "2026-06-18T11:03:08.201Z"
 }

@@ -2,6 +2,6 @@
   "file": "components/navigation-bar/navigation-bar.js",
   "exports": [],
   "imports": [],
-  "capability": "",
-  "updatedAt": "2026-06-18T11:01:11.696Z"
+  "capability": "可复用导航栏组件：支持多 slot、title/background/color 属性自定义、返回按钮（可设 delta 深度）、loading 态、animated 显隐动画、iOS/Android 安全区域自适应（safeAreaTop/胶囊按钮右侧留白）",
+  "updatedAt": "2026-06-18T11:03:08.202Z"
 }

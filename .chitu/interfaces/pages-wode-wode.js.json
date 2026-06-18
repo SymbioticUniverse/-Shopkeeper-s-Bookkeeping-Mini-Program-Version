@@ -2,6 +2,6 @@
   "file": "pages/wode/wode.js",
   "exports": [],
   "imports": [],
-  "capability": "",
-  "updatedAt": "2026-06-18T11:01:11.702Z"
+  "capability": "我的 Tab 占位页：onShow 设置 custom-tab-bar selected=4，实际设置/审核/通知/VIP/登录等子页由 mingxi 页管理",
+  "updatedAt": "2026-06-18T11:03:08.202Z"
 }

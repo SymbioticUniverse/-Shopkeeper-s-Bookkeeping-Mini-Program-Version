@@ -1,0 +1,7 @@
+{
+  "file": ".chitu/interfaces/pages-wode-wode.js.json",
+  "exports": [],
+  "imports": [],
+  "capability": "前端 10 个页面/组件的接口文档全部补全：小程序核心主页面 mingxi.js（5 Tab 导航、简览卡片拖放、四语切换、深色模式、登录认证、公司管理、审核通知、VIP 方案、账单导出、双账本流水）、导航栏组件（安全区域自适应）、自定义 TabBar（5 标签切换）、以及 7 个 Tab 占位/空壳页均已文档化",
+  "updatedAt": "2026-06-18T11:04:52.132Z"
+}

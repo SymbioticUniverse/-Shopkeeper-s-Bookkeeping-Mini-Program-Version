@@ -2,6 +2,6 @@
   "file": "custom-tab-bar/index.js",
   "exports": [],
   "imports": [],
-  "capability": "",
-  "updatedAt": "2026-06-18T11:01:11.698Z"
+  "capability": "自定义底部 TabBar 组件：5 个标签（明细/报表/记账/结清/我的），通过 wx.switchTab 切换页面，selected 状态由各页面 onShow 设置",
+  "updatedAt": "2026-06-18T11:03:08.202Z"
 }

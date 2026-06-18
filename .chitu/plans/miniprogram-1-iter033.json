@@ -1,0 +1,18 @@
+{
+  "project": "miniprogram-1",
+  "goal": "unknown",
+  "targetFiles": [
+    ".chitu/interfaces/components-navigation-bar-navigation-bar.js.json",
+    ".chitu/interfaces/custom-tab-bar-index.js.json",
+    ".chitu/interfaces/pages-baobiao-baobiao.js.json",
+    ".chitu/interfaces/pages-company-ledger-company-ledger.js.json",
+    ".chitu/interfaces/pages-index-index.js.json",
+    ".chitu/interfaces/pages-jieqing-jieqing.js.json",
+    ".chitu/interfaces/pages-jizhang-jizhang.js.json",
+    ".chitu/interfaces/pages-mingxi-mingxi.js.json",
+    ".chitu/interfaces/pages-personal-ledger-personal-ledger.js.json",
+    ".chitu/interfaces/pages-wode-wode.js.json"
+  ],
+  "steps": [],
+  "createdAt": "2026-06-18T11:04:52.055Z"
+}
