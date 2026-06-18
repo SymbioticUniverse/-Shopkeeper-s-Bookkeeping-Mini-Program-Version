@@ -1,0 +1,9 @@
+{
+  "project": "miniprogram-1",
+  "goal": "unknown",
+  "targetFiles": [
+    "backend/src/app.js"
+  ],
+  "steps": [],
+  "createdAt": "2026-06-18T05:52:17.887Z"
+}
