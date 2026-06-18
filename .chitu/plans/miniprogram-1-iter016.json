@@ -4,6 +4,9 @@
   "targetFiles": [
     "backend/src/middleware/auth.js"
   ],
-  "steps": [],
+  "steps": [
+    "modified: backend/src/middleware/auth.js",
+    "capability: 修复 requireAuth 中间件中 db 引用路径 bug（require('./db') → require('../db')），认证中间件现在可正常校验会话表有效性"
+  ],
   "createdAt": "2026-06-18T05:33:45.858Z"
 }
