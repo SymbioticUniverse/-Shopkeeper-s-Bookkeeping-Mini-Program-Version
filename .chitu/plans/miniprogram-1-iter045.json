@@ -6,6 +6,11 @@
     ".chitu/interfaces/pages-mingxi-mingxi.js.json",
     ".chitu/plans/miniprogram-1-iter044.json"
   ],
-  "steps": [],
+  "steps": [
+    "modified: .chitu/interfaces/app.js.json",
+    "modified: .chitu/interfaces/pages-mingxi-mingxi.js.json",
+    "modified: .chitu/plans/miniprogram-1-iter044.json",
+    "capability: app.js 新增 globalData 全局状态（lang/darkMode），冷启动云同步，接口文档 imports/exports 已修复"
+  ],
   "createdAt": "2026-06-18T11:53:26.993Z"
 }
