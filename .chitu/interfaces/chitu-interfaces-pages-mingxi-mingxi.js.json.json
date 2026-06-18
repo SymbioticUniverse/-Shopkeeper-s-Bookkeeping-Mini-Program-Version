@@ -2,6 +2,6 @@
   "file": ".chitu/interfaces/pages-mingxi-mingxi.js.json",
   "exports": [],
   "imports": [],
-  "capability": "mingxi.js 接口文档 imports 字段补全为 [\"utils/api\"]，与源码 require('../../utils/api') 一致，接口图准确反映依赖关系",
-  "updatedAt": "2026-06-18T11:38:49.094Z"
+  "capability": "迭代038收尾：mingxi.js接口文档imports确认为[\"utils/api\"]，创建project-status.json记录交付状态。全部项目已交付",
+  "updatedAt": "2026-06-18T11:48:47.050Z"
 }
