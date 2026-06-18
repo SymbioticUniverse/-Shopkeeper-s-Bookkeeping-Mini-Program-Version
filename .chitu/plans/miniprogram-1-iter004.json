@@ -10,6 +10,15 @@
     "backend/package-lock.json",
     "backend/node_modules"
   ],
-  "steps": [],
+  "steps": [
+    "modified: backend/src/routes/categories.js",
+    "modified: backend/src/routes/company.js",
+    "modified: backend/src/routes/audit.js",
+    "modified: backend/src/routes/notify.js",
+    "modified: backend/package.json",
+    "created: backend/package-lock.json",
+    "created: backend/node_modules",
+    "capability: 用户可管理自定义分类、创建/加入/退出公司、老板审核员工申请（通过时自动通知）、查看通知列表"
+  ],
   "createdAt": "2026-06-18T04:54:14.115Z"
 }

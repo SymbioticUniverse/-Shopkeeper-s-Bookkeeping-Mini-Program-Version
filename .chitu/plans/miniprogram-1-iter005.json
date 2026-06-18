@@ -1,0 +1,12 @@
+{
+  "project": "miniprogram-1",
+  "goal": "语法全部通过。启动服务验证路由能正常加载：\n\nContinue with the next sub-goal. If all tasks are complete, reply with a brief summary (do NOT call `complete_sub_goal`).",
+  "targetFiles": [
+    "backend/src/routes/feedback.js",
+    "backend/src/routes/settings.js",
+    "backend/src/routes/overview.js",
+    "backend/src/routes/migrate.js"
+  ],
+  "steps": [],
+  "createdAt": "2026-06-18T04:55:45.330Z"
+}
