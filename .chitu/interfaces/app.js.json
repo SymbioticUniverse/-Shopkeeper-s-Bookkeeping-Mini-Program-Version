@@ -1,7 +1,7 @@
 {
   "file": "app.js",
   "exports": [],
-  "imports": [],
+  "imports": ["utils/api"],
   "capability": "用户登录后冷启动自动从后端同步全量数据到本地 Storage，换设备登录数据不丢失",
   "updatedAt": "2026-06-18T11:03:07.915Z"
 }
