@@ -97,8 +97,8 @@ router.post('/', requireAuth, (req, res) => {
       VALUES (?, ?, 'employee', 'pending')
     `).run(company.id, req.userId)
 
-    // 自动为老板生成一条审核通知
-    const notifyId = Date.now() * 1000 + Math.floor(Math.random() * 1000)
+    // 自动为老板生成一条审核通知（ID 使用微秒时间戳+6位随机数防并发碰撞）
+    const notifyId = Date.now() * 1000 + Math.floor(Math.random() * 1000000)
     const now = new Date().toISOString()
     db.prepare(`
       INSERT INTO notifications (id, user_id, text, time, read)

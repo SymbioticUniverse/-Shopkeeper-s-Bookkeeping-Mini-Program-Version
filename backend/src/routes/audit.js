@@ -84,9 +84,9 @@ router.post('/', requireAuth, (req, res) => {
         `).run(item.id)
       }
 
-      // 审核通过时，自动为员工创建通知
+      // 审核通过时，自动为员工创建通知（ID 使用微秒时间戳+6位随机数防并发碰撞）
       if (item.status === 'approved' && old.status !== 'approved') {
-        const notifyId = Date.now() * 1000 + Math.floor(Math.random() * 1000)
+        const notifyId = Date.now() * 1000 + Math.floor(Math.random() * 1000000)
         const now = new Date().toISOString()
         db.prepare(`
           INSERT INTO notifications (id, user_id, text, time, read)
@@ -99,9 +99,9 @@ router.post('/', requireAuth, (req, res) => {
         )
       }
 
-      // 审核拒绝时也发通知
+      // 审核拒绝时也发通知（ID 使用微秒时间戳+6位随机数防并发碰撞）
       if (item.status === 'rejected' && old.status !== 'rejected') {
-        const notifyId = Date.now() * 1000 + Math.floor(Math.random() * 1000)
+        const notifyId = Date.now() * 1000 + Math.floor(Math.random() * 1000000)
         const now = new Date().toISOString()
         db.prepare(`
           INSERT INTO notifications (id, user_id, text, time, read)

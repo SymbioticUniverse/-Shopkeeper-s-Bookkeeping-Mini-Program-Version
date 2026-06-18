@@ -6,5 +6,5 @@
   ],
   "imports": [],
   "capability": "员工申请加入公司时，通知 ID 生成使用 Date.now()+Math.random() 防止并发碰撞",
-  "updatedAt": "2026-06-18T05:19:51.968Z"
+  "updatedAt": "2026-06-18T05:28:13.982Z"
 }
