@@ -7,6 +7,20 @@ const { requireAuth } = require('../middleware/auth')
 
 const router = express.Router()
 
+// ==================== 读取所有设置（用于云端同步） ====================
+
+router.get('/all', requireAuth, (req, res) => {
+  const rows = db.prepare(`
+    SELECT key, value FROM user_settings WHERE user_id = ?
+  `).all(req.userId)
+
+  const result = {}
+  for (const row of rows) {
+    result[row.key] = parseValue(row.value)
+  }
+  res.json(result)
+})
+
 // ==================== 读取设置 ====================
 
 router.get('/', requireAuth, (req, res) => {

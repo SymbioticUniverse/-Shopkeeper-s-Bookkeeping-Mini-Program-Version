@@ -299,10 +299,11 @@ async function syncFromCloud() {
       _request('GET', '/feedback'),
       _request('GET', '/auth/user-info'),
       _request('GET', '/overview'),
+      _request('GET', '/settings/all'),
     ])
 
     const [personalItems, companyItems, personalCats, companyCats,
-      companyInfo, auditList, notifyList, feedbackList, userInfo, overviewCards
+      companyInfo, auditList, notifyList, feedbackList, userInfo, overviewCards, settings
     ] = results
 
     if (personalItems.status === 'fulfilled' && personalItems.value) {
@@ -334,6 +335,11 @@ async function syncFromCloud() {
     }
     if (overviewCards.status === 'fulfilled' && overviewCards.value) {
       _save('customOverviewCards', overviewCards.value)
+    }
+    if (settings.status === 'fulfilled' && settings.value) {
+      for (const [key, value] of Object.entries(settings.value)) {
+        _save(key, value)
+      }
     }
 
     return { synced: true }

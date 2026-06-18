@@ -159,7 +159,7 @@ router.put('/:id', requireAuth, (req, res) => {
   res.json(rowToItem(updated))
 })
 
-// ==================== 删除账单 ====================
+// ==================== 删除账单（级联清理联动镜像） ====================
 
 router.delete('/:id', requireAuth, (req, res) => {
   const id = Number(req.params.id)
@@ -169,7 +169,22 @@ router.delete('/:id', requireAuth, (req, res) => {
     return res.status(404).json({ error: '账单不存在' })
   }
 
-  db.prepare('DELETE FROM items WHERE id = ?').run(id)
+  db.transaction(() => {
+    // 获取当前 item 的 linkedId
+    const item = db.prepare('SELECT linked_id FROM items WHERE id = ?').get(id)
+    const linkedId = item ? item.linked_id : null
+
+    // 删除当前 item
+    db.prepare('DELETE FROM items WHERE id = ?').run(id)
+
+    // 级联：删除 linked_id 指向当前 item 的镜像
+    if (linkedId) {
+      db.prepare('DELETE FROM items WHERE id = ?').run(linkedId)
+    }
+    // 级联：删除 linked_id 指向当前 item 的其他 item
+    db.prepare('DELETE FROM items WHERE linked_id = ?').run(id)
+  })()
+
   res.json({ success: true })
 })
 

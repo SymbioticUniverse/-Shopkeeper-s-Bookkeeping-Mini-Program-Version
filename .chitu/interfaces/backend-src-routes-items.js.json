@@ -4,6 +4,6 @@
     "items"
   ],
   "imports": [],
-  "capability": "修复 4 个后端 bug：(1) settings.js 键不存在时返回 null 而非 undefined；(2) auth.js 移除未使用的 nanoid 依赖；(3) items.js 重复 ID 返回 409 而非 500；(4) company.js UID 冲突返回 409 而非 500",
-  "updatedAt": "2026-06-18T09:54:23.083Z"
+  "capability": "修复3个审计问题：(1)移除未使用的nanoid依赖 (2)新增GET /api/settings/all接口+syncFromCloud补全settings同步，换设备登录后设置不丢失 (3)删除账单时事务级联清理linkedId双向关联的镜像账单",
+  "updatedAt": "2026-06-18T10:00:36.838Z"
 }

@@ -6,6 +6,11 @@
     "backend/src/routes/settings.js",
     "backend/src/routes/auth.js"
   ],
-  "steps": [],
+  "steps": [
+    "modified: backend/src/app.js",
+    "modified: backend/src/routes/settings.js",
+    "modified: backend/src/routes/auth.js",
+    "capability: 修复 4 个后端问题：(1) app.js 新增全局错误处理中间件，未捕获异常返回统一 JSON 错误不再泄露调用栈；(2) app.js 新增 CORS 头支持跨域测试；(3) settings.js parseValue 对 null/undefined 值统一返回 null 避免 res.json(undefined) 异常；(4) auth.js removeUserInfo 同步销毁会话 token，匹配 API.md\"退出登录\"语义"
+  ],
   "createdAt": "2026-06-18T09:58:19.885Z"
 }
