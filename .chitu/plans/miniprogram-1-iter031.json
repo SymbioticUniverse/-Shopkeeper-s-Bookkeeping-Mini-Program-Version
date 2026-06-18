@@ -4,6 +4,9 @@
   "targetFiles": [
     ".chitu/plans/api-hybrid.md"
   ],
-  "steps": [],
+  "steps": [
+    "modified: .chitu/plans/api-hybrid.md",
+    "capability: api-hybrid 计划全部 3 部分标记完成：基础设施（BASE_URL/Token/请求封装/云同步）、29 个函数混合改造（本地同步读+后端异步写+纯后端认证）、全部函数导出"
+  ],
   "createdAt": "2026-06-18T11:01:04.322Z"
 }
