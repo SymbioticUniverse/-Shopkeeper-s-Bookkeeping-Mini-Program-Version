@@ -13,6 +13,18 @@
     "backend/src/routes/notify.js",
     "backend/src/routes/feedback.js"
   ],
-  "steps": [],
+  "steps": [
+    "modified: backend/src/app.js",
+    "modified: backend/src/db.js",
+    "modified: backend/src/middleware/auth.js",
+    "modified: backend/src/routes/auth.js",
+    "modified: backend/src/routes/items.js",
+    "modified: backend/src/routes/company.js",
+    "modified: backend/src/routes/audit.js",
+    "modified: backend/src/routes/categories.js",
+    "modified: backend/src/routes/notify.js",
+    "modified: backend/src/routes/feedback.js",
+    "capability: 员工申请加入公司时，通知 ID 生成使用 Date.now()+Math.random() 防止并发碰撞"
+  ],
   "createdAt": "2026-06-18T05:19:05.839Z"
 }
