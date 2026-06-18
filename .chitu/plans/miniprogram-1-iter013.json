@@ -1,0 +1,18 @@
+{
+  "project": "miniprogram-1",
+  "goal": "unknown",
+  "targetFiles": [
+    "backend/src/routes/auth.js",
+    "backend/src/routes/items.js",
+    "backend/src/routes/categories.js",
+    "backend/src/routes/company.js",
+    "backend/src/routes/audit.js",
+    "backend/src/routes/notify.js",
+    "backend/src/routes/feedback.js",
+    "backend/src/routes/settings.js",
+    "backend/src/routes/overview.js",
+    "backend/src/routes/migrate.js"
+  ],
+  "steps": [],
+  "createdAt": "2026-06-18T05:25:28.224Z"
+}

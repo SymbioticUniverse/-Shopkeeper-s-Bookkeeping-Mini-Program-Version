@@ -4,6 +4,9 @@
   "targetFiles": [
     "backend/.gitkeep"
   ],
-  "steps": [],
+  "steps": [
+    "created: backend/.gitkeep",
+    "capability: 员工申请加入公司时，通知 ID 生成使用 Date.now()*1000+Math.floor(Math.random()*1000) 防止并发碰撞"
+  ],
   "createdAt": "2026-06-18T05:20:49.530Z"
 }

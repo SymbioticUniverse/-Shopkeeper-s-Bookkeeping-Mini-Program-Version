@@ -86,7 +86,7 @@ router.post('/', requireAuth, (req, res) => {
 
       // 审核通过时，自动为员工创建通知
       if (item.status === 'approved' && old.status !== 'approved') {
-        const notifyId = Date.now() + Math.random()
+        const notifyId = Date.now() * 1000 + Math.floor(Math.random() * 1000)
         const now = new Date().toISOString()
         db.prepare(`
           INSERT INTO notifications (id, user_id, text, time, read)
@@ -101,7 +101,7 @@ router.post('/', requireAuth, (req, res) => {
 
       // 审核拒绝时也发通知
       if (item.status === 'rejected' && old.status !== 'rejected') {
-        const notifyId = Date.now() + Math.random()
+        const notifyId = Date.now() * 1000 + Math.floor(Math.random() * 1000)
         const now = new Date().toISOString()
         db.prepare(`
           INSERT INTO notifications (id, user_id, text, time, read)
