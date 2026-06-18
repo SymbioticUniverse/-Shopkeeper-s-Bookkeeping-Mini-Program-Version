@@ -4,6 +4,6 @@
     "settings"
   ],
   "imports": [],
-  "capability": "修复 4 个后端 bug：(1) settings.js 键不存在时返回 null 而非 undefined；(2) auth.js 移除未使用的 nanoid 依赖；(3) items.js 重复 ID 返回 409 而非 500；(4) company.js UID 冲突返回 409 而非 500",
-  "updatedAt": "2026-06-18T09:54:23.083Z"
+  "capability": "修复 4 个后端问题：(1) app.js 新增全局错误处理中间件，未捕获异常返回统一 JSON 错误不再泄露调用栈；(2) app.js 新增 CORS 头支持跨域测试；(3) settings.js parseValue 对 null/undefined 值统一返回 null 避免 res.json(undefined) 异常；(4) auth.js removeUserInfo 同步销毁会话 token，匹配 API.md\"退出登录\"语义",
+  "updatedAt": "2026-06-18T09:58:19.954Z"
 }

@@ -11,6 +11,15 @@ const PORT = process.env.PORT || 3000
 // 中间件
 app.use(express.json())
 
+// CORS — 允许小程序及开发工具跨域访问
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', '*')
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization')
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
+  if (req.method === 'OPTIONS') return res.sendStatus(200)
+  next()
+})
+
 // 初始化数据库
 initSchema()
 
@@ -55,6 +64,15 @@ app.use('/api/overview', overviewRouter)
 // 数据迁移（一次性）
 const { migrate: migrateRouter } = require('./routes/migrate')
 app.use('/api', migrateRouter)
+
+// ==================== 全局错误处理 ====================
+
+app.use((err, req, res, _next) => {
+  console.error('[ERROR]', err.message, err.stack)
+  res.status(err.status || 500).json({
+    error: process.env.NODE_ENV === 'production' ? '服务器内部错误' : err.message
+  })
+})
 
 // ==================== 启动 ====================
 

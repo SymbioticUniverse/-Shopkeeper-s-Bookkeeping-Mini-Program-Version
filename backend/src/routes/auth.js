@@ -187,7 +187,14 @@ router.post('/user-info', requireAuth, (req, res) => {
 // ==================== 清除用户信息 ====================
 
 router.delete('/user-info', requireAuth, (req, res) => {
+  // 清除用户信息
   db.prepare('UPDATE users SET nick_name = \'\', avatar_url = \'\', updated_at = datetime(\'now\') WHERE id = ?').run(req.userId)
+  // 同时销毁会话（API.md 标注为"退出登录"）
+  const authHeader = req.headers.authorization || ''
+  const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : (req.query.token || '')
+  if (token) {
+    db.prepare('DELETE FROM sessions WHERE token = ?').run(token)
+  }
   res.json({ success: true })
 })
 

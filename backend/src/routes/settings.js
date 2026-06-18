@@ -64,12 +64,9 @@ router.delete('/', requireAuth, (req, res) => {
 
 /** 将 JSON 字符串还原为原始类型 */
 function parseValue(raw) {
-  if (raw === null || raw === undefined) return undefined
+  if (raw === null || raw === undefined) return null
   try {
-    const parsed = JSON.parse(raw)
-    // JSON.parse('"hello"') → 'hello'，需要特殊处理
-    // 如果解析出的类型和原始字符串一致（非 JSON 包裹），直接返回原始值
-    return parsed
+    return JSON.parse(raw)
   } catch (e) {
     return raw
   }

@@ -4,6 +4,6 @@
     "app"
   ],
   "imports": [],
-  "capability": "用户可运行 cd backend && npm install && npm start 启动完整后端服务，覆盖 API.md 全部 30 个接口：手机/微信登录认证（含登录时存储会话、登出时清除会话、中间件校验会话有效性）、双账本 CRUD + 垫付应付联动事务、自定义分类管理、公司创建/加入/退出/解散、老板审核员工申请（通过/拒绝自动通知）、通知列表、反馈提交、用户设置、简览卡片布局、旧数据迁移",
-  "updatedAt": "2026-06-18T06:02:37.021Z"
+  "capability": "修复 4 个后端问题：(1) app.js 新增全局错误处理中间件，未捕获异常返回统一 JSON 错误不再泄露调用栈；(2) app.js 新增 CORS 头支持跨域测试；(3) settings.js parseValue 对 null/undefined 值统一返回 null 避免 res.json(undefined) 异常；(4) auth.js removeUserInfo 同步销毁会话 token，匹配 API.md\"退出登录\"语义",
+  "updatedAt": "2026-06-18T09:58:19.953Z"
 }
