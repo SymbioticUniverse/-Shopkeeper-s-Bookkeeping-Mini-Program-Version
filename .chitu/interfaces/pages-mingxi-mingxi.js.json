@@ -3,5 +3,5 @@
   "exports": [],
   "imports": ["utils/api"],
   "capability": "登录调用正确处理异步结果，关联账单写入不再触发后端 UNIQUE 约束",
-  "updatedAt": "2026-06-18T13:14:37.425Z"
+  "updatedAt": "2026-06-18T13:15:23.471Z"
 }

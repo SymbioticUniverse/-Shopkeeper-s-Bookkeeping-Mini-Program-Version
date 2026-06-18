@@ -6,6 +6,11 @@
     ".chitu/interfaces/pages-mingxi-mingxi.js.json",
     ".chitu/interfaces/utils-api.js.json"
   ],
-  "steps": [],
+  "steps": [
+    "modified: .chitu/interfaces/app.js.json",
+    "modified: .chitu/interfaces/pages-mingxi-mingxi.js.json",
+    "modified: .chitu/interfaces/utils-api.js.json",
+    "capability: 接口文档 imports/exports 与源码一致：app.js 和 mingxi.js 的 imports 修正为 [\"utils/api\"]，utils/api.js 的同步导出名改为 syncFromCloud"
+  ],
   "createdAt": "2026-06-18T13:15:23.220Z"
 }
