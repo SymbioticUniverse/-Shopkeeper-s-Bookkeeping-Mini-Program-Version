@@ -1,0 +1,10 @@
+# 迭代042 — 收尾清理
+
+## 未提交变更
+- [ ] `.chitu/interfaces/pages-mingxi-mingxi.js.json` — capability 文字精简（移除尾部 imports 核对注释）
+- [ ] `.chitu/plans/miniprogram-1-iter041.json` — 补全 steps
+- [ ] `.chitu/sessions/` — 提交或清理 session 记录
+- [ ] `.chitu/watchdog.json` — 提交或清理
+
+## 策略
+整理未提交变更，统一提交，标记项目交付完成。
