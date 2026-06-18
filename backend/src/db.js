@@ -164,6 +164,47 @@ function initSchema() {
   try {
     db.exec('ALTER TABLE verify_codes ADD COLUMN locked_until TEXT')
   } catch (e) { /* 列已存在 */ }
+
+  // Migration: amount TEXT → REAL（旧库存在时重建表）
+  try {
+    const colInfo = db.pragma('table_info(items)')
+    const amountCol = colInfo.find(c => c.name === 'amount')
+    if (amountCol && amountCol.type.toUpperCase() !== 'REAL') {
+      db.transaction(() => {
+        db.exec(`
+          CREATE TABLE items_mig (
+            id INTEGER PRIMARY KEY,
+            user_id INTEGER NOT NULL,
+            scope TEXT NOT NULL CHECK(scope IN ('personal','company')),
+            category TEXT NOT NULL,
+            type TEXT NOT NULL CHECK(type IN ('in','out')),
+            type_label TEXT NOT NULL,
+            amount REAL NOT NULL,
+            date TEXT NOT NULL,
+            note TEXT DEFAULT '',
+            target TEXT DEFAULT '',
+            target_type TEXT DEFAULT '',
+            linked_id INTEGER DEFAULT NULL,
+            voided INTEGER NOT NULL DEFAULT 0,
+            created_at TEXT NOT NULL DEFAULT (datetime('now')),
+            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+          );
+          INSERT INTO items_mig
+            SELECT id, user_id, scope, category, type, type_label,
+                   CAST(amount AS REAL), date, note, target, target_type,
+                   linked_id, voided, created_at
+            FROM items;
+          DROP TABLE items;
+          ALTER TABLE items_mig RENAME TO items;
+          CREATE INDEX IF NOT EXISTS idx_items_user_scope ON items(user_id, scope);
+          CREATE INDEX IF NOT EXISTS idx_items_linked ON items(linked_id);
+        `)
+      })()
+      console.log('[MIGRATE] amount 列已从 TEXT 迁移为 REAL')
+    }
+  } catch (e) {
+    console.error('[MIGRATE] amount 列迁移失败:', e.message)
+  }
 }
 
 module.exports = { db, initSchema }

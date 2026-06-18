@@ -17,6 +17,6 @@
       "from": "../middleware/auth"
     }
   ],
-  "capability": "验证码60s发送间隔+5次错误锁定15分钟；JWT生产环境强制设密钥；微信登录仅openid匹配；通知upsert避免丢数据；账单PUT级联更新镜像；通知写入移出业务事务；解散公司通知所有员工；CORS白名单模式；amount改为REAL类型；3个复合索引；定时清理过期session/code；移除bcryptjs；body limit 10MB",
-  "updatedAt": "2026-06-18T15:17:14.622Z"
+  "capability": "修复5个问题：通知POST先删后插消除跨用户覆盖+支持删除；PUT级联更新加事务保证原子性；amount返回String()匹配前端格式；旧库amount自动TEXT→REAL迁移",
+  "updatedAt": "2026-06-18T15:39:25.513Z"
 }

@@ -25,7 +25,7 @@ router.get('/', requireAuth, (req, res) => {
   })))
 })
 
-// ==================== 保存通知列表（整体覆盖） ====================
+// ==================== 保存通知列表（整体覆盖 — 先删后插） ====================
 
 router.post('/', requireAuth, (req, res) => {
   const list = req.body || []
@@ -33,18 +33,16 @@ router.post('/', requireAuth, (req, res) => {
     return res.status(400).json({ error: 'list 必须是数组' })
   }
 
-  // upsert：不删除已有通知，避免丢失后端自动创建的通知
-  const upsertStmt = db.prepare(`
+  const insertStmt = db.prepare(`
     INSERT INTO notifications (id, user_id, text, time, read)
     VALUES (?, ?, ?, ?, ?)
-    ON CONFLICT(id) DO UPDATE SET
-      text = excluded.text,
-      time = excluded.time,
-      read = excluded.read
   `)
+
   db.transaction(() => {
+    // 先清空该用户所有通知，再批量插入 → 同时实现新增/更新/删除
+    db.prepare('DELETE FROM notifications WHERE user_id = ?').run(req.userId)
     for (const item of list) {
-      upsertStmt.run(
+      insertStmt.run(
         item.id,
         req.userId,
         item.text,

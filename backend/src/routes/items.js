@@ -18,7 +18,7 @@ function rowToItem(row) {
     type: row.type,
     typeLabel: row.type_label,
     scope: row.scope,
-    amount: row.amount,
+    amount: String(row.amount),
     date: row.date,
     note: row.note || '',
     target: row.target || '',
@@ -152,44 +152,48 @@ router.put('/:id', requireAuth, (req, res) => {
   }
 
   params.push(id)
-  db.prepare(`UPDATE items SET ${setClauses.join(', ')} WHERE id = ?`).run(...params)
 
-  // 级联更新：同步 linked_id 关联的镜像记录
-  const item = db.prepare('SELECT linked_id FROM items WHERE id = ?').get(id)
-  const linkedId = item ? item.linked_id : null
-  // 也查找 linked_id 指向本记录的镜像
-  const mirror = linkedId
-    ? db.prepare('SELECT id FROM items WHERE id = ?').get(linkedId)
-    : db.prepare('SELECT id FROM items WHERE linked_id = ?').get(id)
+  // 事务包裹：主更新 + 镜像级联更新要么全成功要么全回滚
+  const updated = db.transaction(() => {
+    db.prepare(`UPDATE items SET ${setClauses.join(', ')} WHERE id = ?`).run(...params)
 
-  if (mirror) {
-    const mirrorClauses = []
-    const mirrorParams = []
-    // 同步关键字段到镜像（金额、日期、备注、作废状态）
-    if (data.amount !== undefined) {
-      mirrorClauses.push('amount = ?')
-      mirrorParams.push(data.amount)
-    }
-    if (data.date !== undefined) {
-      mirrorClauses.push('date = ?')
-      mirrorParams.push(data.date)
-    }
-    if (data.note !== undefined) {
-      mirrorClauses.push('note = ?')
-      mirrorParams.push(data.note)
-    }
-    if (data._voided !== undefined) {
-      mirrorClauses.push('voided = ?')
-      mirrorParams.push(data._voided ? 1 : 0)
-    }
-    if (mirrorClauses.length > 0) {
-      mirrorParams.push(mirror.id)
-      db.prepare(`UPDATE items SET ${mirrorClauses.join(', ')} WHERE id = ?`).run(...mirrorParams)
-    }
-  }
+    // 级联更新：同步 linked_id 关联的镜像记录
+    const item = db.prepare('SELECT linked_id FROM items WHERE id = ?').get(id)
+    const linkedId = item ? item.linked_id : null
+    // 也查找 linked_id 指向本记录的镜像
+    const mirror = linkedId
+      ? db.prepare('SELECT id FROM items WHERE id = ?').get(linkedId)
+      : db.prepare('SELECT id FROM items WHERE linked_id = ?').get(id)
 
-  // 返回更新后的完整 item
-  const updated = db.prepare('SELECT * FROM items WHERE id = ?').get(id)
+    if (mirror) {
+      const mirrorClauses = []
+      const mirrorParams = []
+      // 同步关键字段到镜像（金额、日期、备注、作废状态）
+      if (data.amount !== undefined) {
+        mirrorClauses.push('amount = ?')
+        mirrorParams.push(data.amount)
+      }
+      if (data.date !== undefined) {
+        mirrorClauses.push('date = ?')
+        mirrorParams.push(data.date)
+      }
+      if (data.note !== undefined) {
+        mirrorClauses.push('note = ?')
+        mirrorParams.push(data.note)
+      }
+      if (data._voided !== undefined) {
+        mirrorClauses.push('voided = ?')
+        mirrorParams.push(data._voided ? 1 : 0)
+      }
+      if (mirrorClauses.length > 0) {
+        mirrorParams.push(mirror.id)
+        db.prepare(`UPDATE items SET ${mirrorClauses.join(', ')} WHERE id = ?`).run(...mirrorParams)
+      }
+    }
+
+    return db.prepare('SELECT * FROM items WHERE id = ?').get(id)
+  })()
+
   res.json(rowToItem(updated))
 })
 
