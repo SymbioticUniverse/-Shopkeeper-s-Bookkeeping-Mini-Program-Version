@@ -2,7 +2,6 @@
  * 认证路由 — 验证码 / 手机登录 / 微信登录 / 登出 / 用户信息
  */
 const express = require('express')
-const { nanoid } = require('nanoid')
 const { db } = require('../db')
 const { requireAuth, generateToken, parseToken } = require('../middleware/auth')
 

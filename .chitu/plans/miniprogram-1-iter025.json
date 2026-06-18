@@ -1,0 +1,12 @@
+{
+  "project": "miniprogram-1",
+  "goal": "赤兔，检查一下你构建的后端backend 以及 对照API文档进行迭代更新 ",
+  "targetFiles": [
+    "backend/src/routes/settings.js",
+    "backend/src/routes/auth.js",
+    "backend/src/routes/items.js",
+    "backend/src/routes/company.js"
+  ],
+  "steps": [],
+  "createdAt": "2026-06-18T09:54:23.012Z"
+}

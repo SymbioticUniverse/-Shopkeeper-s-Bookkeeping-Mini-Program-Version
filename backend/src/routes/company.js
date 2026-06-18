@@ -57,24 +57,31 @@ router.post('/', requireAuth, (req, res) => {
       return res.status(400).json({ error: '创建公司需要填写 companyName' })
     }
 
-    db.transaction(() => {
-      // 删除旧的 pending/rejected 记录
-      if (existing) {
-        db.prepare('DELETE FROM company_members WHERE id = ?').run(existing.id)
+    try {
+      db.transaction(() => {
+        // 删除旧的 pending/rejected 记录
+        if (existing) {
+          db.prepare('DELETE FROM company_members WHERE id = ?').run(existing.id)
+        }
+
+        // 创建公司
+        const companyResult = db.prepare(`
+          INSERT INTO companies (uid, name, boss_title, boss_user_id)
+          VALUES (?, ?, ?, ?)
+        `).run(companyUid, companyName, companyBossTitle || 'BOSS', req.userId)
+
+        // 老板自动成为已通过成员
+        db.prepare(`
+          INSERT INTO company_members (company_id, user_id, role, status, joined_at)
+          VALUES (?, ?, 'boss', 'approved', datetime('now'))
+        `).run(companyResult.lastInsertRowid, req.userId)
+      })()
+    } catch (err) {
+      if (err.code === 'SQLITE_CONSTRAINT_UNIQUE') {
+        return res.status(409).json({ error: '公司 UID 已被占用，请重新生成' })
       }
-
-      // 创建公司
-      const companyResult = db.prepare(`
-        INSERT INTO companies (uid, name, boss_title, boss_user_id)
-        VALUES (?, ?, ?, ?)
-      `).run(companyUid, companyName, companyBossTitle || 'BOSS', req.userId)
-
-      // 老板自动成为已通过成员
-      db.prepare(`
-        INSERT INTO company_members (company_id, user_id, role, status, joined_at)
-        VALUES (?, ?, 'boss', 'approved', datetime('now'))
-      `).run(companyResult.lastInsertRowid, req.userId)
-    })()
+      throw err
+    }
 
     return res.json({ success: true })
   }

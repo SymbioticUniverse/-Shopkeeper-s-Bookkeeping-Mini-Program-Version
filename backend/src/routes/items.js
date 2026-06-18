@@ -61,24 +61,31 @@ router.post('/', requireAuth, (req, res) => {
     return res.status(400).json({ error: 'item 数据不完整' })
   }
 
-  db.prepare(`
-    INSERT INTO items (id, user_id, scope, category, type, type_label, amount, date, note, target, target_type, linked_id, voided)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `).run(
-    item.id,
-    req.userId,
-    scope,
-    item.category,
-    item.type,
-    item.typeLabel,
-    item.amount,
-    item.date,
-    item.note || '',
-    item.target || '',
-    item.targetType || '',
-    item.linkedId || null,
-    item._voided ? 1 : 0
-  )
+  try {
+    db.prepare(`
+      INSERT INTO items (id, user_id, scope, category, type, type_label, amount, date, note, target, target_type, linked_id, voided)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(
+      item.id,
+      req.userId,
+      scope,
+      item.category,
+      item.type,
+      item.typeLabel,
+      item.amount,
+      item.date,
+      item.note || '',
+      item.target || '',
+      item.targetType || '',
+      item.linkedId || null,
+      item._voided ? 1 : 0
+    )
+  } catch (err) {
+    if (err.code === 'SQLITE_CONSTRAINT_PRIMARYKEY') {
+      return res.status(409).json({ error: '账单 id 已存在' })
+    }
+    throw err
+  }
 
   res.json(item)
 })

@@ -21,8 +21,8 @@ router.get('/', requireAuth, (req, res) => {
   `).get(req.userId, key)
 
   if (!row) {
-    // 未设置过，返回 undefined（与前端 Storage 行为一致）
-    return res.json(undefined)
+    // 未设置过，返回 null（前端视为无值）
+    return res.json(null)
   }
 
   // 尝试还原类型（布尔值/数字/字符串）
