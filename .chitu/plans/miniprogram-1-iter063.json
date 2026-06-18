@@ -4,6 +4,9 @@
   "targetFiles": [
     "pages/mingxi/mingxi.js"
   ],
-  "steps": [],
+  "steps": [
+    "modified: pages/mingxi/mingxi.js",
+    "capability: 删除记录时自动级联删除镜像记录；退出登录时清除全部本地Storage防止换号数据残留"
+  ],
   "createdAt": "2026-06-18T14:59:18.395Z"
 }

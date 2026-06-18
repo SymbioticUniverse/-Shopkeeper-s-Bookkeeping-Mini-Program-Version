@@ -1,0 +1,10 @@
+{
+  "project": "miniprogram-1",
+  "goal": "ok",
+  "targetFiles": [
+    ".chitu/interfaces/app.js.json",
+    ".chitu/interfaces/pages-mingxi-mingxi.js.json"
+  ],
+  "steps": [],
+  "createdAt": "2026-06-18T15:01:11.729Z"
+}
