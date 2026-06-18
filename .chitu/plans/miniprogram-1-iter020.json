@@ -9,6 +9,14 @@
     ".chitu/interfaces/backend-src-app.js.json",
     ".chitu/interfaces/backend-src-middleware-auth.js.json"
   ],
-  "steps": [],
+  "steps": [
+    "modified: backend/src/app.js",
+    "modified: backend/src/db.js",
+    "modified: backend/src/middleware/auth.js",
+    "modified: .chitu/interfaces/backend-src-db.js.json",
+    "modified: .chitu/interfaces/backend-src-app.js.json",
+    "modified: .chitu/interfaces/backend-src-middleware-auth.js.json",
+    "capability: 后端核心层已验证：Express 应用入口正常加载，SQLite 数据库 11 张表初始化正常，JWT 认证中间件（生成/解析/会话校验）就绪"
+  ],
   "createdAt": "2026-06-18T05:47:18.695Z"
 }
