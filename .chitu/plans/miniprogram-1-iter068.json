@@ -1,0 +1,9 @@
+{
+  "project": "miniprogram-1",
+  "goal": "  新发现：1 个严重 Bug                                          \n                                                                                                                                              ",
+  "targetFiles": [
+    "backend/src/middleware/auth.js"
+  ],
+  "steps": [],
+  "createdAt": "2026-06-18T15:49:56.121Z"
+}

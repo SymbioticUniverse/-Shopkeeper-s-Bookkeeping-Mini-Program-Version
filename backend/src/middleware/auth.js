@@ -14,8 +14,10 @@ if (!JWT_SECRET) {
   console.warn('[WARN] JWT_SECRET 未设置，使用随机密钥（仅开发环境可用）')
 }
 
+const _devSecret = require('crypto').randomBytes(32).toString('hex')
+
 function getSecret() {
-  return JWT_SECRET || require('crypto').randomBytes(32).toString('hex')
+  return JWT_SECRET || _devSecret
 }
 
 // 生成 token
