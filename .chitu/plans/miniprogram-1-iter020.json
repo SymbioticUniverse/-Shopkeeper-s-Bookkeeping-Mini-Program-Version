@@ -1,0 +1,14 @@
+{
+  "project": "miniprogram-1",
+  "goal": "unknown",
+  "targetFiles": [
+    "backend/src/app.js",
+    "backend/src/db.js",
+    "backend/src/middleware/auth.js",
+    ".chitu/interfaces/backend-src-db.js.json",
+    ".chitu/interfaces/backend-src-app.js.json",
+    ".chitu/interfaces/backend-src-middleware-auth.js.json"
+  ],
+  "steps": [],
+  "createdAt": "2026-06-18T05:47:18.695Z"
+}

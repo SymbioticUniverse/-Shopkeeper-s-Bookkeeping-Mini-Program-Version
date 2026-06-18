@@ -1,9 +1,6 @@
 {
-  "file": "backend/src/db.js",
-  "exports": [
-    "db",
-    "initSchema"
-  ],
+  "file": ".chitu/interfaces/backend-src-db.js.json",
+  "exports": [],
   "imports": [],
   "capability": "后端核心层已验证：Express 应用入口正常加载，SQLite 数据库 11 张表初始化正常，JWT 认证中间件（生成/解析/会话校验）就绪",
   "updatedAt": "2026-06-18T05:47:18.766Z"
