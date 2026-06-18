@@ -31,7 +31,7 @@ function requireAuth(req, res, next) {
   }
 
   // 验证 token 存在于会话表（未被 logout 清除）
-  const db = require('./db').db
+  const db = require('../db').db
   const session = db.prepare('SELECT user_id FROM sessions WHERE token = ? AND expires_at > datetime(\'now\')').get(token)
   if (!session) {
     return res.status(401).json({ error: '会话已注销，请重新登录' })
