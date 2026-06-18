@@ -380,15 +380,6 @@
               </view>
             </view>
           </view>
-          <view class="detail-col-headers">
-            <view class="bill-header-row">
-              <text class="bill-header-label" style="width:70rpx">分类</text>
-              <text class="bill-header-label" style="width:70rpx">类型</text>
-              <text class="bill-header-label" style="width:80rpx">备注</text>
-              <text class="bill-header-label" style="flex:1;text-align:right;margin-right:12rpx">金额</text>
-              <text class="bill-header-label" style="width:110rpx;text-align:right">日期</text>
-            </view>
-          </view>
           <scroll-view class="detail-list" scroll-y enhanced show-scrollbar="{{false}}">
             <view wx:for="{{detailItems}}" wx:key="id" class="bill-row">
               <view class="bill-actions">
@@ -1208,7 +1199,7 @@
         </view>
         <view class="my-group">
           <view class="my-item" bindtap="onVipEntry">
-            <view class="my-item-icon icon-vip"></view>
+            <image class="my-item-icon" src="/assets/icons/VIP.png" mode="aspectFit"/>
             <view class="my-item-body">
               <text class="my-item-title">{{t.vip_title}}</text>
               <text class="my-item-sub">{{t.vip_sub}}</text>
@@ -1216,16 +1207,18 @@
             <text class="my-item-arrow">〉</text>
           </view>
           <view class="my-icon-row">
-            <view class="my-icon-item" bindtap="onLinkCompany"><view class="my-icon-circle icon-link"></view><text class="my-icon-label">{{t.my_link_company}}</text></view>
-            <view class="my-icon-item" bindtap="onInviteEmployee"><view class="my-icon-circle icon-invite"></view><text class="my-icon-label">{{t.my_invite_employee}}</text></view>
+            <view class="my-icon-item" bindtap="onLinkCompany"><image class="my-icon-circle" src="/assets/icons/lianjiegongsi.png" mode="aspectFit"/><text class="my-icon-label">{{t.my_link_company}}</text></view>
+            <view class="my-icon-item" bindtap="onInviteEmployee"><image class="my-icon-circle" src="/assets/icons/yaoqingyuangong.png" mode="aspectFit"/><text class="my-icon-label">{{t.my_invite_employee}}</text></view>
             <view class="my-icon-item" bindtap="onAuditEntry">
-              <view class="my-icon-circle icon-audit" style="position:relative">
+              <view class="my-icon-circle" style="position:relative">
+                <image class="my-icon-circle-img" src="/assets/icons/shenhe.png" mode="aspectFit"/>
                 <view class="notify-badge" wx:if="{{hasPendingAudit}}"></view>
               </view>
               <text class="my-icon-label">{{t.my_audit}}</text>
             </view>
             <view class="my-icon-item" bindtap="onNotifyEntry">
-              <view class="my-icon-circle icon-notify" style="position:relative">
+              <view class="my-icon-circle" style="position:relative">
+                <image class="my-icon-circle-img" src="/assets/icons/tongzhi.png" mode="aspectFit"/>
                 <view class="notify-badge" wx:if="{{hasUnreadNotify}}"></view>
               </view>
               <text class="my-icon-label">{{t.my_notify}}</text>
@@ -1234,7 +1227,7 @@
         </view>
         <view class="my-group">
           <view class="my-item" bindtap="onCustomOverviewEntry">
-            <view class="my-item-icon icon-custom-view"></view>
+            <image class="my-item-icon" src="/assets/icons/jianlan.png" mode="aspectFit"/>
             <view class="my-item-body">
               <text class="my-item-title">{{t.custom_overview_title}}</text>
               <text class="my-item-sub">{{t.custom_overview_sub}}</text>
@@ -1242,7 +1235,7 @@
             <text class="my-item-arrow">〉</text>
           </view>
           <view class="my-item" bindtap="onCustomCategoryEntry">
-            <view class="my-item-icon icon-custom-cat"></view>
+            <image class="my-item-icon" src="/assets/icons/fenlei.png" mode="aspectFit"/>
             <view class="my-item-body">
               <text class="my-item-title">{{t.custom_cat_title}}</text>
               <text class="my-item-sub">{{t.custom_cat_sub}}</text>
@@ -1250,7 +1243,7 @@
             <text class="my-item-arrow">〉</text>
           </view>
           <view class="my-item" bindtap="onCompanyShareEntry">
-            <view class="my-item-icon icon-share"></view>
+            <image class="my-item-icon" src="/assets/icons/lianjiegongsigongxiangtongyizhangben.png" mode="aspectFit"/>
             <view class="my-item-body">
               <text class="my-item-title">{{t.my_share_ledger}}</text>
               <text class="my-item-sub">{{t.my_share_sub}}</text>
@@ -1258,7 +1251,7 @@
             <text class="my-item-arrow">〉</text>
           </view>
           <view class="my-item" bindtap="onExportBillEntry">
-            <view class="my-item-icon icon-export"></view>
+            <image class="my-item-icon" src="/assets/icons/daochu.png" mode="aspectFit"/>
             <view class="my-item-body">
               <text class="my-item-title">{{t.my_export}}</text>
               <text class="my-item-sub">{{t.my_export_sub}}</text>
@@ -1268,7 +1261,7 @@
         </view>
         <view class="my-group">
           <view class="my-item" bindtap="onContactEntry">
-            <view class="my-item-icon icon-contact"></view>
+            <image class="my-item-icon" src="/assets/icons/screenshot.png" mode="aspectFit"/>
             <view class="my-item-body">
               <text class="my-item-title">{{t.my_contact}}</text>
               <text class="my-item-sub">{{t.my_contact_sub}}</text>
@@ -1276,7 +1269,7 @@
             <text class="my-item-arrow">〉</text>
           </view>
           <view class="my-item my-item-last" bindtap="onSettingsEntry">
-            <view class="my-item-icon icon-settings"></view>
+            <image class="my-item-icon" src="/assets/icons/shezhi.png" mode="aspectFit"/>
             <view class="my-item-body"><text class="my-item-title">{{t.my_settings}}</text></view>
             <text class="my-item-arrow">〉</text>
           </view>
@@ -1353,7 +1346,8 @@
     <view class="tab-bar-center-bg"></view>
     <view class="tab-bar">
       <view class="tab-item {{index === 2 ? 'tab-item-center' : ''}}" wx:for="{{tabs}}" wx:key="index" data-index="{{index}}" bindtap="switchTab">
-        <view wx:if="{{index !== 2}}" class="tab-icon"><view class="tab-icon-placeholder"></view></view>
+        <view wx:if="{{index !== 2}}" class="tab-icon"><image class="tab-icon-img" src="{{item.icon}}" mode="aspectFit"/></view>
+        <view wx:if="{{index === 2}}" class="tab-icon-center-wrap"><image class="tab-icon-center-img" src="{{item.icon}}" mode="aspectFit"/></view>
         <text class="tab-label {{index === currentTab && !showOverview ? 'tab-label-active' : ''}}">{{item.text}}</text>
       </view>
     </view>
@@ -1376,13 +1370,19 @@
         </view>
         <input class="book-note-input" placeholder="添加备注" value="{{bookForm.note}}" bindinput="onBookNoteInput" maxlength="50"/>
       </view>
-      <view class="book-cat-select" bindtap="onBookOpenCatPanel">
-        <text class="book-cat-select-label">{{bookScopeLabel}}</text>
-        <text class="book-cat-select-sep">·</text>
-        <text class="book-cat-select-label">{{bookTypeLabel}}</text>
-        <text class="book-cat-select-sep">·</text>
-        <text class="book-cat-select-val">{{bookForm.category || '选择分类'}}</text>
-        <text class="book-cat-select-arrow">›</text>
+      <view class="book-cat-select">
+        <view class="book-cat-tags" bindtap="onBookOpenCatPanel">
+          <text class="book-cat-select-label">{{bookScopeLabel}}</text>
+          <text class="book-cat-select-sep">·</text>
+          <text class="book-cat-select-label">{{bookTypeLabel}}</text>
+          <block wx:if="{{bookForm.type === 'payForward' || bookForm.type === 'payable' || bookForm.target}}">
+            <text class="book-cat-select-sep">→</text>
+            <text class="book-target-tag" catchtap="onBookTargetTap">{{bookForm.target || '选择对象'}}</text>
+          </block>
+          <text class="book-cat-select-sep">·</text>
+          <text class="book-cat-select-val">{{bookForm.category || '选择分类'}}</text>
+        </view>
+        <text class="book-cat-select-arrow" bindtap="onBookOpenCatPanel">›</text>
       </view>
       <view class="book-keypad">
         <view class="book-keypad-row">

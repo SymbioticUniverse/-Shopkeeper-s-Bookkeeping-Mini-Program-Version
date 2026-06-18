@@ -140,11 +140,11 @@ Page({
     isDarkMode: false, // 深色模式
     currentTab: 0,
     tabs: [
-      { text: '明细' },
-      { text: '报表' },
-      { text: '记账' },
-      { text: '结清' },
-      { text: '我的' },
+      { text: '明细', icon: '/assets/icons/mingxi.png' },
+      { text: '报表', icon: '/assets/icons/baobiao.png' },
+      { text: '记账', icon: '/assets/icons/jizhang.png' },
+      { text: '结清', icon: '/assets/icons/jieqing.png' },
+      { text: '我的', icon: '/assets/icons/wode.png' },
     ],
     // 每个 Tab 的卡片集合，span 为占格数 (1/2/3)
     cardSets: [
@@ -214,7 +214,7 @@ Page({
     modalEdit: {},
     // 记账弹窗
     showBookPopup: false,
-    bookForm: { type: 'expense', amount: '', category: '', date: '', note: '' },
+    bookForm: { type: 'expense', amount: '', category: '', date: '', note: '', target: '', targetType: 'external' },
     bookScope: 'personal',
     bookScopeLabel: '个人',
     bookTypeLabel: '支出',
@@ -1046,11 +1046,13 @@ Page({
     const barW = Math.min(8, Math.max(2, pw / chartData.length * 0.4))
     const gap = barW * 0.25
     const groupW = barW * 2 + gap
-    const padX = groupW / 2
-    const usableW = pw - groupW
     const bottomY = mt + ph
 
-    function toX(i) { return ml + padX + (i / Math.max(1, chartData.length - 1)) * usableW }
+    // Fixed group spacing so few data points don't spread across entire width
+    const groupSpacing = Math.min(pw / Math.max(1, chartData.length - 1), groupW * 3)
+    const totalW = groupSpacing * (chartData.length - 1) + groupW
+    const startX = ml + (pw - totalW) / 2 + groupW / 2
+    function toX(i) { return startX + i * groupSpacing }
     function toY(v) { return bottomY - (v / yMax) * ph }
 
     // Grid lines + Y labels
@@ -1752,11 +1754,24 @@ Page({
   nop() {},
 
   // ========== 记账弹窗 ==========
+  _getBookTargetDefaults(scope, type) {
+    // 个人: 收入→公司(内部), 垫付→公司(内部), 支出→外部, 应付→外部
+    // 公司: 垫付→个人(内部), 收入→外部, 支出→外部, 应付→外部
+    if (scope === 'personal') {
+      if (type === 'income' || type === 'payForward') return { targetType: 'internal', target: '公司' }
+      return { targetType: 'external', target: '' }
+    } else {
+      if (type === 'payForward') return { targetType: 'internal', target: '个人' }
+      return { targetType: 'external', target: '' }
+    }
+  },
+
   onBookEntry(e) {
     const type = e.currentTarget.dataset.type
     const now = new Date()
     const date = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
     const typeLabelMap = { income: '收入', expense: '支出', payForward: '垫付', payable: '应付' }
+    const td = this._getBookTargetDefaults(this.data.bookScope, type)
     this.setData({
       showBookPopup: true,
       'bookForm.type': type,
@@ -1764,15 +1779,20 @@ Page({
       'bookForm.category': '',
       'bookForm.date': date,
       'bookForm.note': '',
+      'bookForm.target': td.target,
+      'bookForm.targetType': td.targetType,
       bookTypeLabel: typeLabelMap[type] || '支出',
     })
   },
 
   onBookScopeToggle(e) {
     const scope = e.currentTarget.dataset.scope
+    const td = this._getBookTargetDefaults(scope, this.data.bookForm.type)
     this.setData({
       bookScope: scope,
       bookScopeLabel: scope === 'personal' ? '个人' : '公司',
+      'bookForm.target': td.target,
+      'bookForm.targetType': td.targetType,
     })
     if (this.data.showBookCatPanel) this.refreshBookCatPanel()
   },
@@ -1788,9 +1808,12 @@ Page({
   onBookTypeSelect(e) {
     const type = e.currentTarget.dataset.type
     const typeLabelMap = { income: '收入', expense: '支出', payForward: '垫付', payable: '应付' }
+    const td = this._getBookTargetDefaults(this.data.bookScope, type)
     this.setData({
       'bookForm.type': type,
       'bookForm.category': '',
+      'bookForm.target': td.target,
+      'bookForm.targetType': td.targetType,
       bookTypeLabel: typeLabelMap[type] || '支出',
     })
     if (this.data.showBookCatPanel) this.refreshBookCatPanel()
@@ -1818,6 +1841,7 @@ Page({
       'bookForm.category': e.currentTarget.dataset.cat,
       showBookCatPanel: false,
     })
+    setTimeout(() => this.onBookTargetTap(), 200)
   },
 
   onBookAmountInput(e) {
@@ -1848,18 +1872,53 @@ Page({
     this.setData({ 'bookForm.note': e.detail.value })
   },
 
+  onBookTargetTap() {
+    const scope = this.data.bookScope
+    const type = this.data.bookForm.type
+    const defaults = this._getBookTargetDefaults(scope, type)
+    const internalName = scope === 'personal' ? '公司' : '个人'
+
+    if (defaults.targetType === 'internal') {
+      wx.showActionSheet({
+        itemList: [internalName, '外部'],
+        success: (res) => {
+          if (res.tapIndex === 0) {
+            this.setData({ 'bookForm.target': internalName, 'bookForm.targetType': 'internal' })
+          } else {
+            this.setData({ 'bookForm.target': '外部', 'bookForm.targetType': 'external' })
+          }
+        }
+      })
+    } else {
+      wx.showActionSheet({
+        itemList: ['外部', internalName],
+        success: (res) => {
+          if (res.tapIndex === 0) {
+            this.setData({ 'bookForm.target': '外部', 'bookForm.targetType': 'external' })
+          } else {
+            this.setData({ 'bookForm.target': internalName, 'bookForm.targetType': 'internal' })
+          }
+        }
+      })
+    }
+  },
+
   onBookDateChange(e) {
     this.setData({ 'bookForm.date': e.detail.value })
   },
 
   onBookSave() {
-    const { type, amount, category, date, note } = this.data.bookForm
+    const { type, amount, category, date, note, target, targetType } = this.data.bookForm
     if (!amount || parseFloat(amount) <= 0) {
       wx.showToast({ title: '请输入金额', icon: 'none' })
       return
     }
     if (!category) {
       wx.showToast({ title: '请选择分类', icon: 'none' })
+      return
+    }
+    if ((type === 'payForward' || type === 'payable') && !target) {
+      wx.showToast({ title: '请选择对象', icon: 'none' })
       return
     }
     const typeLabelMap = { income: '收入', expense: '支出', payForward: '垫付', payable: '应付' }
@@ -1873,14 +1932,40 @@ Page({
       amount: parseFloat(amount).toFixed(2),
       date: date,
       note: note || '',
+      target: target || '',
+      targetType: targetType || 'external',
     }
-    const items = [newItem, ...this.data.detailItems]
-    this.setData({ detailItems: items, showBookPopup: false })
-    wx.setStorageSync('detailItems', items)
-    // Update cache
+    const allItems = wx.getStorageSync('detailItems') || []
+    allItems.unshift(newItem)
+
+    // 内部对象 + 垫付/应付 → 联动对面 scope
+    if (targetType === 'internal' && (type === 'payForward' || type === 'payable')) {
+      const mirrorScope = this.data.bookScope === 'personal' ? 'company' : 'personal'
+      const mirrorTypeLabel = type === 'payForward' ? '应付' : '垫付'
+      const mirrorType = type === 'payForward' ? 'out' : 'in'
+      const mirrorItem = {
+        id: Date.now() + 1,
+        category: category,
+        type: mirrorType,
+        typeLabel: mirrorTypeLabel,
+        scope: mirrorScope,
+        amount: parseFloat(amount).toFixed(2),
+        date: date,
+        note: note || '',
+        target: this.data.bookScope === 'personal' ? '个人' : '公司',
+        targetType: 'internal',
+        linkedId: newItem.id,
+      }
+      newItem.linkedId = mirrorItem.id
+      allItems.unshift(mirrorItem)
+    }
+
+    wx.setStorageSync('detailItems', allItems)
+    const filtered = allItems.filter(it => (it.scope || 'personal') === this.data.bookScope)
+    this.setData({ detailItems: filtered, showBookPopup: false })
     const scope = this.data.bookScope
-    if (scope === 'personal') this._personalItems = items.filter(it => (it.scope || 'personal') === 'personal')
-    else this._companyItems = items.filter(it => it.scope === 'company')
+    if (scope === 'personal') this._personalItems = allItems.filter(it => (it.scope || 'personal') === 'personal')
+    else this._companyItems = allItems.filter(it => it.scope === 'company')
     wx.showToast({ title: '记账成功', icon: 'success' })
   },
 
