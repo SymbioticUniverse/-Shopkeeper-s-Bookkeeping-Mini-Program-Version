@@ -2,6 +2,6 @@
   "file": ".chitu/interfaces/app.js.json",
   "exports": [],
   "imports": [],
-  "capability": "app.js 和 mingxi.js 接口文档 imports 字段补全为 [\"utils/api\"]，与实际代码 require 一致，接口图准确反映依赖关系",
-  "updatedAt": "2026-06-18T12:30:19.544Z"
+  "capability": "接口文档 imports 字段与源码 require 一致：app.js 和 mingxi.js 的接口文档 imports 均已修正为 [\"utils/api\"]，接口图准确反映依赖关系",
+  "updatedAt": "2026-06-18T12:31:10.856Z"
 }
