@@ -2,6 +2,6 @@
   "file": ".chitu/interfaces/app.js.json",
   "exports": [],
   "imports": [],
-  "capability": "接口图准确反映依赖关系：app.js 和 mingxi.js 的 imports 均修正为 [\"utils/api\"]，与源码 require 一致",
-  "updatedAt": "2026-06-18T13:16:57.828Z"
+  "capability": "接口文档与源码一致：app.js 和 mingxi.js 的 imports 均已修正为 [\"utils/api\"]，utils/api.js 的 exports 中 syncFromCloud 格式已清理，接口图准确反映依赖关系",
+  "updatedAt": "2026-06-18T13:42:58.426Z"
 }
