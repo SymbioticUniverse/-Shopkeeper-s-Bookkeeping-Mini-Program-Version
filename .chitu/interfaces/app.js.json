@@ -3,5 +3,5 @@
   "exports": [],
   "imports": ["utils/api"],
   "capability": "小程序入口：冷启动云同步 + globalData 全局状态（lang/darkMode），通过 api.syncFromCloud() 拉取全量数据到本地 Storage",
-  "updatedAt": "2026-06-18T12:41:24.975Z"
+  "updatedAt": "2026-06-18T12:42:22.900Z"
 }

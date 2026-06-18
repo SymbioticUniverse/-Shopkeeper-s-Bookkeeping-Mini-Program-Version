@@ -1,5 +1,5 @@
 {
-  "file": ".chitu/interfaces/pages-mingxi-mingxi.js.json",
+  "file": ".chitu/interfaces/utils-api.js.json",
   "exports": [],
   "imports": [],
   "capability": "接口文档与源码一致：app.js 和 mingxi.js 的 imports 均已修正为 [\"utils/api\"]，utils/api.js 的 syncFromCloud 导出已清理，接口图准确反映依赖关系",
