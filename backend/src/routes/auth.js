@@ -70,8 +70,11 @@ router.post('/login-by-phone', (req, res) => {
     db.prepare('UPDATE users SET updated_at = datetime(\'now\') WHERE id = ?').run(user.id)
   }
 
-  // 生成 token
+  // 生成 token 并存入会话表
   const token = generateToken(user.id)
+  db.prepare(
+    'INSERT OR REPLACE INTO sessions (token, user_id, expires_at) VALUES (?, ?, ?)'
+  ).run(token, user.id, new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString())
 
   res.json({
     nickName: user.nick_name,
@@ -119,7 +122,11 @@ router.post('/login-by-wechat', (req, res) => {
     user.avatar_url = avatar
   }
 
+  // 生成 token 并存入会话表
   const token = generateToken(user.id)
+  db.prepare(
+    'INSERT OR REPLACE INTO sessions (token, user_id, expires_at) VALUES (?, ?, ?)'
+  ).run(token, user.id, new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString())
 
   res.json({
     nickName: user.nick_name,
@@ -131,6 +138,12 @@ router.post('/login-by-wechat', (req, res) => {
 // ==================== 退出登录 ====================
 
 router.post('/logout', requireAuth, (req, res) => {
+  // 从会话表删除 token
+  const authHeader = req.headers.authorization || ''
+  const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : (req.query.token || '')
+  if (token) {
+    db.prepare('DELETE FROM sessions WHERE token = ?').run(token)
+  }
   res.json({ success: true })
 })
 
