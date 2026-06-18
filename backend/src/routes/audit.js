@@ -62,6 +62,8 @@ router.post('/', requireAuth, (req, res) => {
 
   const company = db.prepare('SELECT name FROM companies WHERE id = ?').get(bossMember.company_id)
 
+  // 第一阶段：事务内更新审核状态，收集需要通知的项
+  const notifications = []
   db.transaction(() => {
     for (const item of list) {
       // 获取旧状态
@@ -84,37 +86,35 @@ router.post('/', requireAuth, (req, res) => {
         `).run(item.id)
       }
 
-      // 审核通过时，自动为员工创建通知（ID 使用微秒时间戳+6位随机数防并发碰撞）
+      // 收集需要发送的通知（事务外发送，避免 ID 碰撞回滚业务）
       if (item.status === 'approved' && old.status !== 'approved') {
-        const notifyId = Date.now() * 1000 + Math.floor(Math.random() * 1000000)
-        const now = new Date().toISOString()
-        db.prepare(`
-          INSERT INTO notifications (id, user_id, text, time, read)
-          VALUES (?, ?, ?, ?, 0)
-        `).run(
-          notifyId,
-          old.user_id,
-          `您加入「${company.name || '公司'}」的申请已通过`,
-          now
-        )
+        notifications.push({
+          userId: old.user_id,
+          text: `您加入「${company.name || '公司'}」的申请已通过`
+        })
       }
-
-      // 审核拒绝时也发通知（ID 使用微秒时间戳+6位随机数防并发碰撞）
       if (item.status === 'rejected' && old.status !== 'rejected') {
-        const notifyId = Date.now() * 1000 + Math.floor(Math.random() * 1000000)
-        const now = new Date().toISOString()
-        db.prepare(`
-          INSERT INTO notifications (id, user_id, text, time, read)
-          VALUES (?, ?, ?, ?, 0)
-        `).run(
-          notifyId,
-          old.user_id,
-          `您加入「${company.name || '公司'}」的申请已被拒绝`,
-          now
-        )
+        notifications.push({
+          userId: old.user_id,
+          text: `您加入「${company.name || '公司'}」的申请已被拒绝`
+        })
       }
     }
   })()
+
+  // 第二阶段：事务外发送通知
+  const now = new Date().toISOString()
+  for (const n of notifications) {
+    try {
+      const notifyId = Date.now() * 1000 + Math.floor(Math.random() * 1000000)
+      db.prepare(`
+        INSERT INTO notifications (id, user_id, text, time, read)
+        VALUES (?, ?, ?, ?, 0)
+      `).run(notifyId, n.userId, n.text, now)
+    } catch (err) {
+      console.error(`[NOTIFY] 审核通知写入失败 user_id=${n.userId}:`, err.message)
+    }
+  }
 
   res.json({ success: true })
 })

@@ -1,19 +1,28 @@
 /**
  * 记账小程序后端 API 服务
- * v1.0.0 — 覆盖 API.md 全部 30 个接口
+ * v1.1.0 — 安全加固版
  */
 const express = require('express')
-const { initSchema } = require('./db')
+const { initSchema, db } = require('./db')
 
 const app = express()
 const PORT = process.env.PORT || 3000
 
-// 中间件
-app.use(express.json())
+// 中间件 — body 限制提升至 10MB（支持大量账单同步）
+app.use(express.json({ limit: '10mb' }))
 
-// CORS — 允许小程序及开发工具跨域访问
+// CORS — 白名单模式
+const ALLOWED_ORIGINS = process.env.CORS_ORIGINS
+  ? process.env.CORS_ORIGINS.split(',').map(s => s.trim())
+  : (process.env.NODE_ENV === 'production'
+    ? ['https://servicewechat.com']  // 微信小程序合法来源
+    : ['*'])
+
 app.use((req, res, next) => {
-  res.header('Access-Control-Allow-Origin', '*')
+  const origin = req.headers.origin
+  if (ALLOWED_ORIGINS.includes('*') || (origin && ALLOWED_ORIGINS.includes(origin))) {
+    res.header('Access-Control-Allow-Origin', origin || ALLOWED_ORIGINS[0])
+  }
   res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization')
   res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
   if (req.method === 'OPTIONS') return res.sendStatus(200)
@@ -22,6 +31,23 @@ app.use((req, res, next) => {
 
 // 初始化数据库
 initSchema()
+
+// 定时清理过期数据（每 10 分钟）
+setInterval(() => {
+  try {
+    const deletedSessions = db.prepare(
+      "DELETE FROM sessions WHERE expires_at < datetime('now')"
+    ).run().changes
+    const deletedCodes = db.prepare(
+      "DELETE FROM verify_codes WHERE expires_at < datetime('now')"
+    ).run().changes
+    if (deletedSessions > 0 || deletedCodes > 0) {
+      console.log(`[CLEANUP] 清理 ${deletedSessions} 条过期会话, ${deletedCodes} 条过期验证码`)
+    }
+  } catch (e) {
+    console.error('[CLEANUP] 清理失败:', e.message)
+  }
+}, 10 * 60 * 1000)
 
 // ==================== 路由注册 ====================
 

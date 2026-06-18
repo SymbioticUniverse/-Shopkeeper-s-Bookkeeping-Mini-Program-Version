@@ -44,7 +44,9 @@ function initSchema() {
     CREATE TABLE IF NOT EXISTS verify_codes (
       phone TEXT PRIMARY KEY,
       code TEXT NOT NULL,
-      expires_at TEXT NOT NULL
+      expires_at TEXT NOT NULL,
+      failed_attempts INTEGER NOT NULL DEFAULT 0,
+      locked_until TEXT
     );
 
     -- 账单表
@@ -55,7 +57,7 @@ function initSchema() {
       category TEXT NOT NULL,
       type TEXT NOT NULL CHECK(type IN ('in','out')),
       type_label TEXT NOT NULL,
-      amount TEXT NOT NULL,
+      amount REAL NOT NULL,
       date TEXT NOT NULL,
       note TEXT DEFAULT '',
       target TEXT DEFAULT '',
@@ -147,6 +149,21 @@ function initSchema() {
       FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
     );
   `)
+
+  // 索引（加速按用户+scope查询账单、用户查询通知）
+  db.exec(`
+    CREATE INDEX IF NOT EXISTS idx_items_user_scope ON items(user_id, scope);
+    CREATE INDEX IF NOT EXISTS idx_items_linked ON items(linked_id);
+    CREATE INDEX IF NOT EXISTS idx_notifications_user ON notifications(user_id);
+  `)
+
+  // Migration: 为已有 verify_codes 表添加防暴力破解列
+  try {
+    db.exec('ALTER TABLE verify_codes ADD COLUMN failed_attempts INTEGER NOT NULL DEFAULT 0')
+  } catch (e) { /* 列已存在 */ }
+  try {
+    db.exec('ALTER TABLE verify_codes ADD COLUMN locked_until TEXT')
+  } catch (e) { /* 列已存在 */ }
 }
 
 module.exports = { db, initSchema }

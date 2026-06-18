@@ -33,14 +33,18 @@ router.post('/', requireAuth, (req, res) => {
     return res.status(400).json({ error: 'list 必须是数组' })
   }
 
+  // upsert：不删除已有通知，避免丢失后端自动创建的通知
+  const upsertStmt = db.prepare(`
+    INSERT INTO notifications (id, user_id, text, time, read)
+    VALUES (?, ?, ?, ?, ?)
+    ON CONFLICT(id) DO UPDATE SET
+      text = excluded.text,
+      time = excluded.time,
+      read = excluded.read
+  `)
   db.transaction(() => {
-    db.prepare('DELETE FROM notifications WHERE user_id = ?').run(req.userId)
-    const insertStmt = db.prepare(`
-      INSERT INTO notifications (id, user_id, text, time, read)
-      VALUES (?, ?, ?, ?, ?)
-    `)
     for (const item of list) {
-      insertStmt.run(
+      upsertStmt.run(
         item.id,
         req.userId,
         item.text,

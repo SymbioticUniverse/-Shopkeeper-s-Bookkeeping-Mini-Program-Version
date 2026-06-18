@@ -3,17 +3,30 @@
  */
 const jwt = require('jsonwebtoken')
 
-const JWT_SECRET = process.env.JWT_SECRET || 'miniprogram-secret-key-change-in-production'
+const JWT_SECRET = process.env.JWT_SECRET
+
+// 生产环境必须设置 JWT_SECRET，否则拒绝启动
+if (!JWT_SECRET) {
+  if (process.env.NODE_ENV === 'production') {
+    throw new Error('FATAL: JWT_SECRET 环境变量未设置，生产环境拒绝启动')
+  }
+  // 开发环境使用随机密钥（每次重启 token 失效，可接受）
+  console.warn('[WARN] JWT_SECRET 未设置，使用随机密钥（仅开发环境可用）')
+}
+
+function getSecret() {
+  return JWT_SECRET || require('crypto').randomBytes(32).toString('hex')
+}
 
 // 生成 token
 function generateToken(userId) {
-  return jwt.sign({ userId }, JWT_SECRET, { expiresIn: '30d' })
+  return jwt.sign({ userId }, getSecret(), { expiresIn: '30d' })
 }
 
 // 解析 token 获取 userId（不拒绝请求，仅做解析）
 function parseToken(token) {
   try {
-    const decoded = jwt.verify(token, JWT_SECRET)
+    const decoded = jwt.verify(token, getSecret())
     return decoded.userId
   } catch (e) {
     return null
@@ -41,4 +54,4 @@ function requireAuth(req, res, next) {
   next()
 }
 
-module.exports = { requireAuth, generateToken, parseToken, JWT_SECRET, auth: requireAuth }
+module.exports = { requireAuth, generateToken, parseToken, auth: requireAuth }

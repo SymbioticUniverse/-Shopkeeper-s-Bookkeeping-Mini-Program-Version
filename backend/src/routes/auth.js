@@ -15,6 +15,18 @@ router.post('/send-verify-code', (req, res) => {
     return res.status(400).json({ error: '手机号格式不正确' })
   }
 
+  // 频率限制：60 秒内同一手机号不允许重复发送
+  const lastCode = db.prepare(
+    'SELECT expires_at FROM verify_codes WHERE phone = ?'
+  ).get(phone)
+  if (lastCode) {
+    const issuedAt = new Date(lastCode.expires_at).getTime() - 5 * 60 * 1000
+    if (Date.now() - issuedAt < 60000) {
+      const remainSec = Math.ceil((60000 - (Date.now() - issuedAt)) / 1000)
+      return res.status(429).json({ error: `请 ${remainSec} 秒后再发送验证码` })
+    }
+  }
+
   // 生成 6 位验证码（生产环境应对接短信服务商）
   const code = String(Math.floor(100000 + Math.random() * 900000))
   const expiresAt = new Date(Date.now() + 5 * 60 * 1000).toISOString()
@@ -39,6 +51,15 @@ router.post('/login-by-phone', (req, res) => {
     return res.status(400).json({ error: '手机号和验证码不能为空' })
   }
 
+  // 暴力破解防护：5 次错误后锁定 15 分钟
+  const attempts = db.prepare(
+    'SELECT failed_attempts, locked_until FROM verify_codes WHERE phone = ?'
+  ).get(phone)
+  if (attempts && attempts.locked_until && new Date(attempts.locked_until) > new Date()) {
+    const remainMin = Math.ceil((new Date(attempts.locked_until) - new Date()) / 60000)
+    return res.status(429).json({ error: `验证码错误次数过多，请 ${remainMin} 分钟后再试` })
+  }
+
   // 校验验证码
   const row = db.prepare('SELECT code, expires_at FROM verify_codes WHERE phone = ?').get(phone)
   if (!row) {
@@ -49,6 +70,14 @@ router.post('/login-by-phone', (req, res) => {
     return res.status(400).json({ error: '验证码已过期，请重新发送' })
   }
   if (row.code !== code) {
+    // 记录失败次数，超过阈值锁定
+    const newAttempts = (attempts ? attempts.failed_attempts : 0) + 1
+    const lockedUntil = newAttempts >= 5
+      ? new Date(Date.now() + 15 * 60 * 1000).toISOString()
+      : null
+    db.prepare(`
+      UPDATE verify_codes SET failed_attempts = ?, locked_until = ? WHERE phone = ?
+    `).run(newAttempts, lockedUntil, phone)
     return res.status(400).json({ error: '验证码错误' })
   }
 
@@ -87,37 +116,29 @@ router.post('/login-by-phone', (req, res) => {
 router.post('/login-by-wechat', (req, res) => {
   const { nickName, avatarUrl, code } = req.body || {}
 
-  // 如果前端传了微信 code，生产环境应调微信 code2Session 换取 openid
-  // 此处以 nickName 作为临时标识（开发环境）
-  const identifier = nickName || '微信用户'
+  // 必须提供微信 code（生产环境：前端调用 wx.login 获取 code，后端调 code2Session 换 openid）
+  if (!code) {
+    return res.status(400).json({ error: '缺少微信登录凭证(code)' })
+  }
+
+  const nickname = nickName || '微信用户'
   const avatar = avatarUrl || ''
 
-  // 查找或创建用户（openid 匹配优先，降级为 nickName）
-  let user = null
-  if (code) {
-    // 生产环境：用 code 换 openid，此处简化处理
-    user = db.prepare('SELECT id, nick_name, avatar_url FROM users WHERE openid = ?').get(code)
-  }
-
-  if (!user) {
-    // 按昵称 + 头像查找已有用户
-    user = db.prepare(
-      'SELECT id, nick_name, avatar_url FROM users WHERE nick_name = ? AND avatar_url = ?'
-    ).get(identifier, avatar)
-  }
+  // 用 openid 精确匹配用户（生产环境 code 应为微信 code2Session 返回的 openid）
+  let user = db.prepare('SELECT id, nick_name, avatar_url FROM users WHERE openid = ?').get(code)
 
   if (!user) {
     // 创建新用户
     const result = db.prepare(
       'INSERT INTO users (nick_name, avatar_url, openid) VALUES (?, ?, ?)'
-    ).run(identifier, avatar, code || null)
-    user = { id: result.lastInsertRowid, nick_name: identifier, avatar_url: avatar }
+    ).run(nickname, avatar, code)
+    user = { id: result.lastInsertRowid, nick_name: nickname, avatar_url: avatar }
   } else {
     // 更新头像和昵称（微信可能更新）
     db.prepare(
       'UPDATE users SET nick_name = ?, avatar_url = ?, updated_at = datetime(\'now\') WHERE id = ?'
-    ).run(identifier, avatar, user.id)
-    user.nick_name = identifier
+    ).run(nickname, avatar, user.id)
+    user.nick_name = nickname
     user.avatar_url = avatar
   }
 

@@ -154,6 +154,40 @@ router.put('/:id', requireAuth, (req, res) => {
   params.push(id)
   db.prepare(`UPDATE items SET ${setClauses.join(', ')} WHERE id = ?`).run(...params)
 
+  // 级联更新：同步 linked_id 关联的镜像记录
+  const item = db.prepare('SELECT linked_id FROM items WHERE id = ?').get(id)
+  const linkedId = item ? item.linked_id : null
+  // 也查找 linked_id 指向本记录的镜像
+  const mirror = linkedId
+    ? db.prepare('SELECT id FROM items WHERE id = ?').get(linkedId)
+    : db.prepare('SELECT id FROM items WHERE linked_id = ?').get(id)
+
+  if (mirror) {
+    const mirrorClauses = []
+    const mirrorParams = []
+    // 同步关键字段到镜像（金额、日期、备注、作废状态）
+    if (data.amount !== undefined) {
+      mirrorClauses.push('amount = ?')
+      mirrorParams.push(data.amount)
+    }
+    if (data.date !== undefined) {
+      mirrorClauses.push('date = ?')
+      mirrorParams.push(data.date)
+    }
+    if (data.note !== undefined) {
+      mirrorClauses.push('note = ?')
+      mirrorParams.push(data.note)
+    }
+    if (data._voided !== undefined) {
+      mirrorClauses.push('voided = ?')
+      mirrorParams.push(data._voided ? 1 : 0)
+    }
+    if (mirrorClauses.length > 0) {
+      mirrorParams.push(mirror.id)
+      db.prepare(`UPDATE items SET ${mirrorClauses.join(', ')} WHERE id = ?`).run(...mirrorParams)
+    }
+  }
+
   // 返回更新后的完整 item
   const updated = db.prepare('SELECT * FROM items WHERE id = ?').get(id)
   res.json(rowToItem(updated))

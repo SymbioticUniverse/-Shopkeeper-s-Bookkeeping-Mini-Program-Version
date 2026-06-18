@@ -103,8 +103,10 @@ router.post('/', requireAuth, (req, res) => {
       INSERT INTO company_members (company_id, user_id, role, status)
       VALUES (?, ?, 'employee', 'pending')
     `).run(company.id, req.userId)
+  })()
 
-    // 自动为老板生成一条审核通知（ID 使用微秒时间戳+6位随机数防并发碰撞）
+  // 通知写入在事务外，避免 ID 碰撞回滚业务事务
+  try {
     const notifyId = Date.now() * 1000 + Math.floor(Math.random() * 1000000)
     const now = new Date().toISOString()
     db.prepare(`
@@ -116,7 +118,9 @@ router.post('/', requireAuth, (req, res) => {
       `有新员工申请加入公司`,
       now
     )
-  })()
+  } catch (err) {
+    console.error('[NOTIFY] 通知写入失败（不影响业务）:', err.message)
+  }
 
   res.json({ success: true })
 })
@@ -135,11 +139,32 @@ router.delete('/', requireAuth, (req, res) => {
   }
 
   if (member.role === 'boss') {
+    // 解散公司前：收集所有员工 ID 以便后续通知
+    const employees = db.prepare(`
+      SELECT user_id FROM company_members
+      WHERE company_id = ? AND role = 'employee' AND status = 'approved'
+    `).all(member.company_id)
+
     // 解散公司：删除所有成员、删除公司
     db.transaction(() => {
       db.prepare('DELETE FROM company_members WHERE company_id = ?').run(member.company_id)
       db.prepare('DELETE FROM companies WHERE id = ?').run(member.company_id)
     })()
+
+    // 通知所有员工（事务外，避免回滚业务）
+    const now = new Date().toISOString()
+    const notifyStmt = db.prepare(`
+      INSERT INTO notifications (id, user_id, text, time, read)
+      VALUES (?, ?, ?, ?, 0)
+    `)
+    for (const emp of employees) {
+      try {
+        const notifyId = Date.now() * 1000 + Math.floor(Math.random() * 1000000)
+        notifyStmt.run(notifyId, emp.user_id, '您所在的公司已被老板解散', now)
+      } catch (err) {
+        console.error(`[NOTIFY] 解散通知失败 user_id=${emp.user_id}:`, err.message)
+      }
+    }
   } else {
     // 员工退出
     db.prepare('DELETE FROM company_members WHERE id = ?').run(member.id)
