@@ -1,0 +1,9 @@
+{
+  "file": "backend/src/app.js",
+  "exports": [
+    "app"
+  ],
+  "imports": [],
+  "capability": "用户可运行 npm install && npm start 启动后端服务（路由占位，尚未实现具体业务逻辑）",
+  "updatedAt": "2026-06-18T04:49:35.970Z"
+}

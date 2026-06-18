@@ -1,0 +1,13 @@
+{
+  "file": "utils/i18n.js",
+  "exports": [
+    "t",
+    "getTLang",
+    "getLangLabel",
+    "translations",
+    "i18n"
+  ],
+  "imports": [],
+  "capability": "",
+  "updatedAt": "2026-06-18T04:47:18.277Z"
+}

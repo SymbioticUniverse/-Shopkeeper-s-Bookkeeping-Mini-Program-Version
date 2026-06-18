@@ -1,0 +1,12 @@
+{
+  "file": ".eslintrc.js",
+  "exports": [
+    "env",
+    "browser",
+    "node",
+    ".eslintrc"
+  ],
+  "imports": [],
+  "capability": "",
+  "updatedAt": "2026-06-18T04:47:18.270Z"
+}

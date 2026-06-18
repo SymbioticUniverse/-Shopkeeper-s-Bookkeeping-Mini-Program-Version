@@ -1,0 +1,14 @@
+{
+  "project": "miniprogram-1",
+  "goal": "chitu 帮我完成这个微信小程序的后端设计，它已经提供了好了前端的接口，文件在API.md中，你不需要去修改commit之前的文件，你创建的所有后端文件放到backend中，不要污染其他路径，ok开始吧文档任务都在api.md中啊",
+  "targetFiles": [
+    "backend/package.json",
+    "backend/package-lock.json",
+    "backend/src/app.js",
+    "backend/src/db.js",
+    "backend/src/migrate.js",
+    "backend/src/middleware/auth.js"
+  ],
+  "steps": [],
+  "createdAt": "2026-06-18T04:49:27.346Z"
+}
