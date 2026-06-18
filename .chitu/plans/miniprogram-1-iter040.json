@@ -4,6 +4,9 @@
   "targetFiles": [
     ".chitu/interfaces/pages-mingxi-mingxi.js.json"
   ],
-  "steps": [],
+  "steps": [
+    "modified: .chitu/interfaces/pages-mingxi-mingxi.js.json",
+    "capability: mingxi.js 接口文档 imports 已核对 [\"utils/api\"]，与源码 require('../../utils/api') 一致，项目交付完成"
+  ],
   "createdAt": "2026-06-18T11:35:43.222Z"
 }
