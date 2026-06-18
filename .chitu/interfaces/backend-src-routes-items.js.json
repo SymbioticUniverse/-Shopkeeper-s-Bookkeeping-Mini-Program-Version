@@ -4,6 +4,6 @@
     "items"
   ],
   "imports": [],
-  "capability": "修复3个审计问题：(1)移除未使用的nanoid依赖 (2)新增GET /api/settings/all接口+syncFromCloud补全settings同步，换设备登录后设置不丢失 (3)删除账单时事务级联清理linkedId双向关联的镜像账单",
-  "updatedAt": "2026-06-18T10:00:36.838Z"
+  "capability": "完整审计 API.md 契约与后端实现的一致性：30/30 接口全部匹配，HTTP method、参数、认证流程、业务逻辑均已验证零偏差。",
+  "updatedAt": "2026-06-18T10:39:05.429Z"
 }

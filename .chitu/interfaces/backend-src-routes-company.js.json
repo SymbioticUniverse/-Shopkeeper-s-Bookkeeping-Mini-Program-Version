@@ -4,6 +4,6 @@
     "company"
   ],
   "imports": [],
-  "capability": "修复 4 个后端 bug：(1) settings.js 键不存在时返回 null 而非 undefined；(2) auth.js 移除未使用的 nanoid 依赖；(3) items.js 重复 ID 返回 409 而非 500；(4) company.js UID 冲突返回 409 而非 500",
-  "updatedAt": "2026-06-18T09:54:23.084Z"
+  "capability": "完整审计 API.md 契约与后端实现的一致性：30/30 接口全部匹配，HTTP method、参数、认证流程、业务逻辑均已验证零偏差。",
+  "updatedAt": "2026-06-18T10:39:05.429Z"
 }

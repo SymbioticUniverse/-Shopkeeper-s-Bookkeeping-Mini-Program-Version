@@ -1,0 +1,18 @@
+{
+  "project": "miniprogram-1",
+  "goal": "Continue. You are not done. Call the next tool or complete_sub_goal.",
+  "targetFiles": [
+    "backend/src/routes/items.js",
+    "backend/src/routes/auth.js",
+    "backend/src/routes/categories.js",
+    "backend/src/routes/company.js",
+    "backend/src/routes/audit.js",
+    "backend/src/routes/notify.js",
+    "backend/src/routes/feedback.js",
+    "backend/src/routes/settings.js",
+    "backend/src/routes/overview.js",
+    "backend/src/routes/migrate.js"
+  ],
+  "steps": [],
+  "createdAt": "2026-06-18T10:39:05.377Z"
+}
