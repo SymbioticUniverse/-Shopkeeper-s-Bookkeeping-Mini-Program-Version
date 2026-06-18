@@ -1,0 +1,11 @@
+{
+  "project": "miniprogram-1",
+  "goal": "unknown",
+  "targetFiles": [
+    "backend/src/app.js",
+    "backend/src/db.js",
+    "backend/src/middleware/auth.js"
+  ],
+  "steps": [],
+  "createdAt": "2026-06-18T06:02:36.956Z"
+}
