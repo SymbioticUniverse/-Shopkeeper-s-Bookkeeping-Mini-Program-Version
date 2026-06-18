@@ -79,14 +79,22 @@ function getItems(scope) {
   return wx.getStorageSync(key) || []
 }
 
-function addItem(scope, item) {
+/**
+ * 仅写入本地 Storage，不推后端（供 addLinkedItems 等组合函数复用）
+ */
+function _addItemLocal(scope, item) {
   const key = scope === 'company' ? 'companyItems' : 'personalItems'
   const items = getItems(scope)
   items.unshift(item)
   _save(key, items)
+  return item
+}
+
+function addItem(scope, item) {
+  const result = _addItemLocal(scope, item)
   // 异步推送到后端
   _pushBackend('POST', '/items', { scope, item })
-  return item
+  return result
 }
 
 function updateItem(id, data) {
@@ -109,9 +117,10 @@ function removeItem(id) {
 }
 
 function addLinkedItems(scope, item, mirrorScope, mirrorItem) {
-  addItem(scope, item)
-  addItem(mirrorScope, mirrorItem)
-  // 后端联动接口（事务写入）
+  // 先写本地 Storage（不推后端，避免重复）
+  _addItemLocal(scope, item)
+  _addItemLocal(mirrorScope, mirrorItem)
+  // 后端联动接口（事务写入，一次推送两条）
   _pushBackend('POST', '/items/linked', { scope, item, mirrorScope, mirrorItem })
 }
 

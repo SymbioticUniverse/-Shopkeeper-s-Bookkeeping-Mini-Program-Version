@@ -31,10 +31,10 @@
     "getOverviewCards",
     "saveOverviewCards",
     "migrate",
-    "syncFromCloud",
+    "// 新增：云端同步\n  syncFromCloud",
     "api"
   ],
   "imports": [],
-  "capability": "修复3个审计问题：(1)移除未使用的nanoid依赖 (2)新增GET /api/settings/all接口+syncFromCloud补全settings同步，换设备登录后设置不丢失 (3)删除账单时事务级联清理linkedId双向关联的镜像账单",
-  "updatedAt": "2026-06-18T10:00:36.839Z"
+  "capability": "登录调用正确处理异步结果，关联账单写入不再触发后端 UNIQUE 约束",
+  "updatedAt": "2026-06-18T13:13:32.653Z"
 }

@@ -3234,16 +3234,22 @@ Page({
       wx.showToast({ title: '请输入6位验证码', icon: 'none' })
       return
     }
-    const userInfo = api.loginByPhone(loginPhone, loginCode)
-    this.setData({ isLoggedIn: true, userInfo, showLoginPage: false, loginPhone: '', loginCode: '' })
-    wx.showToast({ title: '登录成功', icon: 'success' })
+    api.loginByPhone(loginPhone, loginCode).then(userInfo => {
+      this.setData({ isLoggedIn: true, userInfo, showLoginPage: false, loginPhone: '', loginCode: '' })
+      wx.showToast({ title: '登录成功', icon: 'success' })
+    }).catch(() => {
+      wx.showToast({ title: '登录失败', icon: 'none' })
+    })
   },
 
   onWxLogin(e) {
     if (e.detail.userInfo) {
-      const userInfo = api.loginByWechat(e.detail.userInfo)
-      this.setData({ isLoggedIn: true, userInfo, showLoginPage: false })
-      wx.showToast({ title: '登录成功', icon: 'success' })
+      api.loginByWechat(e.detail.userInfo).then(userInfo => {
+        this.setData({ isLoggedIn: true, userInfo, showLoginPage: false })
+        wx.showToast({ title: '登录成功', icon: 'success' })
+      }).catch(() => {
+        wx.showToast({ title: '登录失败', icon: 'none' })
+      })
     } else {
       wx.showToast({ title: '授权已取消', icon: 'none' })
     }
