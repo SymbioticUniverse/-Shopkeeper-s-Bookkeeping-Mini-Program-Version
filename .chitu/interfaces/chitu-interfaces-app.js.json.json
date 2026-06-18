@@ -2,6 +2,6 @@
   "file": ".chitu/interfaces/app.js.json",
   "exports": [],
   "imports": [],
-  "capability": "app.js 新增 globalData 全局状态（lang/darkMode），冷启动云同步，接口文档 imports/exports 已修复",
-  "updatedAt": "2026-06-18T11:53:27.066Z"
+  "capability": "app.js 和 mingxi.js 接口文档 imports 字段补全为 [\"utils/api\"]，与实际代码 require 一致，接口图准确反映依赖关系",
+  "updatedAt": "2026-06-18T12:30:19.544Z"
 }
