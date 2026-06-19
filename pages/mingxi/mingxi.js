@@ -3668,7 +3668,9 @@ Page({
   },
 
   onGuideSkipLogin() {
-    this.setData({ guideStep: 2 })
+    const devUser = { nickName: '开发者', avatarUrl: '', phone: '1031' }
+    wx.setStorageSync('userInfo', devUser)
+    this.setData({ isLoggedIn: true, userInfo: devUser, guideStep: 2 })
   },
 
   onGuideBack() {
