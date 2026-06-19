@@ -823,6 +823,10 @@ Page({
     const prevTab = this.data.currentTab
     const wasOverview = this.data.showOverview
     let dir = ''
+    if (index === 2) {
+      this.onBookEntry({ currentTarget: { dataset: { type: 'expense' } } })
+      return
+    }
     if (wasOverview) {
       dir = 'slide-right'
     } else if (index !== prevTab) {
@@ -839,12 +843,6 @@ Page({
     }
     if (index === 0) {
       this.initDetailItems()
-    }
-    if (index === 2) {
-      this.setData({ currentTab: 0, tabSlideDir: '' })
-      this.initDetailItems()
-      this.onBookEntry({ currentTarget: { dataset: { type: 'expense' } } })
-      return
     }
     if (index === 3) {
       this.initSettleItems()
