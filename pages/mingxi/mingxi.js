@@ -3818,6 +3818,39 @@ Page({
     this.setData({ showAiChat: false, aiRecording: false })
   },
 
+  onAiBillTap(e) {
+    const idx = e.currentTarget.dataset.idx
+    const msg = this.data.aiMessages[idx]
+    if (!msg || !msg.card || msg.card.saved) return
+    const c = msg.card
+    const scope = this.data.bookScope || 'personal'
+    const newItem = {
+      id: Date.now(),
+      category: c.category,
+      type: c.type,
+      typeLabel: c.typeLabel,
+      scope: scope,
+      amount: c.amount,
+      date: c.date,
+      note: c.note || '',
+      target: '',
+      targetType: 'external',
+    }
+    api.addItem(scope, newItem)
+    const msgs = this.data.aiMessages.slice()
+    msgs[idx].card.saved = true
+    this.setData({
+      aiMessages: msgs,
+      showAiChat: false,
+      currentTab: 0,
+      showOverview: false,
+      detailItems: api.getItems(scope),
+      modalItem: newItem,
+    })
+    this._calcOverviewData()
+    wx.showToast({ title: '已添加到明细', icon: 'success' })
+  },
+
   onAiInput(e) {
     this.setData({ aiInputText: e.detail.value })
   },

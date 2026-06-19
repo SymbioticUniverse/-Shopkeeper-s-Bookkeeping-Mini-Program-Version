@@ -1479,11 +1479,12 @@
         <view class="ai-msg" wx:for="{{aiMessages}}" wx:key="index" id="ai-msg-{{index}}">
           <view class="ai-msg-bubble ai-msg-bubble--{{item.role}}">
             <text class="ai-msg-text">{{item.text}}</text>
-            <view wx:if="{{item.card}}" class="ai-bill-card ai-bill-card--{{item.card.type}}">
+            <view wx:if="{{item.card}}" class="ai-bill-card ai-bill-card--{{item.card.type}} {{item.card.saved ? 'ai-bill-card--saved' : ''}}" catchtap="onAiBillTap" data-idx="{{index}}">
               <view class="ai-bill-row">
                 <view class="ai-bill-dot"></view>
                 <text class="ai-bill-cat">{{item.card.category}}</text>
                 <text class="ai-bill-type">{{item.card.typeLabel}}</text>
+                <text wx:if="{{item.card.saved}}" class="ai-bill-saved">已添加</text>
               </view>
               <view class="ai-bill-row ai-bill-row--bottom">
                 <text class="ai-bill-amount">¥{{item.card.amount}}</text>
