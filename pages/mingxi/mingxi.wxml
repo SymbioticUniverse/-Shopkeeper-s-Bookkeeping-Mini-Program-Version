@@ -643,6 +643,8 @@
               <view class="custom-cat-tabs">
                 <view class="custom-cat-tab {{catTabPersonal === 'out' ? 'custom-cat-tab--on' : ''}}" bindtap="onCatTabChange" data-scope="personal" data-tab="out">支出</view>
                 <view class="custom-cat-tab {{catTabPersonal === 'in' ? 'custom-cat-tab--on' : ''}}" bindtap="onCatTabChange" data-scope="personal" data-tab="in">收入</view>
+                <view class="custom-cat-tab {{catTabPersonal === 'payForward' ? 'custom-cat-tab--on' : ''}}" bindtap="onCatTabChange" data-scope="personal" data-tab="payForward">垫付</view>
+                <view class="custom-cat-tab {{catTabPersonal === 'payable' ? 'custom-cat-tab--on' : ''}}" bindtap="onCatTabChange" data-scope="personal" data-tab="payable">应付</view>
               </view>
             </view>
             <scroll-view class="custom-cat-grid-scroll" scroll-y enhanced show-scrollbar="{{false}}">
@@ -666,6 +668,8 @@
               <view class="custom-cat-tabs">
                 <view class="custom-cat-tab {{catTabCompany === 'out' ? 'custom-cat-tab--on' : ''}}" bindtap="onCatTabChange" data-scope="company" data-tab="out">支出</view>
                 <view class="custom-cat-tab {{catTabCompany === 'in' ? 'custom-cat-tab--on' : ''}}" bindtap="onCatTabChange" data-scope="company" data-tab="in">收入</view>
+                <view class="custom-cat-tab {{catTabCompany === 'payForward' ? 'custom-cat-tab--on' : ''}}" bindtap="onCatTabChange" data-scope="company" data-tab="payForward">垫付</view>
+                <view class="custom-cat-tab {{catTabCompany === 'payable' ? 'custom-cat-tab--on' : ''}}" bindtap="onCatTabChange" data-scope="company" data-tab="payable">应付</view>
               </view>
             </view>
             <scroll-view class="custom-cat-grid-scroll" scroll-y enhanced show-scrollbar="{{false}}">

@@ -532,6 +532,14 @@ Page({
 	      { id: 'p_34', name: '礼金', emoji: '🎀', inOut: 'in' },
 	      { id: 'p_35', name: '报销', emoji: '🧾', inOut: 'in' },
 	      { id: 'p_36', name: '补贴', emoji: '🪙', inOut: 'in' },
+	      { id: 'p_37', name: '代购', emoji: '🛒', inOut: 'payForward' },
+	      { id: 'p_38', name: '垫餐', emoji: '🍱', inOut: 'payForward' },
+	      { id: 'p_39', name: '垫车费', emoji: '🚕', inOut: 'payForward' },
+	      { id: 'p_40', name: '垫物料', emoji: '📦', inOut: 'payForward' },
+	      { id: 'p_41', name: '借款', emoji: '💰', inOut: 'payable' },
+	      { id: 'p_42', name: '欠款', emoji: '📝', inOut: 'payable' },
+	      { id: 'p_43', name: '分期', emoji: '🔄', inOut: 'payable' },
+	      { id: 'p_44', name: '赊账', emoji: '🧾', inOut: 'payable' },
     ],
     companyCategories: [
       { id: 'c_1', name: '采购', emoji: '📋', inOut: 'out' },
@@ -570,6 +578,14 @@ Page({
 	      { id: 'c_34', name: '佣金', emoji: '🤲', inOut: 'in' },
 	      { id: 'c_35', name: '赞助', emoji: '🎗', inOut: 'in' },
 	      { id: 'c_36', name: '政府补贴', emoji: '🏛', inOut: 'in' },
+	      { id: 'c_37', name: '差旅垫付', emoji: '✈', inOut: 'payForward' },
+	      { id: 'c_38', name: '采购垫付', emoji: '📋', inOut: 'payForward' },
+	      { id: 'c_39', name: '办公垫付', emoji: '🖥', inOut: 'payForward' },
+	      { id: 'c_40', name: '接待垫付', emoji: '🍷', inOut: 'payForward' },
+	      { id: 'c_41', name: '货款', emoji: '📦', inOut: 'payable' },
+	      { id: 'c_42', name: '工程款', emoji: '🏗', inOut: 'payable' },
+	      { id: 'c_43', name: '服务费', emoji: '⚙', inOut: 'payable' },
+	      { id: 'c_44', name: '租赁款', emoji: '🔑', inOut: 'payable' },
     ],
   },
 
@@ -1934,7 +1950,7 @@ Page({
     const scope = this.data.bookScope
     const type = this.data.bookForm.type
     const source = scope === 'personal' ? this.data.personalCategories : this.data.companyCategories
-    const inOut = (type === 'income') ? 'in' : 'out'
+    const inOut = { income: 'in', expense: 'out', payForward: 'payForward', payable: 'payable' }[type] || 'out'
     this.setData({ bookCatPanelData: source.filter(item => item.inOut === inOut) })
   },
 
@@ -2794,11 +2810,12 @@ Page({
       const n = parseInt(item.id.split('_')[1])
       return n > m ? n : m
     }, 0)
+    const currentTab = catModalScope === 'personal' ? this.data.catTabPersonal : this.data.catTabCompany
     const newItem = {
       id: `${prefix}_${maxNum + 1}`,
       name,
       emoji: catModalEmoji,
-      inOut: 'out',
+      inOut: currentTab,
     }
     const newList = [...list, newItem]
     this.setData({
