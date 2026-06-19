@@ -1,5 +1,9 @@
 /**
- * 通知路由 — 获取 / 保存通知列表
+ * 通知路由 — 获取 / 保存 / 删除通知
+ *
+ * 通知分两种来源：
+ *   source='user'   — 前端管理的手动通知（可增删改）
+ *   source='system' — 后端自动生成的通知（审核/解散等，前端不可覆盖）
  */
 const express = require('express')
 const { db } = require('../db')
@@ -11,7 +15,7 @@ const router = express.Router()
 
 router.get('/', requireAuth, (req, res) => {
   const rows = db.prepare(`
-    SELECT id, text, time, read
+    SELECT id, text, time, read, source
     FROM notifications
     WHERE user_id = ?
     ORDER BY id DESC
@@ -21,11 +25,12 @@ router.get('/', requireAuth, (req, res) => {
     id: r.id,
     text: r.text,
     time: r.time,
-    read: r.read === 1
+    read: r.read === 1,
+    source: r.source
   })))
 })
 
-// ==================== 保存通知列表（整体覆盖 — 先删后插） ====================
+// ==================== 保存通知列表（仅覆盖 source='user' 的通知） ====================
 
 router.post('/', requireAuth, (req, res) => {
   const list = req.body || []
@@ -34,14 +39,15 @@ router.post('/', requireAuth, (req, res) => {
   }
 
   const insertStmt = db.prepare(`
-    INSERT INTO notifications (id, user_id, text, time, read)
-    VALUES (?, ?, ?, ?, ?)
+    INSERT OR IGNORE INTO notifications (id, user_id, text, time, read, source)
+    VALUES (?, ?, ?, ?, ?, 'user')
   `)
 
   db.transaction(() => {
-    // 先清空该用户所有通知，再批量插入 → 同时实现新增/更新/删除
-    db.prepare('DELETE FROM notifications WHERE user_id = ?').run(req.userId)
+    // 只清空用户手动管理的通知，系统自动通知不受影响
+    db.prepare("DELETE FROM notifications WHERE user_id = ? AND source = 'user'").run(req.userId)
     for (const item of list) {
+      // 仅处理前端传来的通知（前端不会传 source 字段，统一视为 user 源）
       insertStmt.run(
         item.id,
         req.userId,
@@ -51,6 +57,21 @@ router.post('/', requireAuth, (req, res) => {
       )
     }
   })()
+
+  res.json({ success: true })
+})
+
+// ==================== 删除单条通知（仅允许 source='user'） ====================
+
+router.delete('/:id', requireAuth, (req, res) => {
+  const result = db.prepare(`
+    DELETE FROM notifications
+    WHERE id = ? AND user_id = ? AND source = 'user'
+  `).run(Number(req.params.id), req.userId)
+
+  if (result.changes === 0) {
+    return res.status(404).json({ error: '通知不存在或无权删除' })
+  }
 
   res.json({ success: true })
 })

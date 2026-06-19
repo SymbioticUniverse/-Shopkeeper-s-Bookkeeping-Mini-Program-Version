@@ -113,6 +113,7 @@ function initSchema() {
       text TEXT NOT NULL,
       time TEXT NOT NULL,
       read INTEGER NOT NULL DEFAULT 0,
+      source TEXT NOT NULL DEFAULT 'user' CHECK(source IN ('user','system')),
       FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
     );
 
@@ -163,6 +164,11 @@ function initSchema() {
   } catch (e) { /* 列已存在 */ }
   try {
     db.exec('ALTER TABLE verify_codes ADD COLUMN locked_until TEXT')
+  } catch (e) { /* 列已存在 */ }
+
+  // Migration: 通知表加 source 列（user/system 区分，防止全量覆盖竞态）
+  try {
+    db.exec('ALTER TABLE notifications ADD COLUMN source TEXT NOT NULL DEFAULT \'user\' CHECK(source IN (\'user\',\'system\'))')
   } catch (e) { /* 列已存在 */ }
 
   // Migration: amount TEXT → REAL（旧库存在时重建表）

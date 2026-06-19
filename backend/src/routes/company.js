@@ -110,8 +110,8 @@ router.post('/', requireAuth, (req, res) => {
     const notifyId = Date.now() * 1000 + Math.floor(Math.random() * 1000000)
     const now = new Date().toISOString()
     db.prepare(`
-      INSERT INTO notifications (id, user_id, text, time, read)
-      VALUES (?, ?, ?, ?, 0)
+      INSERT INTO notifications (id, user_id, text, time, read, source)
+      VALUES (?, ?, ?, ?, 0, 'system')
     `).run(
       notifyId,
       company.boss_user_id,
@@ -154,8 +154,8 @@ router.delete('/', requireAuth, (req, res) => {
     // 通知所有员工（事务外，避免回滚业务）
     const now = new Date().toISOString()
     const notifyStmt = db.prepare(`
-      INSERT INTO notifications (id, user_id, text, time, read)
-      VALUES (?, ?, ?, ?, 0)
+      INSERT INTO notifications (id, user_id, text, time, read, source)
+      VALUES (?, ?, ?, ?, 0, 'system')
     `)
     for (const emp of employees) {
       try {

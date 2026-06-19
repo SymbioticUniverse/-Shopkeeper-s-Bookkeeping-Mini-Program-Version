@@ -2,6 +2,11 @@
 const api = require('./utils/api')
 
 App({
+  globalData: {
+    lang: 'zh-CN',
+    darkMode: 'auto',
+  },
+
   onLaunch() {
     // 冷启动时从云端同步数据（已登录用户）
     this._syncFromCloud()

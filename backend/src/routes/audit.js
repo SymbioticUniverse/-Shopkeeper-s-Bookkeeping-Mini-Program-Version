@@ -108,8 +108,8 @@ router.post('/', requireAuth, (req, res) => {
     try {
       const notifyId = Date.now() * 1000 + Math.floor(Math.random() * 1000000)
       db.prepare(`
-        INSERT INTO notifications (id, user_id, text, time, read)
-        VALUES (?, ?, ?, ?, 0)
+        INSERT INTO notifications (id, user_id, text, time, read, source)
+        VALUES (?, ?, ?, ?, 0, 'system')
       `).run(notifyId, n.userId, n.text, now)
     } catch (err) {
       console.error(`[NOTIFY] 审核通知写入失败 user_id=${n.userId}:`, err.message)

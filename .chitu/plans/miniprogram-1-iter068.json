@@ -4,6 +4,9 @@
   "targetFiles": [
     "backend/src/middleware/auth.js"
   ],
-  "steps": [],
+  "steps": [
+    "modified: backend/src/middleware/auth.js",
+    "capability: 开发环境下 getSecret() 仅在模块加载时生成一次随机密钥并缓存，generateToken() 和 parseToken() 使用同一密钥，开发环境登录恢复正常"
+  ],
   "createdAt": "2026-06-18T15:49:56.121Z"
 }
