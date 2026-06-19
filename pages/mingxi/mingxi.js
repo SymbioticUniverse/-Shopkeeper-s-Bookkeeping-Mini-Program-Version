@@ -1643,6 +1643,10 @@ Page({
 
   // 切换个人/公司
   switchReportType() {
+    if (this.data.reportType === 0 && !api.getCompanyInfo()) {
+      wx.showToast({ title: '请先注册公司', icon: 'none' })
+      return
+    }
     const { currentReportCard, reportCards } = this.data
     const card = reportCards[currentReportCard]
     const next = card.col === 0 ? currentReportCard + 1 : currentReportCard - 1
@@ -1774,19 +1778,57 @@ Page({
 
   // ---- 结清 ----
   switchSettleType() {
+    if (this.data.settleType === 0 && !api.getCompanyInfo()) {
+      wx.showToast({ title: '请先注册公司', icon: 'none' })
+      return
+    }
     this.setData({ settleType: this.data.settleType === 0 ? 1 : 0 })
     this.initSettleItems()
   },
 
   onSettleAll() {
+    const items = this.data.settleItems
+    const settleable = items.filter(it =>
+      it.typeLabel === '应付' || (it.typeLabel === '垫付' && it.settleStatus === 'company_settled')
+    )
+    if (!settleable.length) {
+      wx.showToast({ title: '没有可结清的项目', icon: 'none' })
+      return
+    }
     wx.showModal({
       title: '确认结清',
-      content: '确认一键结清所有垫付资金？此操作不可撤销。',
+      content: `将结清 ${settleable.length} 笔账单并自动生成对账记录，确定吗？`,
       success: (res) => {
-        if (res.confirm) {
-          wx.showToast({ title: '已结清', icon: 'success' })
-          this.setData({ settleItems: [] })
+        if (!res.confirm) return
+        const settleTime = this._formatSettleTime()
+        const today = this._todayDate()
+
+        for (const item of settleable) {
+          if (item.typeLabel === '应付') {
+            this._doSettle(item, 'settle', true)
+          } else if (item.typeLabel === '垫付' && item.settleStatus === 'company_settled') {
+            const settleInfo = settleTime + ' 由[垫付]结清'
+            api.updateItem(item.id, { settleStatus: 'settled', settleInfo, typeLabel: '支出' })
+            api.addItem('personal', {
+              id: Date.now() + Math.random() * 100 | 0,
+              category: item.category,
+              type: 'in',
+              typeLabel: '收入',
+              scope: 'personal',
+              amount: item.amount,
+              date: today,
+              note: '',
+              target: item.target,
+              targetType: item.targetType || 'internal',
+              settleInfo,
+              _autoSettle: true,
+            })
+          }
         }
+        this.initSettleItems()
+        this.initDetailItems()
+        this._calcOverviewData()
+        wx.showToast({ title: '已全部结清', icon: 'success' })
       },
     })
   },
@@ -1905,6 +1947,10 @@ Page({
 
   onBookScopeToggle(e) {
     const scope = e.currentTarget.dataset.scope
+    if (scope === 'company' && !api.getCompanyInfo()) {
+      wx.showToast({ title: '请先注册公司', icon: 'none' })
+      return
+    }
     const td = this._getBookTargetDefaults(scope, this.data.bookForm.type)
     this.setData({
       bookScope: scope,
@@ -2088,31 +2134,187 @@ Page({
     this.setData({ modalItem: null })
   },
 
+  _formatSettleTime() {
+    const d = new Date()
+    const y = d.getFullYear()
+    const mo = String(d.getMonth() + 1).padStart(2, '0')
+    const da = String(d.getDate()).padStart(2, '0')
+    const h = String(d.getHours()).padStart(2, '0')
+    const mi = String(d.getMinutes()).padStart(2, '0')
+    return `${y}年${mo}月${da}日 ${h}:${mi}`
+  },
+
+  _todayDate() {
+    const d = new Date()
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+  },
+
   onBillSettle(e) {
     const id = e.currentTarget.dataset.id
     const from = e.currentTarget.dataset.from || 'detail'
+    const itemsKey = from === 'settle' ? 'settleItems' : 'detailItems'
+    const found = this.data[itemsKey].find(item => item.id === id)
+    if (!found) return
+
+    if (found.typeLabel === '垫付') {
+      if (found.settleStatus === 'company_settled') {
+        this.onBillConfirmSettle(e)
+      } else {
+        wx.showToast({ title: '请等待对方结清应付款', icon: 'none' })
+      }
+      return
+    }
+    if (found.typeLabel !== '应付') return
+
     wx.showModal({
       title: '确认结清',
-      content: '结清后将视为普通收支，确定吗？',
+      content: '结清后将自动生成对账记录，确定吗？',
       success: (res) => {
         if (!res.confirm) return
-        const itemsKey = from === 'settle' ? 'settleItems' : 'detailItems'
-        const found = this.data[itemsKey].find(item => item.id === id)
-        const newTypeLabel = found && found.type === 'in' ? '收入' : '支出'
-        // 更新原始记录
-        api.updateItem(id, { typeLabel: newTypeLabel })
-        // 级联更新镜像记录
-        const mirrorId = found && found.linkedId
-        if (mirrorId) {
-          api.updateItem(mirrorId, { typeLabel: newTypeLabel })
+        this._doSettle(found, from)
+      },
+    })
+  },
+
+  _doSettle(found, from, skipRefresh) {
+    const settleTime = this._formatSettleTime()
+    const today = this._todayDate()
+    const settleScope = from === 'settle'
+      ? (this.data.settleType === 1 ? 'company' : 'personal')
+      : (found.scope || 'personal')
+    const mirrorScope = settleScope === 'company' ? 'personal' : 'company'
+    const mirrorItems = api.getItems(mirrorScope)
+    const mirrorItem = found.linkedId ? mirrorItems.find(it => it.id === found.linkedId) : null
+
+    if (settleScope === 'company' && found.typeLabel === '应付') {
+      // Case A/B: 公司结清应付（镜像为个人垫付）
+      const settleInfo = settleTime + ' 由[应付]结清'
+      api.updateItem(found.id, { settleStatus: 'settled', settleInfo })
+      api.addItem('company', {
+        id: Date.now() + 10,
+        category: found.category,
+        type: 'out',
+        typeLabel: '支出',
+        scope: 'company',
+        amount: found.amount,
+        date: today,
+        note: '',
+        target: found.target,
+        targetType: found.targetType || 'internal',
+        settleInfo,
+        _autoSettle: true,
+      })
+
+      const companyInfo = api.getCompanyInfo()
+      const isBoss = companyInfo && (companyInfo.companyRole === 'boss' || !companyInfo.companyRole)
+
+      if (mirrorItem) {
+        if (isBoss) {
+          const personalSettleInfo = settleTime + ' 由[垫付]结清'
+          api.updateItem(mirrorItem.id, { settleStatus: 'settled', settleInfo: personalSettleInfo, typeLabel: '支出' })
+          api.addItem('personal', {
+            id: Date.now() + 11,
+            category: mirrorItem.category,
+            type: 'in',
+            typeLabel: '收入',
+            scope: 'personal',
+            amount: mirrorItem.amount,
+            date: today,
+            note: '',
+            target: mirrorItem.target,
+            targetType: mirrorItem.targetType || 'internal',
+            settleInfo: personalSettleInfo,
+            _autoSettle: true,
+          })
+        } else {
+          api.updateItem(mirrorItem.id, { settleStatus: 'company_settled' })
         }
-        const updated = this.data[itemsKey].map(item => {
-          if (item.id === id || item.id === mirrorId) return { ...item, typeLabel: newTypeLabel, _open: false }
-          return { ...item }
+      }
+    } else if (settleScope === 'personal' && found.typeLabel === '应付') {
+      // Case C: 个人结清应付（镜像为公司垫付）
+      const settleInfo = settleTime + ' 由[应付]结清'
+      api.updateItem(found.id, { settleStatus: 'settled', settleInfo })
+      api.addItem('personal', {
+        id: Date.now() + 10,
+        category: found.category,
+        type: 'out',
+        typeLabel: '支出',
+        scope: 'personal',
+        amount: found.amount,
+        date: today,
+        note: '',
+        target: found.target,
+        targetType: found.targetType || 'internal',
+        settleInfo,
+        _autoSettle: true,
+      })
+
+      if (mirrorItem) {
+        const companySettleInfo = settleTime + ' 由[垫付]结清'
+        api.updateItem(mirrorItem.id, { settleStatus: 'settled', settleInfo: companySettleInfo, typeLabel: '收入' })
+        api.addItem('company', {
+          id: Date.now() + 11,
+          category: mirrorItem.category,
+          type: 'in',
+          typeLabel: '收入',
+          scope: 'company',
+          amount: mirrorItem.amount,
+          date: today,
+          note: '',
+          target: mirrorItem.target,
+          targetType: mirrorItem.targetType || 'internal',
+          settleInfo: companySettleInfo,
+          _autoSettle: true,
         })
-        this.setData({ [itemsKey]: updated, modalItem: null })
+      }
+    }
+
+    if (!skipRefresh) {
+      this.initSettleItems()
+      this.initDetailItems()
+      this.setData({ modalItem: null })
+      this._calcOverviewData()
+      wx.showToast({ title: '已结清', icon: 'success' })
+    }
+  },
+
+  onBillConfirmSettle(e) {
+    const id = e.currentTarget.dataset.id
+    const from = e.currentTarget.dataset.from || 'settle'
+    const itemsKey = from === 'settle' ? 'settleItems' : 'detailItems'
+    const found = this.data[itemsKey].find(item => item.id === id)
+    if (!found || found.settleStatus !== 'company_settled') return
+
+    wx.showModal({
+      title: '确认到账',
+      content: '确认资金已到账？一旦确认将视为结清。',
+      success: (res) => {
+        if (!res.confirm) return
+        const settleTime = this._formatSettleTime()
+        const today = this._todayDate()
+        const settleInfo = settleTime + ' 由[垫付]结清'
+
+        api.updateItem(found.id, { settleStatus: 'settled', settleInfo, typeLabel: '支出' })
+        api.addItem('personal', {
+          id: Date.now() + 10,
+          category: found.category,
+          type: 'in',
+          typeLabel: '收入',
+          scope: 'personal',
+          amount: found.amount,
+          date: today,
+          note: '',
+          target: found.target,
+          targetType: found.targetType || 'internal',
+          settleInfo,
+          _autoSettle: true,
+        })
+
+        this.initSettleItems()
+        this.initDetailItems()
+        this.setData({ modalItem: null })
         this._calcOverviewData()
-        wx.showToast({ title: '已结清', icon: 'success' })
+        wx.showToast({ title: '已确认到账', icon: 'success' })
       },
     })
   },
@@ -2207,6 +2409,10 @@ Page({
 
   // ---- 明细 ----
   switchDetailType() {
+    if (this.data.detailType === 0 && !api.getCompanyInfo()) {
+      wx.showToast({ title: '请先注册公司', icon: 'none' })
+      return
+    }
     this.setData({ detailType: this.data.detailType === 0 ? 1 : 0 })
     this.initDetailItems()
   },
@@ -2274,7 +2480,10 @@ Page({
   initSettleItems() {
     const scope = this.data.settleType === 1 ? 'company' : 'personal'
     const items = api.getItems(scope)
-    const filtered = items.filter(item => item.typeLabel === '垫付' || item.typeLabel === '应付')
+    const filtered = items.filter(item =>
+      (item.typeLabel === '垫付' || item.typeLabel === '应付') &&
+      item.settleStatus !== 'settled'
+    )
     this.setData({ settleItems: filtered.map(item => ({ ...item })) })
   },
 
@@ -2754,7 +2963,7 @@ Page({
       wx.showToast({ title: '请输入公司名称', icon: 'none' })
       return
     }
-    const info = { companyUid, companyName: companyName.trim(), companyBossTitle: companyBossTitle.trim() || 'BOSS' }
+    const info = { companyUid, companyName: companyName.trim(), companyBossTitle: companyBossTitle.trim() || 'BOSS', companyRole: 'boss' }
     api.saveCompanyInfo(info)
     wx.showToast({ title: '创建成功', icon: 'success' })
     this.setData({ companyShareStep: 2, companyName: info.companyName, companyBossTitle: info.companyBossTitle, companyUid: info.companyUid })

@@ -384,12 +384,13 @@
           <scroll-view class="detail-list" scroll-y enhanced show-scrollbar="{{false}}">
             <view wx:for="{{detailItems}}" wx:key="id" class="bill-row">
               <view class="bill-actions">
-                <view class="bill-act-btn bill-act-settle" catchtap="onBillSettle" data-id="{{item.id}}" data-from="detail">结清</view>
-                <view class="bill-act-btn bill-act-delete" catchtap="onBillDelete" data-id="{{item.id}}" data-from="detail">删除</view>
-                <view wx:if="{{!item._voided}}" class="bill-act-btn bill-act-void" catchtap="onBillVoid" data-id="{{item.id}}" data-from="detail">作废</view>
-                <view wx:else class="bill-act-btn bill-act-unvoid" catchtap="onBillUnvoid" data-id="{{item.id}}" data-from="detail">恢复</view>
+                <view wx:if="{{item.typeLabel === '应付' && item.settleStatus !== 'settled'}}" class="bill-act-btn bill-act-settle" catchtap="onBillSettle" data-id="{{item.id}}" data-from="detail">结清</view>
+                <view wx:elif="{{item.typeLabel === '垫付' && item.settleStatus === 'company_settled'}}" class="bill-act-btn bill-act-confirm" catchtap="onBillSettle" data-id="{{item.id}}" data-from="detail">确认到账</view>
+                <view wx:if="{{!item._autoSettle}}" class="bill-act-btn bill-act-delete" catchtap="onBillDelete" data-id="{{item.id}}" data-from="detail">删除</view>
+                <view wx:if="{{!item._autoSettle && !item._voided}}" class="bill-act-btn bill-act-void" catchtap="onBillVoid" data-id="{{item.id}}" data-from="detail">作废</view>
+                <view wx:elif="{{!item._autoSettle && item._voided}}" class="bill-act-btn bill-act-unvoid" catchtap="onBillUnvoid" data-id="{{item.id}}" data-from="detail">恢复</view>
               </view>
-              <view class="bill-item {{item.typeLabel === '垫付' ? 'bill-item--advance' : ''}} {{item.typeLabel === '应付' ? 'bill-item--payable' : ''}} {{item._voided ? 'bill-item--voided' : ''}}"
+              <view class="bill-item {{item.typeLabel === '垫付' ? 'bill-item--advance' : ''}} {{item.typeLabel === '应付' ? 'bill-item--payable' : ''}} {{item._voided ? 'bill-item--voided' : ''}} {{item.settleStatus === 'company_settled' ? 'bill-item--pending-confirm' : ''}} {{item._autoSettle ? 'bill-item--auto' : ''}}"
                     bindtouchstart="onBillTouchStart"
                     bindtouchmove="onBillTouchMove"
                     bindtouchend="onBillTouchEnd"
@@ -399,6 +400,8 @@
                 <view class="bill-dot"></view>
                 <text class="bill-cat">{{item.category}}</text>
                 <text class="bill-type">{{item.typeLabel}}</text>
+                <text wx:if="{{item.settleStatus === 'company_settled'}}" class="bill-settle-tag bill-settle-tag--pending">待确认</text>
+                <text wx:elif="{{item._autoSettle}}" class="bill-settle-tag bill-settle-tag--auto">自动</text>
                 <text class="bill-note-inline">{{item.note || '-'}}</text>
                 <text class="bill-amount {{item.type === 'in' ? 'bill-amount--in' : 'bill-amount--out'}}">¥{{item.amount}}</text>
                 <text class="bill-date">{{item.date}}</text>
@@ -530,12 +533,13 @@
         <scroll-view class="settle-list" scroll-y enhanced show-scrollbar="{{false}}">
           <view wx:for="{{settleItems}}" wx:key="id" class="bill-row">
             <view class="bill-actions">
-              <view class="bill-act-btn bill-act-settle" catchtap="onBillSettle" data-id="{{item.id}}" data-from="settle">结清</view>
+              <view wx:if="{{item.typeLabel === '应付'}}" class="bill-act-btn bill-act-settle" catchtap="onBillSettle" data-id="{{item.id}}" data-from="settle">结清</view>
+              <view wx:elif="{{item.typeLabel === '垫付' && item.settleStatus === 'company_settled'}}" class="bill-act-btn bill-act-confirm" catchtap="onBillSettle" data-id="{{item.id}}" data-from="settle">确认到账</view>
               <view class="bill-act-btn bill-act-delete" catchtap="onBillDelete" data-id="{{item.id}}" data-from="settle">删除</view>
               <view wx:if="{{!item._voided}}" class="bill-act-btn bill-act-void" catchtap="onBillVoid" data-id="{{item.id}}" data-from="settle">作废</view>
               <view wx:else class="bill-act-btn bill-act-unvoid" catchtap="onBillUnvoid" data-id="{{item.id}}" data-from="settle">恢复</view>
             </view>
-            <view class="bill-item {{item.typeLabel === '垫付' ? 'bill-item--advance' : ''}} {{item.typeLabel === '应付' ? 'bill-item--payable' : ''}} {{item._voided ? 'bill-item--voided' : ''}}"
+            <view class="bill-item {{item.typeLabel === '垫付' ? 'bill-item--advance' : ''}} {{item.typeLabel === '应付' ? 'bill-item--payable' : ''}} {{item._voided ? 'bill-item--voided' : ''}} {{item.settleStatus === 'company_settled' ? 'bill-item--pending-confirm' : ''}}"
                   bindtouchstart="onBillTouchStart"
                   bindtouchmove="onBillTouchMove"
                   bindtouchend="onBillTouchEnd"
@@ -545,6 +549,7 @@
               <view class="bill-dot"></view>
               <text class="bill-cat">{{item.category}}</text>
               <text class="bill-type">{{item.typeLabel}}</text>
+              <text wx:if="{{item.settleStatus === 'company_settled'}}" class="bill-settle-tag bill-settle-tag--pending">待确认</text>
               <text class="bill-note-inline">{{item.note || '-'}}</text>
               <text class="bill-amount {{item.type === 'in' ? 'bill-amount--in' : 'bill-amount--out'}}">¥{{item.amount}}</text>
               <text class="bill-date">{{item.date}}</text>
@@ -1314,6 +1319,7 @@
   <view class="bill-modal-mask" wx:if="{{modalItem}}" catchtap="onModalClose">
     <view class="bill-modal" catchtap="nop">
       <text class="bill-modal-title">{{modalItem.category}}</text>
+      <view wx:if="{{modalItem._autoSettle}}" class="bill-modal-auto-tag">系统自动生成</view>
       <view class="bill-modal-divider"></view>
       <view class="bill-modal-row">
         <text class="bill-modal-label">类型</text>
@@ -1321,27 +1327,35 @@
       </view>
       <view class="bill-modal-row">
         <text class="bill-modal-label">分类</text>
-        <input class="bill-modal-input" value="{{modalEdit.category}}" bindinput="onModalFieldEdit" data-field="category"/>
+        <text wx:if="{{modalItem._autoSettle}}" class="bill-modal-value">{{modalEdit.category}}</text>
+        <input wx:else class="bill-modal-input" value="{{modalEdit.category}}" bindinput="onModalFieldEdit" data-field="category"/>
       </view>
       <view class="bill-modal-row">
         <text class="bill-modal-label">金额</text>
-        <input class="bill-modal-input" value="{{modalEdit.amount}}" bindinput="onModalFieldEdit" data-field="amount" type="digit"/>
+        <text wx:if="{{modalItem._autoSettle}}" class="bill-modal-value">¥{{modalEdit.amount}}</text>
+        <input wx:else class="bill-modal-input" value="{{modalEdit.amount}}" bindinput="onModalFieldEdit" data-field="amount" type="digit"/>
       </view>
       <view class="bill-modal-row">
         <text class="bill-modal-label">备注</text>
-        <input class="bill-modal-input" value="{{modalEdit.note}}" bindinput="onModalFieldEdit" data-field="note"/>
+        <text wx:if="{{modalItem._autoSettle}}" class="bill-modal-value">{{modalEdit.note || '-'}}</text>
+        <input wx:else class="bill-modal-input" value="{{modalEdit.note}}" bindinput="onModalFieldEdit" data-field="note"/>
       </view>
       <view class="bill-modal-row">
         <text class="bill-modal-label">日期</text>
         <text class="bill-modal-value">{{modalItem.date}}</text>
       </view>
+      <view wx:if="{{modalItem.settleInfo}}" class="bill-modal-row">
+        <text class="bill-modal-label">结清</text>
+        <text class="bill-modal-settle-info">{{modalItem.settleInfo}}</text>
+      </view>
       <view class="bill-modal-divider"></view>
       <view class="bill-modal-btns">
-        <view class="bill-modal-btn bill-modal-save" bindtap="onModalSave">保存</view>
-        <view wx:if="{{modalItem.typeLabel === '垫付' || modalItem.typeLabel === '应付'}}" class="bill-modal-btn bill-modal-settle" bindtap="onBillSettle" data-id="{{modalItem.id}}" data-from="{{modalFrom}}">结清</view>
-        <view wx:if="{{!modalItem._voided}}" class="bill-modal-btn bill-modal-void" bindtap="onBillVoid" data-id="{{modalItem.id}}" data-from="{{modalFrom}}">作废</view>
-        <view wx:else class="bill-modal-btn bill-modal-unvoid" bindtap="onBillUnvoid" data-id="{{modalItem.id}}" data-from="{{modalFrom}}">恢复</view>
-        <view class="bill-modal-btn bill-modal-delete" bindtap="onBillDelete" data-id="{{modalItem.id}}" data-from="{{modalFrom}}">删除</view>
+        <view wx:if="{{!modalItem._autoSettle}}" class="bill-modal-btn bill-modal-save" bindtap="onModalSave">保存</view>
+        <view wx:if="{{modalItem.typeLabel === '应付' && modalItem.settleStatus !== 'settled'}}" class="bill-modal-btn bill-modal-settle" bindtap="onBillSettle" data-id="{{modalItem.id}}" data-from="{{modalFrom}}">结清</view>
+        <view wx:elif="{{modalItem.typeLabel === '垫付' && modalItem.settleStatus === 'company_settled'}}" class="bill-modal-btn bill-modal-settle" bindtap="onBillSettle" data-id="{{modalItem.id}}" data-from="{{modalFrom}}">确认到账</view>
+        <view wx:if="{{!modalItem._autoSettle && !modalItem._voided}}" class="bill-modal-btn bill-modal-void" bindtap="onBillVoid" data-id="{{modalItem.id}}" data-from="{{modalFrom}}">作废</view>
+        <view wx:elif="{{!modalItem._autoSettle && modalItem._voided}}" class="bill-modal-btn bill-modal-unvoid" bindtap="onBillUnvoid" data-id="{{modalItem.id}}" data-from="{{modalFrom}}">恢复</view>
+        <view wx:if="{{!modalItem._autoSettle}}" class="bill-modal-btn bill-modal-delete" bindtap="onBillDelete" data-id="{{modalItem.id}}" data-from="{{modalFrom}}">删除</view>
       </view>
     </view>
   </view>

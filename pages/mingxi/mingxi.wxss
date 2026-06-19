@@ -1046,6 +1046,7 @@ page {
   flex-shrink: 0;
 }
 .bill-act-settle { background: #00d042; }
+.bill-act-confirm { background: #ff9500; }
 .bill-act-delete { background: #ed2e2e; }
 .bill-act-void { background: #333; }
 .bill-act-unvoid { background: #007aff; }
@@ -1066,6 +1067,30 @@ page {
 }
 .bill-item--voided .bill-dot {
   background: #999 !important;
+}
+/* ---- 结清状态标签 ---- */
+.bill-settle-tag {
+  font-size: 20rpx;
+  padding: 2rpx 10rpx;
+  border-radius: 6rpx;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+.bill-settle-tag--pending {
+  background: #fff3e0;
+  color: #ff9500;
+  border: 1rpx solid #ff9500;
+}
+.bill-settle-tag--auto {
+  background: #e8f5e9;
+  color: #4caf50;
+  border: 1rpx solid #4caf50;
+}
+.bill-item--pending-confirm {
+  border-left: 4rpx solid #ff9500 !important;
+}
+.bill-item--auto {
+  opacity: 0.75;
 }
 
 /* ---- 详情弹窗 ---- */
@@ -1150,6 +1175,18 @@ page {
 .bill-modal-delete { background: #ed2e2e; }
 .bill-modal-void { background: #333; }
 .bill-modal-unvoid { background: #007aff; }
+.bill-modal-auto-tag {
+  font-size: 22rpx;
+  color: #4caf50;
+  font-weight: 600;
+  margin-top: 6rpx;
+}
+.bill-modal-settle-info {
+  font-size: 22rpx;
+  color: #999;
+  flex: 1;
+  text-align: right;
+}
 
 /* ---- VIP 升级卡片（内嵌在 Tab4 中） ---- */
 .vip-main-card {
@@ -4024,6 +4061,7 @@ page {
   flex-shrink: 0;
 }
 .bill-act-settle { background: #00d042; }
+.bill-act-confirm { background: #ff9500; }
 .bill-act-delete { background: #ed2e2e; }
 .bill-act-void { background: #333; }
 .bill-act-unvoid { background: #007aff; }
@@ -4044,6 +4082,30 @@ page {
 }
 .bill-item--voided .bill-dot {
   background: #999 !important;
+}
+/* ---- 结清状态标签 ---- */
+.bill-settle-tag {
+  font-size: 20rpx;
+  padding: 2rpx 10rpx;
+  border-radius: 6rpx;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+.bill-settle-tag--pending {
+  background: #fff3e0;
+  color: #ff9500;
+  border: 1rpx solid #ff9500;
+}
+.bill-settle-tag--auto {
+  background: #e8f5e9;
+  color: #4caf50;
+  border: 1rpx solid #4caf50;
+}
+.bill-item--pending-confirm {
+  border-left: 4rpx solid #ff9500 !important;
+}
+.bill-item--auto {
+  opacity: 0.75;
 }
 
 /* ---- 详情弹窗 ---- */
@@ -4128,6 +4190,18 @@ page {
 .bill-modal-delete { background: #ed2e2e; }
 .bill-modal-void { background: #333; }
 .bill-modal-unvoid { background: #007aff; }
+.bill-modal-auto-tag {
+  font-size: 22rpx;
+  color: #4caf50;
+  font-weight: 600;
+  margin-top: 6rpx;
+}
+.bill-modal-settle-info {
+  font-size: 22rpx;
+  color: #999;
+  flex: 1;
+  text-align: right;
+}
 
 /* ---- VIP 升级卡片（内嵌在 Tab4 中） ---- */
 .vip-main-card {
@@ -7191,6 +7265,23 @@ page {
 .page--dark .cat-modal-title,
 .page--dark .bill-modal-title {
   color: #e0e0e0;
+}
+.page--dark .bill-settle-tag--pending {
+  background: rgba(255, 149, 0, 0.15);
+  border-color: #ff9500;
+}
+.page--dark .bill-settle-tag--auto {
+  background: rgba(76, 175, 80, 0.15);
+  border-color: #4caf50;
+}
+.page--dark .bill-item--pending-confirm {
+  border-left-color: #ff9500 !important;
+}
+.page--dark .bill-modal-auto-tag {
+  color: #66bb6a;
+}
+.page--dark .bill-modal-settle-info {
+  color: #888;
 }
 
 /* 我的页分组 */
