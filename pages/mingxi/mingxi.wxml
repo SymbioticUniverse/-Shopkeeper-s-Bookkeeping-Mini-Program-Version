@@ -1450,4 +1450,111 @@
       </scroll-view>
     </view>
   </view>
+
+  <!-- 首次启动引导 -->
+  <view class="guide-overlay" wx:if="{{showGuide}}">
+    <!-- Step 0: 欢迎 -->
+    <view class="guide-card" wx:if="{{guideStep === 0}}">
+      <text class="guide-app-name">赤兔记账</text>
+      <text class="guide-slogan">简单好用的智能记账工具</text>
+      <view class="guide-btn" bindtap="onGuideNext">开始使用</view>
+      <view class="guide-dots">
+        <view class="guide-dot guide-dot--active"></view>
+        <view class="guide-dot"></view>
+        <view class="guide-dot"></view>
+      </view>
+    </view>
+
+    <!-- Step 1: 登录 -->
+    <view class="guide-card" wx:elif="{{guideStep === 1}}">
+      <text class="guide-card-title">登录 / 注册</text>
+      <view class="guide-form">
+        <view class="guide-input-row">
+          <text class="guide-prefix">+86</text>
+          <input class="guide-input" placeholder="手机号" type="number" maxlength="11"
+                 value="{{loginPhone}}" bindinput="onLoginPhoneInput"/>
+        </view>
+        <view class="guide-input-row">
+          <input class="guide-input" placeholder="验证码" type="number" maxlength="6"
+                 value="{{loginCode}}" bindinput="onLoginCodeInput"/>
+          <view class="guide-code-btn {{loginCodeSending ? 'guide-code-btn--disabled' : ''}}"
+                bindtap="onSendCode">
+            {{loginCodeSending ? loginCodeCountdown + 's' : '获取验证码'}}
+          </view>
+        </view>
+      </view>
+      <view class="guide-btn" bindtap="onGuidePhoneLogin">登录</view>
+      <view class="guide-divider-row">
+        <view class="guide-divider-line"></view>
+        <text class="guide-divider-text">或</text>
+        <view class="guide-divider-line"></view>
+      </view>
+      <button class="guide-wx-btn" open-type="getUserInfo" bindgetuserinfo="onGuideWxLogin">微信一键登录</button>
+      <view class="guide-dots">
+        <view class="guide-dot"></view>
+        <view class="guide-dot guide-dot--active"></view>
+        <view class="guide-dot"></view>
+      </view>
+    </view>
+
+    <!-- Step 2: 身份选择 -->
+    <view class="guide-card" wx:elif="{{guideStep === 2}}">
+      <text class="guide-card-title">选择身份</text>
+      <text class="guide-card-desc">可以稍后在「我的 → 链接公司」中设置</text>
+      <view class="guide-role-btn" bindtap="onGuideRole" data-role="boss">
+        <text class="guide-role-label">我是老板</text>
+        <text class="guide-role-hint">创建公司，邀请员工</text>
+      </view>
+      <view class="guide-role-btn" bindtap="onGuideRole" data-role="employee">
+        <text class="guide-role-label">我是员工</text>
+        <text class="guide-role-hint">输入 UID 加入公司</text>
+      </view>
+      <text class="guide-skip" bindtap="onGuideComplete">稍后再说</text>
+      <view class="guide-dots">
+        <view class="guide-dot"></view>
+        <view class="guide-dot"></view>
+        <view class="guide-dot guide-dot--active"></view>
+      </view>
+    </view>
+
+    <!-- Step 3: 公司表单 -->
+    <view class="guide-card" wx:elif="{{guideStep === 3}}">
+      <block wx:if="{{guideRole === 'boss'}}">
+        <text class="guide-card-title">创建公司</text>
+        <view class="guide-form">
+          <view class="guide-input-row">
+            <input class="guide-input" placeholder="公司名称" value="{{companyName}}"
+                   bindinput="onCompanyNameInput"/>
+          </view>
+          <view class="guide-input-row">
+            <input class="guide-input" placeholder="老板称谓（选填，默认 BOSS）" value="{{companyBossTitle}}"
+                   bindinput="onCompanyBossTitleInput"/>
+          </view>
+          <view class="guide-uid-row">
+            <text class="guide-uid-label">公司 UID</text>
+            <text class="guide-uid-value">{{companyUid || '—'}}</text>
+            <view class="guide-uid-gen" bindtap="onCreateUid">生成</view>
+          </view>
+        </view>
+        <view class="guide-btn" bindtap="onGuideCompanyCreate">确认创建</view>
+      </block>
+      <block wx:elif="{{guideRole === 'employee'}}">
+        <text class="guide-card-title">加入公司</text>
+        <text class="guide-card-desc">输入老板提供的公司 UID</text>
+        <view class="guide-form">
+          <view class="guide-input-row">
+            <input class="guide-input" placeholder="公司 UID" value="{{employeeUid}}"
+                   bindinput="onEmployeeUidInput"/>
+          </view>
+        </view>
+        <view class="guide-btn" bindtap="onGuideEmployeeJoin">申请加入</view>
+      </block>
+      <text class="guide-back" bindtap="onGuideBack">← 返回</text>
+      <view class="guide-dots">
+        <view class="guide-dot"></view>
+        <view class="guide-dot"></view>
+        <view class="guide-dot guide-dot--active"></view>
+      </view>
+    </view>
+  </view>
 </view>

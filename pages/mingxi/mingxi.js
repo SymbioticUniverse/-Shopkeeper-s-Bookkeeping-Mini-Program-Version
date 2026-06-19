@@ -236,6 +236,10 @@ Page({
     companyName: '',
     companyBossTitle: '',
     employeeUid: '',
+    // 首次引导
+    showGuide: false,
+    guideStep: 0,
+    guideRole: '',
     loginPhone: '',
     loginCode: '',
     loginCodeSending: false,
@@ -590,6 +594,10 @@ Page({
   },
 
   onLoad() {
+    // 首次启动引导检测
+    if (!wx.getStorageSync('guideCompleted')) {
+      this.setData({ showGuide: true, guideStep: 0 })
+    }
     const now = new Date()
     const y = now.getFullYear()
     const m = now.getMonth() + 1
@@ -3652,6 +3660,95 @@ Page({
         }
       }
     })
+  },
+
+  // ========== 首次引导 ==========
+  onGuideNext() {
+    this.setData({ guideStep: this.data.guideStep + 1 })
+  },
+
+  onGuideBack() {
+    this.setData({ guideStep: 2, guideRole: '' })
+  },
+
+  onGuideRole(e) {
+    const role = e.currentTarget.dataset.role
+    this.setData({ guideRole: role, guideStep: 3 })
+    if (role === 'boss') {
+      const uid = 'UID' + Date.now().toString(36).toUpperCase().slice(-8)
+      this.setData({ companyUid: uid })
+    }
+  },
+
+  onGuidePhoneLogin() {
+    const { loginPhone, loginCode } = this.data
+    if (!/^1[3-9]\d{9}$/.test(loginPhone)) {
+      wx.showToast({ title: '请输入正确的手机号', icon: 'none' })
+      return
+    }
+    if (loginCode.length !== 6) {
+      wx.showToast({ title: '请输入6位验证码', icon: 'none' })
+      return
+    }
+    api.loginByPhone(loginPhone, loginCode).then(userInfo => {
+      this.setData({ isLoggedIn: true, userInfo, guideStep: 2, loginPhone: '', loginCode: '' })
+      wx.showToast({ title: '登录成功', icon: 'success' })
+      api.syncFromCloud().then(() => { this.initDetailItems() })
+    }).catch(() => {
+      wx.showToast({ title: '登录失败', icon: 'none' })
+    })
+  },
+
+  onGuideWxLogin(e) {
+    if (e.detail.userInfo) {
+      api.loginByWechat(e.detail.userInfo).then(userInfo => {
+        this.setData({ isLoggedIn: true, userInfo, guideStep: 2 })
+        wx.showToast({ title: '登录成功', icon: 'success' })
+        api.syncFromCloud().then(() => { this.initDetailItems() })
+      }).catch(() => {
+        wx.showToast({ title: '登录失败', icon: 'none' })
+      })
+    } else {
+      wx.showToast({ title: '授权已取消', icon: 'none' })
+    }
+  },
+
+  onGuideCompanyCreate() {
+    const { companyUid, companyName, companyBossTitle } = this.data
+    if (!companyUid) {
+      wx.showToast({ title: '请先生成 UID', icon: 'none' })
+      return
+    }
+    if (!companyName.trim()) {
+      wx.showToast({ title: '请输入公司名称', icon: 'none' })
+      return
+    }
+    const info = { companyUid, companyName: companyName.trim(), companyBossTitle: companyBossTitle.trim() || 'BOSS', companyRole: 'boss' }
+    api.saveCompanyInfo(info)
+    wx.showToast({ title: '创建成功', icon: 'success' })
+    this.onGuideComplete()
+  },
+
+  onGuideEmployeeJoin() {
+    const { employeeUid } = this.data
+    if (!employeeUid.trim()) {
+      wx.showToast({ title: '请输入公司 UID', icon: 'none' })
+      return
+    }
+    const info = { companyUid: employeeUid.trim(), companyRole: 'employee' }
+    api.joinCompany(info).then(() => {
+      wx.showToast({ title: '已提交申请', icon: 'success' })
+      this.onGuideComplete()
+    }).catch(() => {
+      wx.showToast({ title: '加入失败', icon: 'none' })
+    })
+  },
+
+  onGuideComplete() {
+    wx.setStorageSync('guideCompleted', true)
+    this.setData({ showGuide: false })
+    this.initDetailItems()
+    this._calcOverviewData()
   },
 
   // ---- VIP 升级 ----
