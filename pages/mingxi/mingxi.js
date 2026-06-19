@@ -3667,6 +3667,10 @@ Page({
     this.setData({ guideStep: this.data.guideStep + 1 })
   },
 
+  onGuideSkipLogin() {
+    this.setData({ guideStep: 2 })
+  },
+
   onGuideBack() {
     this.setData({ guideStep: 2, guideRole: '' })
   },

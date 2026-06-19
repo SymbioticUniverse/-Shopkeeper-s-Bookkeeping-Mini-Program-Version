@@ -1490,6 +1490,7 @@
         <view class="guide-divider-line"></view>
       </view>
       <button class="guide-wx-btn" open-type="getUserInfo" bindgetuserinfo="onGuideWxLogin">微信一键登录</button>
+      <text class="guide-skip" bindtap="onGuideSkipLogin">跳过登录</text>
       <view class="guide-dots">
         <view class="guide-dot"></view>
         <view class="guide-dot guide-dot--active"></view>

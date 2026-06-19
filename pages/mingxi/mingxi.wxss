@@ -7741,7 +7741,7 @@ page {
   position: fixed;
   inset: 0;
   z-index: 9999;
-  background: linear-gradient(180deg, #5b9bff 0%, #3a7bfd 100%);
+  background: linear-gradient(160deg, #FAF7F2 0%, #F5F0E8 40%, #EDE8DF 100%);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -7951,7 +7951,7 @@ page {
 }
 /* 引导页暗色模式 */
 .page--dark .guide-overlay {
-  background: linear-gradient(180deg, #1a1a2e 0%, #16213e 100%);
+  background: linear-gradient(to top, #1a1a2e 0%, #16213e 37%, #1a1a3e 62%, #16213e 100%);
 }
 .page--dark .guide-card {
   background: #1e1e2e;
