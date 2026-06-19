@@ -8189,6 +8189,52 @@ page {
   color: #333;
   border-bottom-left-radius: 8rpx;
 }
+
+/* AI 对话内账单卡片 */
+.ai-bill-card {
+  margin-top: 16rpx;
+  border-radius: 16rpx;
+  padding: 20rpx 24rpx;
+  display: flex;
+  flex-direction: column;
+  gap: 14rpx;
+}
+.ai-bill-card--out { background: #7e0000; }
+.ai-bill-card--in { background: #3a762e; }
+.ai-bill-row {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+}
+.ai-bill-dot {
+  width: 18rpx;
+  height: 18rpx;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.5);
+  flex-shrink: 0;
+}
+.ai-bill-cat {
+  font-size: 28rpx;
+  font-weight: 600;
+  color: rgba(255,255,255,0.9);
+}
+.ai-bill-type {
+  font-size: 22rpx;
+  color: rgba(255,255,255,0.55);
+  margin-left: auto;
+}
+.ai-bill-row--bottom { justify-content: space-between; }
+.ai-bill-amount {
+  font-size: 36rpx;
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: 1rpx;
+}
+.ai-bill-date {
+  font-size: 22rpx;
+  color: rgba(255,255,255,0.5);
+  align-self: flex-end;
+}
 .ai-msg-time {
   font-size: 20rpx;
   color: #ccc;

@@ -1479,6 +1479,17 @@
         <view class="ai-msg" wx:for="{{aiMessages}}" wx:key="index" id="ai-msg-{{index}}">
           <view class="ai-msg-bubble ai-msg-bubble--{{item.role}}">
             <text class="ai-msg-text">{{item.text}}</text>
+            <view wx:if="{{item.card}}" class="ai-bill-card ai-bill-card--{{item.card.type}}">
+              <view class="ai-bill-row">
+                <view class="ai-bill-dot"></view>
+                <text class="ai-bill-cat">{{item.card.category}}</text>
+                <text class="ai-bill-type">{{item.card.typeLabel}}</text>
+              </view>
+              <view class="ai-bill-row ai-bill-row--bottom">
+                <text class="ai-bill-amount">¥{{item.card.amount}}</text>
+                <text class="ai-bill-date">{{item.card.date}}</text>
+              </view>
+            </view>
           </view>
           <text class="ai-msg-time ai-msg-time--{{item.role}}">{{item.time}}</text>
         </view>

@@ -3851,11 +3851,24 @@ Page({
 
   _mockAiReply(input) {
     const time = this._formatChatTime(new Date())
+    const now = new Date()
+    const date = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0')
     const match = input.match(/(.+?)\s+(\d+(?:\.\d{1,2})?)/)
     if (match) {
-      return { role: 'ai', text: '好的，已帮你记录：\n' + match[1] + '  ¥' + match[2] + '\n\n（AI 记账功能即将上线，敬请期待）', time }
+      const desc = match[1].trim()
+      const amount = parseFloat(match[2]).toFixed(2)
+      const catMap = { '午餐': '餐饮', '晚餐': '餐饮', '早餐': '餐饮', '外卖': '餐饮', '吃饭': '餐饮', '打车': '交通', '出租': '交通', '地铁': '交通', '公交': '交通', '加油': '交通', '咖啡': '饮品', '奶茶': '饮品', '水果': '食品', '零食': '食品', '买菜': '食品', '工资': '工资', '薪资': '工资', '奖金': '奖金' }
+      const incomeKeys = ['工资', '薪资', '奖金', '收到', '收入', '转入']
+      const isIncome = incomeKeys.some(function(k) { return desc.indexOf(k) >= 0 })
+      const category = catMap[desc] || desc
+      return {
+        role: 'ai',
+        text: '好的，已帮你记录：',
+        card: { category: category, amount: amount, typeLabel: isIncome ? '收入' : '支出', type: isIncome ? 'in' : 'out', date: date, note: desc },
+        time: time
+      }
     }
-    return { role: 'ai', text: '收到！AI 记账功能正在开发中，敬请期待\n\n目前你可以用格式 "描述 金额" 来快速记一笔。', time }
+    return { role: 'ai', text: '收到！AI 记账功能正在开发中，敬请期待\n\n目前你可以用格式 "描述 金额" 来快速记一笔。', time: time }
   },
 
   _formatChatTime(d) {
