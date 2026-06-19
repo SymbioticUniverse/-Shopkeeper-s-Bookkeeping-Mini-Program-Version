@@ -1455,6 +1455,13 @@
   <view class="guide-overlay" wx:if="{{showGuide}}">
     <!-- Step 0: 欢迎 -->
     <view class="guide-card" wx:if="{{guideStep === 0}}">
+      <view class="guide-logo">
+        <view class="guide-logo-icon">
+          <view class="guide-logo-bar guide-logo-bar--1"></view>
+          <view class="guide-logo-bar guide-logo-bar--2"></view>
+          <view class="guide-logo-bar guide-logo-bar--3"></view>
+        </view>
+      </view>
       <text class="guide-app-name">掌柜记账</text>
       <text class="guide-slogan">简单好用的智能记账工具</text>
       <view class="guide-btn" bindtap="onGuideNext">开始使用</view>
@@ -1503,12 +1510,20 @@
       <text class="guide-card-title">选择身份</text>
       <text class="guide-card-desc">可以稍后在「我的 → 链接公司」中设置</text>
       <view class="guide-role-btn" bindtap="onGuideRole" data-role="boss">
-        <text class="guide-role-label">我是老板</text>
-        <text class="guide-role-hint">创建公司，邀请员工</text>
+        <view class="guide-role-icon guide-role-icon--boss">B</view>
+        <view class="guide-role-info">
+          <text class="guide-role-label">我是老板</text>
+          <text class="guide-role-hint">创建公司，邀请员工</text>
+        </view>
+        <text class="guide-role-arrow">></text>
       </view>
       <view class="guide-role-btn" bindtap="onGuideRole" data-role="employee">
-        <text class="guide-role-label">我是员工</text>
-        <text class="guide-role-hint">输入 UID 加入公司</text>
+        <view class="guide-role-icon guide-role-icon--emp">E</view>
+        <view class="guide-role-info">
+          <text class="guide-role-label">我是员工</text>
+          <text class="guide-role-hint">输入 UID 加入公司</text>
+        </view>
+        <text class="guide-role-arrow">></text>
       </view>
       <text class="guide-skip" bindtap="onGuideComplete">稍后再说</text>
       <view class="guide-dots">

@@ -59,7 +59,7 @@ page {
   height: 0;
   border-left: 10rpx solid transparent;
   border-right: 10rpx solid transparent;
-  border-top: 14rpx solid #000;
+  border-top: 14rpx solid #999;
   margin-left: 4rpx;
   margin-top: 24rpx;
 }
@@ -81,23 +81,23 @@ page {
   align-items: center;
   gap: 12rpx;
   background: #fff;
-  border: 2rpx solid #000;
+  border: 1rpx solid rgba(0,0,0,0.06);
   border-radius: 40rpx;
   padding: 12rpx 26rpx 12rpx 20rpx;
   flex-shrink: 0;
   margin-top: -10rpx;
-  box-shadow: 0rpx 4rpx 0rpx 1rpx rgba(0,0,0,0.2);
+  box-shadow: 0 4rpx 16rpx rgba(0,0,0,0.06);
   transition: transform 0.12s ease, box-shadow 0.12s ease;
 }
 .header-back-btn:active {
   transform: translateY(3rpx);
-  box-shadow: 0rpx 1rpx 0rpx 1rpx rgba(0,0,0,0.2);
+  box-shadow: 0 2rpx 8rpx rgba(0,0,0,0.04);
 }
 .back-arrow {
   width: 18rpx;
   height: 18rpx;
-  border-left: 4rpx solid #000;
-  border-bottom: 4rpx solid #000;
+  border-left: 4rpx solid #888;
+  border-bottom: 4rpx solid #888;
   transform: rotate(45deg);
 }
 .back-text {
@@ -130,10 +130,10 @@ page {
 
 .card {
   background: rgba(255,255,255,0.3);
-  border: 2rpx solid #000;
+  border: 1rpx solid rgba(0,0,0,0.06);
   border-radius: 26rpx;
   padding: 32rpx 28rpx;
-  box-shadow: 0rpx 6rpx 0rpx 1rpx rgba(0,0,0,0.2);
+  box-shadow: 0 8rpx 24rpx rgba(0,0,0,0.08);
   overflow: hidden;
   display: flex;
   flex-direction: column;
@@ -362,9 +362,9 @@ page {
 /* ---- 我的页面卡片 ---- */
 .my-card {
   background: rgba(255,255,255,0.3);
-  border: 2rpx solid #000;
+  border: 1rpx solid rgba(0,0,0,0.06);
   border-radius: 26rpx;
-  box-shadow: 0rpx 6rpx 0rpx 1rpx rgba(0,0,0,0.2);
+  box-shadow: 0 8rpx 24rpx rgba(0,0,0,0.08);
   padding: 24rpx 36rpx;
   justify-content: space-evenly;
 }
@@ -551,7 +551,7 @@ page {
   justify-content: center;
   padding: 12rpx 0;
   background: rgba(255,255,255,0.3);
-  border: 2rpx solid #000;
+  border: 1rpx solid rgba(0,0,0,0.06);
   border-right: none;
   box-shadow: 0rpx 4rpx 4rpx 0rpx rgba(0,0,0,0.1);
 }
@@ -560,7 +560,7 @@ page {
 }
 .report-period-item:last-child {
   border-radius: 0 26rpx 26rpx 0;
-  border-right: 2rpx solid #000;
+  border-right: 1rpx solid rgba(0,0,0,0.06);
 }
 .report-period-text {
   font-size: 30rpx;
@@ -1106,9 +1106,9 @@ page {
 .bill-modal {
   width: 580rpx;
   background: #fff;
-  border: 2rpx solid #000;
+  border: 1rpx solid rgba(0,0,0,0.06);
   border-radius: 26rpx;
-  box-shadow: 0rpx 6rpx 0rpx 1rpx rgba(0,0,0,0.2);
+  box-shadow: 0 8rpx 24rpx rgba(0,0,0,0.08);
   padding: 36rpx 32rpx 28rpx;
   display: flex;
   flex-direction: column;
@@ -2443,9 +2443,7 @@ page {
   border: 1rpx solid #bbb;
   border-radius: 12rpx;
   padding: 16rpx 14rpx;
-  box-shadow:
-    0rpx 3rpx 0rpx 1rpx rgba(0,0,0,0.2),
-    0 6rpx 18rpx rgba(0,0,0,0.12);
+  box-shadow: 0 6rpx 20rpx rgba(0,0,0,0.1);
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -3125,10 +3123,10 @@ page {
   display: flex;
   flex-direction: column;
   background: rgba(255,255,255,0.7);
-  border: 2rpx solid #000;
+  border: 1rpx solid rgba(0,0,0,0.06);
   border-radius: 18rpx;
   padding: 16rpx 20rpx;
-  box-shadow: 0rpx 4rpx 0rpx 1rpx rgba(0,0,0,0.12);
+  box-shadow: 0 4rpx 16rpx rgba(0,0,0,0.06);
   overflow: hidden;
   box-sizing: border-box;
 }
@@ -3377,9 +3375,9 @@ page {
 /* ---- 我的页面卡片 ---- */
 .my-card {
   background: rgba(255,255,255,0.3);
-  border: 2rpx solid #000;
+  border: 1rpx solid rgba(0,0,0,0.06);
   border-radius: 26rpx;
-  box-shadow: 0rpx 6rpx 0rpx 1rpx rgba(0,0,0,0.2);
+  box-shadow: 0 8rpx 24rpx rgba(0,0,0,0.08);
   padding: 24rpx 36rpx;
   justify-content: space-evenly;
 }
@@ -3566,7 +3564,7 @@ page {
   justify-content: center;
   padding: 12rpx 0;
   background: rgba(255,255,255,0.3);
-  border: 2rpx solid #000;
+  border: 1rpx solid rgba(0,0,0,0.06);
   border-right: none;
   box-shadow: 0rpx 4rpx 4rpx 0rpx rgba(0,0,0,0.1);
 }
@@ -3575,7 +3573,7 @@ page {
 }
 .report-period-item:last-child {
   border-radius: 0 26rpx 26rpx 0;
-  border-right: 2rpx solid #000;
+  border-right: 1rpx solid rgba(0,0,0,0.06);
 }
 .report-period-text {
   font-size: 30rpx;
@@ -4121,9 +4119,9 @@ page {
 .bill-modal {
   width: 580rpx;
   background: #fff;
-  border: 2rpx solid #000;
+  border: 1rpx solid rgba(0,0,0,0.06);
   border-radius: 26rpx;
-  box-shadow: 0rpx 6rpx 0rpx 1rpx rgba(0,0,0,0.2);
+  box-shadow: 0 8rpx 24rpx rgba(0,0,0,0.08);
   padding: 36rpx 32rpx 28rpx;
   display: flex;
   flex-direction: column;
@@ -5458,9 +5456,7 @@ page {
   border: 1rpx solid #bbb;
   border-radius: 12rpx;
   padding: 16rpx 14rpx;
-  box-shadow:
-    0rpx 3rpx 0rpx 1rpx rgba(0,0,0,0.2),
-    0 6rpx 18rpx rgba(0,0,0,0.12);
+  box-shadow: 0 6rpx 20rpx rgba(0,0,0,0.1);
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -6076,10 +6072,10 @@ page {
 /* 网格卡片 */
 .edit-card-item {
   background: rgba(255,255,255,0.3);
-  border: 2rpx solid rgba(0,0,0,0.4);
+  border: 1rpx solid rgba(0,0,0,0.1);
   border-radius: 18rpx;
   padding: 12rpx 10rpx;
-  box-shadow: 0rpx 4rpx 0rpx 1rpx rgba(0,0,0,0.15);
+  box-shadow: 0 4rpx 16rpx rgba(0,0,0,0.08);
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -7114,7 +7110,7 @@ page {
 .page--dark .header-back-btn {
   background: rgba(255, 255, 255, 0.1);
   border-color: rgba(255, 255, 255, 0.3);
-  box-shadow: 0rpx 4rpx 0rpx 1rpx rgba(0,0,0,0.4);
+  box-shadow: 0 4rpx 16rpx rgba(0,0,0,0.2);
 }
 .page--dark .card-arrow {
   color: #888 !important;
@@ -7750,43 +7746,78 @@ page {
 .guide-card {
   width: 100%;
   max-width: 640rpx;
-  background: #fff;
-  border-radius: 32rpx;
-  padding: 60rpx 40rpx 40rpx;
+  background: rgba(255,255,255,0.92);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-radius: 36rpx;
+  border: 1rpx solid rgba(255,255,255,0.6);
+  padding: 56rpx 44rpx 44rpx;
   display: flex;
   flex-direction: column;
   align-items: center;
-  box-shadow: 0 16rpx 48rpx rgba(0, 0, 0, 0.12);
+  box-shadow:
+    0 2rpx 4rpx rgba(0,0,0,0.02),
+    0 8rpx 24rpx rgba(0,0,0,0.06),
+    0 24rpx 64rpx rgba(0,0,0,0.08);
 }
+
+/* Logo */
+.guide-logo {
+  width: 140rpx;
+  height: 140rpx;
+  background: linear-gradient(135deg, #3a7bfd 0%, #6c5ce7 100%);
+  border-radius: 36rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 8rpx 28rpx rgba(58,123,253,0.3);
+  margin-bottom: 12rpx;
+}
+.guide-logo-icon {
+  display: flex;
+  align-items: flex-end;
+  gap: 6rpx;
+  height: 60rpx;
+}
+.guide-logo-bar {
+  width: 14rpx;
+  border-radius: 4rpx;
+  background: rgba(255,255,255,0.9);
+}
+.guide-logo-bar--1 { height: 28rpx; }
+.guide-logo-bar--2 { height: 48rpx; }
+.guide-logo-bar--3 { height: 36rpx; }
+
 .guide-app-name {
-  font-size: 52rpx;
+  font-size: 48rpx;
   font-weight: 800;
-  color: #000;
-  letter-spacing: 4rpx;
-  margin-top: 40rpx;
+  color: #1a1a2e;
+  letter-spacing: 6rpx;
+  margin-top: 28rpx;
 }
 .guide-slogan {
-  font-size: 28rpx;
-  color: #666;
-  margin-top: 16rpx;
-  margin-bottom: 20rpx;
+  font-size: 26rpx;
+  color: #888;
+  margin-top: 12rpx;
+  margin-bottom: 28rpx;
+  letter-spacing: 2rpx;
 }
 .guide-card-title {
-  font-size: 40rpx;
+  font-size: 38rpx;
   font-weight: 700;
-  color: #000;
-  margin-bottom: 12rpx;
+  color: #1a1a2e;
+  margin-bottom: 8rpx;
 }
 .guide-card-desc {
   font-size: 26rpx;
   color: #999;
-  margin-bottom: 24rpx;
+  margin-bottom: 28rpx;
 }
 .guide-btn {
   width: 100%;
-  height: 88rpx;
-  background: #3a7bfd;
-  border-radius: 44rpx;
+  height: 92rpx;
+  background: linear-gradient(135deg, #4a8afe 0%, #3a7bfd 50%, #2d6ce0 100%);
+  border-radius: 46rpx;
   color: #fff;
   font-size: 32rpx;
   font-weight: 600;
@@ -7794,10 +7825,13 @@ page {
   align-items: center;
   justify-content: center;
   margin-top: 32rpx;
-  letter-spacing: 2rpx;
+  letter-spacing: 3rpx;
+  box-shadow: 0 6rpx 20rpx rgba(58,123,253,0.3);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
 .guide-btn:active {
-  opacity: 0.85;
+  transform: scale(0.97);
+  box-shadow: 0 3rpx 12rpx rgba(58,123,253,0.2);
 }
 .guide-form {
   width: 100%;
@@ -7806,11 +7840,13 @@ page {
 .guide-input-row {
   display: flex;
   align-items: center;
-  background: #f5f7fa;
-  border-radius: 16rpx;
-  padding: 0 24rpx;
-  height: 88rpx;
+  background: #f7f8fa;
+  border: 1rpx solid rgba(0,0,0,0.05);
+  border-radius: 20rpx;
+  padding: 0 28rpx;
+  height: 92rpx;
   margin-bottom: 16rpx;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 .guide-prefix {
   font-size: 30rpx;
@@ -7822,39 +7858,42 @@ page {
   flex: 1;
   font-size: 30rpx;
   color: #333;
-  height: 88rpx;
+  height: 92rpx;
 }
 .guide-code-btn {
   font-size: 26rpx;
   color: #3a7bfd;
   font-weight: 600;
   white-space: nowrap;
-  padding-left: 16rpx;
+  padding: 10rpx 20rpx;
+  background: rgba(58,123,253,0.08);
+  border-radius: 12rpx;
 }
 .guide-code-btn--disabled {
   color: #ccc;
+  background: transparent;
 }
 .guide-divider-row {
   display: flex;
   align-items: center;
   width: 100%;
   margin: 28rpx 0;
-  gap: 16rpx;
+  gap: 20rpx;
 }
 .guide-divider-line {
   flex: 1;
   height: 1rpx;
-  background: #e0e0e0;
+  background: linear-gradient(90deg, transparent 0%, rgba(0,0,0,0.08) 50%, transparent 100%);
 }
 .guide-divider-text {
   font-size: 24rpx;
-  color: #bbb;
+  color: #ccc;
 }
 .guide-wx-btn {
   width: 100% !important;
-  height: 88rpx;
-  background: #07C160 !important;
-  border-radius: 44rpx;
+  height: 92rpx;
+  background: linear-gradient(135deg, #1aad5a 0%, #07C160 50%, #06a855 100%) !important;
+  border-radius: 46rpx;
   color: #fff !important;
   font-size: 30rpx;
   font-weight: 600;
@@ -7864,50 +7903,100 @@ page {
   padding: 0;
   margin: 0;
   border: none;
-  line-height: 88rpx;
+  line-height: 92rpx;
+  box-shadow: 0 6rpx 20rpx rgba(7,193,96,0.25);
+  transition: transform 0.15s ease;
+}
+.guide-wx-btn:active {
+  transform: scale(0.97);
 }
 .guide-wx-btn::after { border: none; }
+
+/* Role buttons */
 .guide-role-btn {
   width: 100%;
-  padding: 28rpx 32rpx;
-  background: #f5f7fa;
-  border-radius: 20rpx;
+  padding: 28rpx 24rpx;
+  background: #f7f8fa;
+  border: 1rpx solid rgba(0,0,0,0.04);
+  border-radius: 22rpx;
   margin-bottom: 16rpx;
   display: flex;
-  flex-direction: column;
-  gap: 6rpx;
+  align-items: center;
+  gap: 20rpx;
+  transition: background 0.15s ease, transform 0.1s ease;
 }
 .guide-role-btn:active {
   background: #eef1f6;
+  transform: scale(0.98);
+}
+.guide-role-icon {
+  width: 72rpx;
+  height: 72rpx;
+  border-radius: 20rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28rpx;
+  font-weight: 800;
+  color: #fff;
+  flex-shrink: 0;
+}
+.guide-role-icon--boss {
+  background: linear-gradient(135deg, #ff9500 0%, #ff6b00 100%);
+  box-shadow: 0 4rpx 12rpx rgba(255,149,0,0.3);
+}
+.guide-role-icon--emp {
+  background: linear-gradient(135deg, #3a7bfd 0%, #2d6ce0 100%);
+  box-shadow: 0 4rpx 12rpx rgba(58,123,253,0.3);
+}
+.guide-role-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4rpx;
 }
 .guide-role-label {
   font-size: 32rpx;
   font-weight: 700;
-  color: #000;
+  color: #1a1a2e;
 }
 .guide-role-hint {
   font-size: 24rpx;
   color: #999;
 }
+.guide-role-arrow {
+  font-size: 28rpx;
+  color: #ccc;
+  font-weight: 300;
+  flex-shrink: 0;
+}
 .guide-skip {
   font-size: 28rpx;
   color: #999;
   margin-top: 24rpx;
-  padding: 10rpx 20rpx;
+  padding: 12rpx 24rpx;
+  transition: color 0.15s ease;
+}
+.guide-skip:active {
+  color: #666;
 }
 .guide-back {
   font-size: 28rpx;
   color: #3a7bfd;
   margin-top: 24rpx;
-  padding: 10rpx 20rpx;
+  padding: 12rpx 24rpx;
   font-weight: 600;
+}
+.guide-back:active {
+  opacity: 0.7;
 }
 .guide-uid-row {
   display: flex;
   align-items: center;
-  background: #f5f7fa;
-  border-radius: 16rpx;
-  padding: 20rpx 24rpx;
+  background: #f7f8fa;
+  border: 1rpx solid rgba(0,0,0,0.04);
+  border-radius: 20rpx;
+  padding: 22rpx 28rpx;
   margin-bottom: 16rpx;
   gap: 16rpx;
 }
@@ -7920,56 +8009,81 @@ page {
   flex: 1;
   font-size: 28rpx;
   font-weight: 600;
-  color: #000;
+  color: #1a1a2e;
   font-family: monospace;
 }
 .guide-uid-gen {
   font-size: 26rpx;
   color: #3a7bfd;
   font-weight: 600;
-  padding: 8rpx 20rpx;
-  background: rgba(58, 123, 253, 0.1);
-  border-radius: 10rpx;
+  padding: 10rpx 24rpx;
+  background: rgba(58, 123, 253, 0.08);
+  border-radius: 12rpx;
   flex-shrink: 0;
+}
+.guide-uid-gen:active {
+  background: rgba(58, 123, 253, 0.15);
 }
 .guide-dots {
   display: flex;
-  gap: 12rpx;
+  gap: 10rpx;
   margin-top: 40rpx;
 }
 .guide-dot {
-  width: 12rpx;
-  height: 12rpx;
+  width: 10rpx;
+  height: 10rpx;
   border-radius: 50%;
-  background: rgba(0, 0, 0, 0.12);
-  transition: all 0.3s ease;
+  background: rgba(0, 0, 0, 0.1);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 .guide-dot--active {
   background: #3a7bfd;
-  width: 28rpx;
-  border-radius: 6rpx;
+  width: 30rpx;
+  border-radius: 5rpx;
 }
+
 /* 引导页暗色模式 */
 .page--dark .guide-overlay {
   background: linear-gradient(to top, #1a1a2e 0%, #16213e 37%, #1a1a3e 62%, #16213e 100%);
 }
 .page--dark .guide-card {
-  background: #1e1e2e;
-  box-shadow: 0 16rpx 48rpx rgba(0, 0, 0, 0.4);
+  background: rgba(30,30,46,0.95);
+  border-color: rgba(255,255,255,0.08);
+  box-shadow:
+    0 2rpx 4rpx rgba(0,0,0,0.1),
+    0 8rpx 24rpx rgba(0,0,0,0.2),
+    0 24rpx 64rpx rgba(0,0,0,0.3);
 }
-.page--dark .guide-app-name { color: #e0e0e0; }
-.page--dark .guide-slogan { color: #888; }
-.page--dark .guide-card-title { color: #e0e0e0; }
-.page--dark .guide-card-desc { color: #777; }
-.page--dark .guide-input-row { background: #2a2a3a; }
+.page--dark .guide-logo {
+  background: linear-gradient(135deg, #4a8afe 0%, #6c5ce7 100%);
+  box-shadow: 0 8rpx 28rpx rgba(58,123,253,0.2);
+}
+.page--dark .guide-app-name { color: #e8e8f0; }
+.page--dark .guide-slogan { color: #777; }
+.page--dark .guide-card-title { color: #e8e8f0; }
+.page--dark .guide-card-desc { color: #666; }
+.page--dark .guide-input-row {
+  background: rgba(255,255,255,0.06);
+  border-color: rgba(255,255,255,0.08);
+}
 .page--dark .guide-input { color: #e0e0e0; }
 .page--dark .guide-prefix { color: #ccc; }
-.page--dark .guide-divider-line { background: #333; }
-.page--dark .guide-role-btn { background: #2a2a3a; }
-.page--dark .guide-role-btn:active { background: #333; }
+.page--dark .guide-code-btn { background: rgba(58,123,253,0.15); }
+.page--dark .guide-divider-line {
+  background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.08) 50%, transparent 100%);
+}
+.page--dark .guide-role-btn {
+  background: rgba(255,255,255,0.06);
+  border-color: rgba(255,255,255,0.06);
+}
+.page--dark .guide-role-btn:active { background: rgba(255,255,255,0.1); }
 .page--dark .guide-role-label { color: #e0e0e0; }
-.page--dark .guide-role-hint { color: #777; }
-.page--dark .guide-uid-row { background: #2a2a3a; }
+.page--dark .guide-role-hint { color: #666; }
+.page--dark .guide-role-arrow { color: #555; }
+.page--dark .guide-uid-row {
+  background: rgba(255,255,255,0.06);
+  border-color: rgba(255,255,255,0.06);
+}
 .page--dark .guide-uid-label { color: #aaa; }
 .page--dark .guide-uid-value { color: #e0e0e0; }
-.page--dark .guide-dot { background: rgba(255, 255, 255, 0.15); }
+.page--dark .guide-dot { background: rgba(255, 255, 255, 0.12); }
