@@ -824,6 +824,11 @@ Page({
     const wasOverview = this.data.showOverview
     let dir = ''
     if (index === 2) {
+      if (this.data.currentTab === 1) {
+        this.setData({ currentTab: 0, showOverview: false, tabSlideDir: 'slide-left' })
+        setTimeout(() => this.setData({ tabSlideDir: '' }), 400)
+        this.initDetailItems()
+      }
       this.onBookEntry({ currentTarget: { dataset: { type: 'expense' } } })
       return
     }
