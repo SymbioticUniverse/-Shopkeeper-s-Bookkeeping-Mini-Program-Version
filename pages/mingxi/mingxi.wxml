@@ -15,7 +15,8 @@
     </view>
     <text class="header-title">公私OPC记账</text>
     <view class="header-right-icon">
-      <view class="avatar-circle"></view>
+      <image class="avatar-circle" src="{{userInfo.avatarUrl}}" wx:if="{{isLoggedIn && userInfo.avatarUrl}}" mode="aspectFill"></image>
+      <view class="avatar-circle" wx:else></view>
     </view>
   </view>
 

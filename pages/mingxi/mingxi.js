@@ -769,6 +769,7 @@ Page({
     })
     this.setData({ overviewCards: cards })
   },
+  _initOverviewCharts() {
     const charts = this.data.overviewCards.filter(c =>
       c.previewStyle === 'chart_line' || c.previewStyle === 'chart_bar' || c.previewStyle === 'chart_pie'
     )
@@ -806,7 +807,7 @@ Page({
           ctx.translate(halfW, 0)
           this.drawPieChart(ctx, halfW, h, pieData.expense, palette)
           ctx.restore()
-          ctx.fillStyle = '#666'
+          ctx.fillStyle = this.data.isDarkMode ? '#aaa' : '#666'
           ctx.font = '10px sans-serif'
           ctx.textAlign = 'center'
           ctx.fillText('收入', halfW / 2, 12)
@@ -911,12 +912,14 @@ Page({
   },
 
   drawStockChart(ctx, w, h, chartData, selectedIdx) {
+    const dk = this.data.isDarkMode
+    const C = { bg: dk ? '#1e1e2e' : '#fff', text: '#a0a0a0', grid: dk ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)', border: dk ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.15)', line: dk ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.7)', dot: dk ? '#ccc' : '#333', tipBg: dk ? 'rgba(30,30,46,0.96)' : 'rgba(255,255,255,0.96)', sep: dk ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)' }
     // Background
-    ctx.fillStyle = '#ffffff'
+    ctx.fillStyle = C.bg
     ctx.fillRect(0, 0, w, h)
 
     if (!chartData || chartData.length === 0) {
-      ctx.fillStyle = '#a0a0a0'
+      ctx.fillStyle = C.text
       ctx.font = '12px sans-serif'
       ctx.textAlign = 'center'
       ctx.fillText('暂无数据', w / 2, h / 2)
@@ -939,7 +942,7 @@ Page({
     const zeroY = mt + ph / 2
 
     // Grid lines + Y labels
-    ctx.fillStyle = '#a0a0a0'
+    ctx.fillStyle = C.text
     ctx.font = '9px sans-serif'
     ctx.textAlign = 'right'
     const steps = 4
@@ -952,19 +955,19 @@ Page({
     for (let i = 0; i <= steps; i++) {
       const val = yMin + ((yMax - yMin) / steps) * i
       const gy = toY(val)
-      ctx.strokeStyle = 'rgba(0,0,0,0.06)'
+      ctx.strokeStyle = C.grid
       ctx.lineWidth = 1
       ctx.beginPath(); ctx.moveTo(ml, gy); ctx.lineTo(w - mr, gy); ctx.stroke()
       ctx.fillText(fmtY(val), ml - 6, gy + 3)
     }
 
     // Zero line
-    ctx.strokeStyle = 'rgba(0,0,0,0.15)'
+    ctx.strokeStyle = C.border
     ctx.lineWidth = 1
     ctx.beginPath(); ctx.moveTo(ml, zeroY); ctx.lineTo(w - mr, zeroY); ctx.stroke()
 
     // X labels
-    ctx.fillStyle = '#a0a0a0'
+    ctx.fillStyle = C.text
     ctx.textAlign = 'center'
     const step = Math.max(1, Math.floor(chartData.length / 7))
     for (let i = 0; i < chartData.length; i += step) {
@@ -972,7 +975,7 @@ Page({
     }
 
     // Connecting line
-    ctx.strokeStyle = 'rgba(0,0,0,0.7)'
+    ctx.strokeStyle = C.line
     ctx.lineWidth = 1.2
     ctx.lineJoin = 'round'
     ctx.beginPath()
@@ -1000,7 +1003,7 @@ Page({
       ctx.fillStyle = '#ed2e2e'
       ctx.fillRect(cx - blockW / 2, fy, blockW, rH)
 
-      ctx.fillStyle = '#333'
+      ctx.fillStyle = C.dot
       ctx.beginPath()
       ctx.arc(cx, fy, 1.5, 0, Math.PI * 2)
       ctx.fill()
@@ -1010,7 +1013,7 @@ Page({
     const lx = ml, ly = 10
     ctx.fillStyle = '#00d042'
     ctx.fillRect(lx, ly, 8, 8)
-    ctx.fillStyle = '#a0a0a0'
+    ctx.fillStyle = C.text
     ctx.font = '10px sans-serif'
     ctx.textAlign = 'left'
     ctx.fillText('收入', lx + 12, ly + 8)
@@ -1019,11 +1022,11 @@ Page({
     ctx.fillRect(lx + 52, ly, 8, 8)
     ctx.fillText('支出', lx + 64, ly + 8)
 
-    ctx.fillStyle = '#333'
+    ctx.fillStyle = C.dot
     ctx.beginPath()
     ctx.arc(lx + 104, ly + 4, 3, 0, Math.PI * 2)
     ctx.fill()
-    ctx.fillStyle = '#a0a0a0'
+    ctx.fillStyle = C.text
     ctx.fillText('净值', lx + 112, ly + 8)
 
     // Tooltip
@@ -1041,8 +1044,8 @@ Page({
       if (tipY < mt) tipY = mt + 2
 
       // Tooltip bg
-      ctx.fillStyle = 'rgba(255,255,255,0.96)'
-      ctx.strokeStyle = 'rgba(0,0,0,0.15)'
+      ctx.fillStyle = C.tipBg
+      ctx.strokeStyle = C.border
       ctx.lineWidth = 1
       ctx.beginPath()
       const r = 6
@@ -1065,7 +1068,7 @@ Page({
 
       // Net value (prominent)
       const netColor = pt.net >= 0 ? '#00d042' : '#ed2e2e'
-      ctx.fillStyle = '#a0a0a0'
+      ctx.fillStyle = C.text
       ctx.fillText('净值', tipX + 8, tipY + 14)
       ctx.fillStyle = netColor
       ctx.font = 'bold 12px sans-serif'
@@ -1073,7 +1076,7 @@ Page({
       ctx.font = '10px sans-serif'
 
       // Divider
-      ctx.strokeStyle = 'rgba(0,0,0,0.08)'
+      ctx.strokeStyle = C.sep
       ctx.lineWidth = 1
       ctx.beginPath(); ctx.moveTo(tipX + 8, tipY + 20); ctx.lineTo(tipX + tipW - 8, tipY + 20); ctx.stroke()
 
@@ -1085,7 +1088,7 @@ Page({
       ]
       rows.forEach((row, i) => {
         const ry = tipY + 34 + i * 15
-        ctx.fillStyle = '#a0a0a0'
+        ctx.fillStyle = C.text
         ctx.fillText(row.label, tipX + 8, ry)
         ctx.fillStyle = row.color
         ctx.font = 'bold 10px sans-serif'
@@ -1110,12 +1113,14 @@ Page({
 
   // ---- 柱状图 ----
   drawBarChart(ctx, w, h, chartData) {
+    const dk = this.data.isDarkMode
+    const C = { bg: dk ? '#1e1e2e' : '#fff', text: '#a0a0a0', grid: dk ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)', sep: dk ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)' }
     // Background
-    ctx.fillStyle = '#ffffff'
+    ctx.fillStyle = C.bg
     ctx.fillRect(0, 0, w, h)
 
     if (!chartData || chartData.length === 0) {
-      ctx.fillStyle = '#a0a0a0'
+      ctx.fillStyle = C.text
       ctx.font = '12px sans-serif'
       ctx.textAlign = 'center'
       ctx.fillText('暂无数据', w / 2, h / 2)
@@ -1148,7 +1153,7 @@ Page({
     function toY(v) { return bottomY - (v / yMax) * ph }
 
     // Grid lines + Y labels
-    ctx.fillStyle = '#a0a0a0'
+    ctx.fillStyle = C.text
     ctx.font = '9px sans-serif'
     ctx.textAlign = 'right'
     const steps = 4
@@ -1160,14 +1165,14 @@ Page({
     for (let i = 0; i <= steps; i++) {
       const val = (yMax / steps) * i
       const gy = toY(val)
-      ctx.strokeStyle = 'rgba(0,0,0,0.06)'
+      ctx.strokeStyle = C.grid
       ctx.lineWidth = 1
       ctx.beginPath(); ctx.moveTo(ml, gy); ctx.lineTo(w - mr, gy); ctx.stroke()
       ctx.fillText(fmtY(val), ml - 6, gy + 3)
     }
 
     // X labels
-    ctx.fillStyle = '#a0a0a0'
+    ctx.fillStyle = C.text
     ctx.textAlign = 'center'
     const step = Math.max(1, Math.floor(chartData.length / 7))
     for (let i = 0; i < chartData.length; i += step) {
@@ -1175,7 +1180,7 @@ Page({
     }
 
     // Vertical dashed separators between groups
-    ctx.strokeStyle = 'rgba(0,0,0,0.08)'
+    ctx.strokeStyle = C.sep
     ctx.lineWidth = 1
     ctx.setLineDash([3, 4])
     for (let i = 1; i < chartData.length; i++) {
@@ -1207,7 +1212,7 @@ Page({
     const lx = ml, ly = 10
     ctx.fillStyle = '#00d042'
     ctx.fillRect(lx, ly, 8, 8)
-    ctx.fillStyle = '#a0a0a0'
+    ctx.fillStyle = C.text
     ctx.font = '10px sans-serif'
     ctx.textAlign = 'left'
     ctx.fillText('收入', lx + 12, ly + 8)
@@ -1282,8 +1287,9 @@ Page({
   },
 
   drawPieChart(ctx, w, h, segments, colors, selectedIdx) {
+    const dk = this.data.isDarkMode
     // Background
-    ctx.fillStyle = '#ffffff'
+    ctx.fillStyle = dk ? '#1e1e2e' : '#ffffff'
     ctx.fillRect(0, 0, w, h)
 
     const total = segments.reduce((s, seg) => s + seg.value, 0)

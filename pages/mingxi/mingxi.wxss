@@ -1,5 +1,5 @@
 page {
-  background: linear-gradient(to top, #BEDAFF 0%, #DBEAFF 37%, #DDF4FF 62%, #CEE9FB 100%);
+  background: linear-gradient(160deg, #FAF7F2 0%, #F5F0E8 40%, #EDE8DF 100%);
   height: 100vh;
   overflow: hidden;
 }
@@ -10,6 +10,7 @@ page {
   height: 100vh;
   padding: 60rpx 26rpx 0;
   box-sizing: border-box;
+  background: linear-gradient(160deg, #FAF7F2 0%, #F5F0E8 40%, #EDE8DF 100%);
 }
 
 /* ---- 标题栏 ---- */
@@ -77,23 +78,32 @@ page {
 .header-back-btn {
   display: flex;
   align-items: center;
-  gap: 6rpx;
-  background: #fff;
-  border-radius: 30rpx;
-  padding: 10rpx 20rpx;
+  gap: 10rpx;
+  background: rgba(255, 255, 255, 0.88);
+  border: 1rpx solid rgba(0, 0, 0, 0.06);
+  border-radius: 36rpx;
+  padding: 14rpx 26rpx 14rpx 20rpx;
   flex-shrink: 0;
+  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.05);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.header-back-btn:active {
+  transform: scale(0.96);
+  box-shadow: 0 1rpx 4rpx rgba(0, 0, 0, 0.04);
 }
 .back-arrow {
-  width: 0;
-  height: 0;
-  border-top: 10rpx solid transparent;
-  border-bottom: 10rpx solid transparent;
-  border-right: 14rpx solid #000;
+  width: 14rpx;
+  height: 14rpx;
+  border-left: 3rpx solid #333;
+  border-bottom: 3rpx solid #333;
+  transform: rotate(45deg);
+  margin-right: 2rpx;
 }
 .back-text {
-  font-size: 28rpx;
-  font-weight: 500;
-  color: #000;
+  font-size: 26rpx;
+  font-weight: 600;
+  color: #333;
+  letter-spacing: 1rpx;
 }
 .invisible {
   visibility: hidden;
@@ -103,6 +113,7 @@ page {
   height: 86rpx;
   border-radius: 50%;
   background: #ddd;
+  overflow: hidden;
 }
 
 /* ---- 卡片网格 ---- */
@@ -6946,6 +6957,77 @@ page {
 /* 普通文字 */
 .page--dark .tab-label {
   color: #888;
+}
+
+/* 标题文字（补全遗漏） */
+.page--dark .header-title,
+.page--dark .date-month-num,
+.page--dark .date-month-label,
+.page--dark .row-label,
+.page--dark .report-title,
+.page--dark .detail-title,
+.page--dark .settle-title,
+.page--dark .report-type-text--active,
+.page--dark .vip-card-single-name,
+.page--dark .vip-main-title,
+.page--dark .vip-price-int,
+.page--dark .vip-price-decimal,
+.page--dark .vip-price-unit,
+.page--dark .vip-price-yen,
+.page--dark .vip-feature-text--strong,
+.page--dark .company-boss-success-tip,
+.page--dark .company-success-val,
+.page--dark .company-employee-note-strong,
+.page--dark .company-employee-success-note-strong,
+.page--dark .company-employee-success-role,
+.page--dark .custom-edit-card-name,
+.page--dark .custom-glass-label-name,
+.page--dark .custom-section-title,
+.page--dark .edit-mode-title,
+.page--dark .ghost-card-name,
+.page--dark .popup-slot-card-name,
+.page--dark .template-panel-title,
+.page--dark .placeholder-card,
+.page--dark .settle-warn,
+.page--dark .audit-name {
+  color: #e0e0e0 !important;
+}
+
+/* 弹窗/输入框文字 */
+.page--dark .bill-modal-value,
+.page--dark .bill-modal-input,
+.page--dark .bill-cat,
+.page--dark .bill-type,
+.page--dark .back-text {
+  color: #e0e0e0 !important;
+}
+
+/* 箭头指示器 */
+.page--dark .date-arrow {
+  border-top-color: #e0e0e0 !important;
+}
+.page--dark .back-arrow {
+  border-left-color: #ccc !important;
+  border-bottom-color: #ccc !important;
+}
+.page--dark .header-back-btn {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.1);
+  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.2);
+}
+.page--dark .card-arrow {
+  color: #888 !important;
+}
+
+/* 卡片边框（暗色可见） */
+.page--dark .card,
+.page--dark .my-card {
+  border-color: rgba(255, 255, 255, 0.12) !important;
+}
+
+/* 年份文字 */
+.page--dark .year-text {
+  color: #888 !important;
 }
 
 /* 设置条目 */
