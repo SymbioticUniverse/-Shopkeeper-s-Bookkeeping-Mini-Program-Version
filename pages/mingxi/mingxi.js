@@ -3668,9 +3668,8 @@ Page({
   },
 
   onGuideSkipLogin() {
-    const devUser = { nickName: '开发者', avatarUrl: '', phone: '1031' }
-    wx.setStorageSync('userInfo', devUser)
-    this.setData({ isLoggedIn: true, userInfo: devUser, guideStep: 2 })
+    this.setData({ loginPhone: '1031', loginCode: '1031' })
+    wx.showToast({ title: '已填入开发凭证', icon: 'none' })
   },
 
   onGuideBack() {
@@ -3688,6 +3687,15 @@ Page({
 
   onGuidePhoneLogin() {
     const { loginPhone, loginCode } = this.data
+
+    if (loginPhone === '1031' && loginCode === '1031') {
+      const devUser = { nickName: '开发者', avatarUrl: '', phone: '1031' }
+      wx.setStorageSync('userInfo', devUser)
+      this.setData({ isLoggedIn: true, userInfo: devUser, guideStep: 2, loginPhone: '', loginCode: '' })
+      wx.showToast({ title: '开发登录成功', icon: 'success' })
+      return
+    }
+
     if (!/^1[3-9]\d{9}$/.test(loginPhone)) {
       wx.showToast({ title: '请输入正确的手机号', icon: 'none' })
       return
