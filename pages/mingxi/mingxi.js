@@ -141,6 +141,7 @@ Page({
     showOverview: true, // 简览页 vs 明细页
     isDarkMode: false, // 深色模式
     currentTab: 0,
+    tabSlideDir: '',
     tabs: [
       { text: '明细', icon: '/assets/icons/mingxi.png' },
       { text: '报表', icon: '/assets/icons/baobiao.png' },
@@ -819,17 +820,28 @@ Page({
 
   switchTab(e) {
     const index = e.currentTarget.dataset.index
-    this.setData({ currentTab: index, showOverview: false })
+    const prevTab = this.data.currentTab
+    const wasOverview = this.data.showOverview
+    let dir = ''
+    if (wasOverview) {
+      dir = 'slide-right'
+    } else if (index !== prevTab) {
+      dir = index > prevTab ? 'slide-right' : 'slide-left'
+    }
+    this.setData({ currentTab: index, showOverview: false, tabSlideDir: dir })
+    if (dir) setTimeout(() => this.setData({ tabSlideDir: '' }), 400)
     if (index === 1) {
-      this.initLineChart()
-      this.initBarChart()
-      this.initPieCharts()
+      setTimeout(() => {
+        this.initLineChart()
+        this.initBarChart()
+        this.initPieCharts()
+      }, 300)
     }
     if (index === 0) {
       this.initDetailItems()
     }
     if (index === 2) {
-      this.setData({ currentTab: 0 })
+      this.setData({ currentTab: 0, tabSlideDir: '' })
       this.initDetailItems()
       this.onBookEntry({ currentTarget: { dataset: { type: 'expense' } } })
       return
@@ -2170,7 +2182,8 @@ Page({
 
   goOverview() {
     this._syncOverviewCards()
-    this.setData({ showOverview: true, showCustomOverview: false, showCustomCategory: false })
+    this.setData({ showOverview: true, showCustomOverview: false, showCustomCategory: false, tabSlideDir: 'slide-left' })
+    setTimeout(() => this.setData({ tabSlideDir: '' }), 400)
   },
 
   // ---- 明细 ----
@@ -2858,7 +2871,8 @@ Page({
 
   onExitEditMode() {
     api.saveOverviewCards(this.data.customCards)
-    this.setData({ showCustomOverview: false, showOverview: false, currentTab: 4 })
+    this.setData({ showCustomOverview: false, showOverview: false, currentTab: 4, tabSlideDir: 'slide-right' })
+    setTimeout(() => this.setData({ tabSlideDir: '' }), 400)
   },
 
   onAddCustomCard(e) {
