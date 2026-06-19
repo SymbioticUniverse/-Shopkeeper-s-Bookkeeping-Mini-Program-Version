@@ -8087,3 +8087,161 @@ page {
 .page--dark .guide-uid-label { color: #aaa; }
 .page--dark .guide-uid-value { color: #e0e0e0; }
 .page--dark .guide-dot { background: rgba(255, 255, 255, 0.12); }
+
+/* ========== AI 对话窗口 ========== */
+.ai-chat-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 8000;
+  background: rgba(0,0,0,0.4);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+.ai-chat-card {
+  width: 100%;
+  height: 85vh;
+  background: #fff;
+  border-radius: 32rpx 32rpx 0 0;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 -8rpx 40rpx rgba(0,0,0,0.12);
+  overflow: hidden;
+}
+.ai-chat-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 28rpx 32rpx;
+  border-bottom: 1rpx solid rgba(0,0,0,0.06);
+  flex-shrink: 0;
+}
+.ai-chat-title {
+  font-size: 34rpx;
+  font-weight: 700;
+  color: #1a1a2e;
+}
+.ai-chat-close {
+  font-size: 44rpx;
+  color: #999;
+  padding: 4rpx 16rpx;
+  line-height: 1;
+}
+.ai-chat-messages {
+  flex: 1;
+  padding: 24rpx 28rpx;
+}
+.ai-msg {
+  margin-bottom: 28rpx;
+  display: flex;
+  flex-direction: column;
+}
+.ai-msg-bubble {
+  max-width: 80%;
+  padding: 22rpx 28rpx;
+  border-radius: 24rpx;
+  font-size: 28rpx;
+  line-height: 1.7;
+  word-break: break-all;
+}
+.ai-msg-bubble--user {
+  align-self: flex-end;
+  background: linear-gradient(135deg, #4a8afe 0%, #3a7bfd 100%);
+  color: #fff;
+  border-bottom-right-radius: 8rpx;
+  box-shadow: 0 4rpx 12rpx rgba(58,123,253,0.2);
+}
+.ai-msg-bubble--ai {
+  align-self: flex-start;
+  background: #f5f7fa;
+  color: #333;
+  border-bottom-left-radius: 8rpx;
+}
+.ai-msg-time {
+  font-size: 20rpx;
+  color: #ccc;
+  margin-top: 8rpx;
+}
+.ai-msg-time--user {
+  align-self: flex-end;
+}
+.ai-msg-time--ai {
+  align-self: flex-start;
+}
+.ai-thinking-dots {
+  display: flex;
+  gap: 8rpx;
+  padding: 6rpx 4rpx;
+}
+.ai-thinking-dot {
+  width: 14rpx;
+  height: 14rpx;
+  border-radius: 50%;
+  background: #bbb;
+  animation: aiDotPulse 1.2s infinite ease-in-out;
+}
+.ai-thinking-dot:nth-child(2) { animation-delay: 0.2s; }
+.ai-thinking-dot:nth-child(3) { animation-delay: 0.4s; }
+@keyframes aiDotPulse {
+  0%, 80%, 100% { opacity: 0.3; transform: scale(0.8); }
+  40% { opacity: 1; transform: scale(1.1); }
+}
+.ai-chat-input-bar {
+  display: flex;
+  align-items: center;
+  padding: 16rpx 24rpx;
+  padding-bottom: calc(16rpx + env(safe-area-inset-bottom));
+  gap: 16rpx;
+  border-top: 1rpx solid rgba(0,0,0,0.06);
+  background: #fff;
+  flex-shrink: 0;
+}
+.ai-chat-input {
+  flex: 1;
+  height: 80rpx;
+  background: #f5f7fa;
+  border-radius: 40rpx;
+  padding: 0 28rpx;
+  font-size: 28rpx;
+  color: #333;
+}
+.ai-chat-send {
+  width: 72rpx;
+  height: 72rpx;
+  border-radius: 50%;
+  background: #e0e0e0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: background 0.2s ease, transform 0.1s ease;
+}
+.ai-chat-send--active {
+  background: linear-gradient(135deg, #4a8afe 0%, #3a7bfd 100%);
+  box-shadow: 0 4rpx 12rpx rgba(58,123,253,0.25);
+}
+.ai-chat-send:active { transform: scale(0.92); }
+.ai-send-arrow {
+  font-size: 34rpx;
+  color: #fff;
+  font-weight: 700;
+  margin-top: -4rpx;
+}
+
+/* AI 对话暗色模式 */
+.page--dark .ai-chat-card {
+  background: #1e1e2e;
+  box-shadow: 0 -8rpx 40rpx rgba(0,0,0,0.35);
+}
+.page--dark .ai-chat-header { border-bottom-color: rgba(255,255,255,0.08); }
+.page--dark .ai-chat-title { color: #e0e0e0; }
+.page--dark .ai-chat-close { color: #666; }
+.page--dark .ai-msg-bubble--ai { background: #2a2a3a; color: #e0e0e0; }
+.page--dark .ai-msg-time { color: #555; }
+.page--dark .ai-thinking-dot { background: #666; }
+.page--dark .ai-chat-input-bar {
+  border-top-color: rgba(255,255,255,0.08);
+  background: #1e1e2e;
+}
+.page--dark .ai-chat-input { background: #2a2a3a; color: #e0e0e0; }
+.page--dark .ai-chat-send { background: #333; }

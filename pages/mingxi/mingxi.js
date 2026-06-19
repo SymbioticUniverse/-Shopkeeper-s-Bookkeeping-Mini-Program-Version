@@ -247,6 +247,12 @@ Page({
     showCustomOverview: false,
     showCustomCategory: false, // 自定义分类页
     showExportBill: false, // 导出账单页
+    // AI 对话
+    showAiChat: false,
+    aiMessages: [],
+    aiInputText: '',
+    aiThinking: false,
+    aiScrollId: '',
     showAuditPage: false, // 审核页
     showNotifyPage: false, // 通知页
     showContactPage: false, // 联系我们获好礼页
@@ -843,6 +849,10 @@ Page({
   },
 
   switchTab(e) {
+    if (this._longPressTriggered) {
+      this._longPressTriggered = false
+      return
+    }
     const index = e.currentTarget.dataset.index
     const prevTab = this.data.currentTab
     const wasOverview = this.data.showOverview
@@ -3763,6 +3773,72 @@ Page({
     this.setData({ showGuide: false })
     this.initDetailItems()
     this._calcOverviewData()
+  },
+
+  // ---- AI 对话 ----
+  onAiChatOpen() {
+    this._longPressTriggered = true
+    const now = new Date()
+    const greeting = {
+      role: 'ai',
+      text: '你好！我是你的 AI 记账助手\n\n试试对我说：\n• "午餐 25"\n• "打车 15 交通"\n• "收到工资 8000"',
+      time: this._formatChatTime(now)
+    }
+    this.setData({
+      showAiChat: true,
+      aiMessages: [greeting],
+      aiInputText: '',
+      aiThinking: false,
+      aiScrollId: 'ai-msg-0'
+    })
+  },
+
+  onAiChatClose() {
+    this.setData({ showAiChat: false })
+  },
+
+  onAiInput(e) {
+    this.setData({ aiInputText: e.detail.value })
+  },
+
+  onAiSend() {
+    const text = this.data.aiInputText.trim()
+    if (!text || this.data.aiThinking) return
+
+    const msgs = this.data.aiMessages.slice()
+    const userMsg = { role: 'user', text, time: this._formatChatTime(new Date()) }
+    msgs.push(userMsg)
+
+    this.setData({
+      aiMessages: msgs,
+      aiInputText: '',
+      aiThinking: true,
+      aiScrollId: 'ai-msg-' + msgs.length
+    })
+
+    setTimeout(() => {
+      const reply = this._mockAiReply(text)
+      const updated = this.data.aiMessages.slice()
+      updated.push(reply)
+      this.setData({
+        aiMessages: updated,
+        aiThinking: false,
+        aiScrollId: 'ai-msg-' + (updated.length - 1)
+      })
+    }, 800)
+  },
+
+  _mockAiReply(input) {
+    const time = this._formatChatTime(new Date())
+    const match = input.match(/(.+?)\s+(\d+(?:\.\d{1,2})?)/)
+    if (match) {
+      return { role: 'ai', text: '好的，已帮你记录：\n' + match[1] + '  ¥' + match[2] + '\n\n（AI 记账功能即将上线，敬请期待）', time }
+    }
+    return { role: 'ai', text: '收到！AI 记账功能正在开发中，敬请期待\n\n目前你可以用格式 "描述 金额" 来快速记一笔。', time }
+  },
+
+  _formatChatTime(d) {
+    return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0')
   },
 
   // ---- VIP 升级 ----
