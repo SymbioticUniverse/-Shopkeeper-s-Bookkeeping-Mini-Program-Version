@@ -8158,7 +8158,7 @@ page {
 }
 .ai-chat-messages {
   flex: 1;
-  padding: 24rpx 28rpx;
+  padding: 24rpx 36rpx;
 }
 .ai-msg {
   margin-bottom: 28rpx;
@@ -8166,7 +8166,7 @@ page {
   flex-direction: column;
 }
 .ai-msg-bubble {
-  max-width: 80%;
+  max-width: 75%;
   padding: 22rpx 28rpx;
   border-radius: 24rpx;
   font-size: 28rpx;
