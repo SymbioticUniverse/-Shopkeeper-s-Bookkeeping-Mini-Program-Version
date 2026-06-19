@@ -79,31 +79,31 @@ page {
 .header-back-btn {
   display: flex;
   align-items: center;
-  gap: 10rpx;
-  background: rgba(255, 255, 255, 0.88);
-  border: 1rpx solid rgba(0, 0, 0, 0.06);
-  border-radius: 36rpx;
-  padding: 14rpx 26rpx 14rpx 20rpx;
+  gap: 12rpx;
+  background: #fff;
+  border: 2rpx solid #000;
+  border-radius: 40rpx;
+  padding: 12rpx 26rpx 12rpx 20rpx;
   flex-shrink: 0;
-  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.05);
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  margin-top: -10rpx;
+  box-shadow: 0rpx 4rpx 0rpx 1rpx rgba(0,0,0,0.2);
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
 }
 .header-back-btn:active {
-  transform: scale(0.96);
-  box-shadow: 0 1rpx 4rpx rgba(0, 0, 0, 0.04);
+  transform: translateY(3rpx);
+  box-shadow: 0rpx 1rpx 0rpx 1rpx rgba(0,0,0,0.2);
 }
 .back-arrow {
-  width: 14rpx;
-  height: 14rpx;
-  border-left: 3rpx solid #333;
-  border-bottom: 3rpx solid #333;
+  width: 18rpx;
+  height: 18rpx;
+  border-left: 4rpx solid #000;
+  border-bottom: 4rpx solid #000;
   transform: rotate(45deg);
-  margin-right: 2rpx;
 }
 .back-text {
-  font-size: 26rpx;
-  font-weight: 600;
-  color: #333;
+  font-size: 28rpx;
+  font-weight: 700;
+  color: #000;
   letter-spacing: 1rpx;
 }
 .invisible {
@@ -7029,9 +7029,9 @@ page {
   border-bottom-color: #ccc !important;
 }
 .page--dark .header-back-btn {
-  background: rgba(255, 255, 255, 0.08);
-  border-color: rgba(255, 255, 255, 0.1);
-  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.2);
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.3);
+  box-shadow: 0rpx 4rpx 0rpx 1rpx rgba(0,0,0,0.4);
 }
 .page--dark .card-arrow {
   color: #888 !important;
