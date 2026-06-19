@@ -3780,43 +3780,27 @@ Page({
   // ---- AI 对话 ----
   onAiChatOpen() {
     this._longPressTriggered = true
-    this._aiWaitingRelease = true
+    this.setData({ aiRecording: true })
+  },
+
+  onAiRecordEnd() {
+    if (!this.data.aiRecording) return
+    this.setData({ aiRecording: false })
     const now = new Date()
     const greeting = {
       role: 'ai',
       text: '你好！我是你的 AI 记账助手\n\n试试对我说：\n• "午餐 25"\n• "打车 15 交通"\n• "收到工资 8000"',
       time: this._formatChatTime(now)
     }
-    this.setData({
-      showAiChat: true,
-      aiRecording: true,
-      aiMessages: [greeting],
-      aiInputText: '',
-      aiThinking: false,
-      aiScrollId: 'ai-msg-0'
-    })
-    wx.vibrateShort({ type: 'medium' })
-  },
-
-  onAiChatClose() {
-    this.setData({ showAiChat: false, aiRecording: false })
-    this._aiWaitingRelease = false
-  },
-
-  onAiCardTouchEnd() {
-    if (!this._aiWaitingRelease) return
-    this._aiWaitingRelease = false
-    if (!this.data.aiRecording) return
-    this.setData({ aiRecording: false })
-    wx.vibrateShort({ type: 'light' })
     const demos = ['午餐 25', '打车回家 32', '咖啡 18', '买水果 45', '收到工资 8000']
     const text = demos[Math.floor(Math.random() * demos.length)]
-    const msgs = this.data.aiMessages.slice()
-    msgs.push({ role: 'user', text, time: this._formatChatTime(new Date()) })
+    const userMsg = { role: 'user', text, time: this._formatChatTime(now) }
     this.setData({
-      aiMessages: msgs,
+      showAiChat: true,
+      aiMessages: [greeting, userMsg],
+      aiInputText: '',
       aiThinking: true,
-      aiScrollId: 'ai-msg-' + msgs.length
+      aiScrollId: 'ai-msg-1'
     })
     setTimeout(() => {
       const reply = this._mockAiReply(text)
@@ -3828,6 +3812,10 @@ Page({
         aiScrollId: 'ai-msg-' + (updated.length - 1)
       })
     }, 800)
+  },
+
+  onAiChatClose() {
+    this.setData({ showAiChat: false, aiRecording: false })
   },
 
   onAiInput(e) {

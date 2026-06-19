@@ -8328,3 +8328,52 @@ page {
 .page--dark .ai-toggle-label { color: #aaa; }
 .page--dark .ai-voice-btn { background: #2a2a3a; border-color: rgba(255,255,255,0.08); }
 .page--dark .ai-voice-text { color: #aaa; }
+
+/* ===== 语音录入指示器（按钮附近） ===== */
+.ai-voice-indicator {
+  position: fixed;
+  bottom: 180rpx;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 9000;
+  background: rgba(7, 193, 96, 0.92);
+  border-radius: 28rpx;
+  padding: 28rpx 48rpx 24rpx;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14rpx;
+  box-shadow: 0 8rpx 36rpx rgba(7, 193, 96, 0.35);
+}
+.ai-voice-wave {
+  display: flex;
+  align-items: center;
+  gap: 8rpx;
+  height: 64rpx;
+}
+.ai-voice-bar {
+  width: 8rpx;
+  background: rgba(255,255,255,0.9);
+  border-radius: 4rpx;
+  animation: voiceWave 0.8s ease-in-out infinite;
+}
+.ai-voice-bar:nth-child(1) { height: 20rpx; animation-delay: 0s; }
+.ai-voice-bar:nth-child(2) { height: 40rpx; animation-delay: 0.12s; }
+.ai-voice-bar:nth-child(3) { height: 56rpx; animation-delay: 0.24s; }
+.ai-voice-bar:nth-child(4) { height: 40rpx; animation-delay: 0.36s; }
+.ai-voice-bar:nth-child(5) { height: 20rpx; animation-delay: 0.48s; }
+@keyframes voiceWave {
+  0%, 100% { transform: scaleY(0.4); }
+  50% { transform: scaleY(1.2); }
+}
+.ai-voice-tip {
+  font-size: 24rpx;
+  color: rgba(255,255,255,0.9);
+  font-weight: 500;
+  letter-spacing: 2rpx;
+}
+
+.page--dark .ai-voice-indicator {
+  background: rgba(7, 193, 96, 0.85);
+  box-shadow: 0 8rpx 36rpx rgba(7, 193, 96, 0.25);
+}

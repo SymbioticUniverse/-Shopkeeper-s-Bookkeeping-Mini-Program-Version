@@ -1361,10 +1361,22 @@
   </view>
 
   <!-- 底部 TabBar -->
+  <!-- 语音录入指示器 -->
+  <view class="ai-voice-indicator" wx:if="{{aiRecording && !showAiChat}}">
+    <view class="ai-voice-wave">
+      <view class="ai-voice-bar"></view>
+      <view class="ai-voice-bar"></view>
+      <view class="ai-voice-bar"></view>
+      <view class="ai-voice-bar"></view>
+      <view class="ai-voice-bar"></view>
+    </view>
+    <text class="ai-voice-tip">正在聆听…</text>
+  </view>
+
   <view class="tab-bar-wrapper">
     <view class="tab-bar-center-bg"></view>
     <view class="tab-bar">
-      <view class="tab-item {{index === 2 ? 'tab-item-center' : ''}}" wx:for="{{tabs}}" wx:key="index" data-index="{{index}}" bindtap="switchTab" bindlongpress="{{index === 2 ? 'onAiChatOpen' : ''}}">
+      <view class="tab-item {{index === 2 ? 'tab-item-center' : ''}}" wx:for="{{tabs}}" wx:key="index" data-index="{{index}}" bindtap="switchTab" bindlongpress="{{index === 2 ? 'onAiChatOpen' : ''}}" bindtouchend="{{index === 2 ? 'onAiRecordEnd' : ''}}">
         <view wx:if="{{index !== 2}}" class="tab-icon"><image class="tab-icon-img" src="{{item.icon}}" mode="aspectFit"/></view>
         <view wx:if="{{index === 2}}" class="tab-icon-center-wrap"><image class="tab-icon-center-img" src="{{item.icon}}" mode="aspectFit"/></view>
         <text class="tab-label {{index === currentTab && !showOverview ? 'tab-label-active' : ''}}">{{item.text}}</text>
@@ -1453,7 +1465,7 @@
 
   <!-- AI 对话窗口 -->
   <view class="ai-chat-overlay" wx:if="{{showAiChat}}" catchtap="onAiChatClose">
-    <view class="ai-chat-card" catchtap="nop" bindtouchend="onAiCardTouchEnd">
+    <view class="ai-chat-card" catchtap="nop">
       <view class="ai-chat-header">
         <text class="ai-chat-title">AI 记账助手</text>
         <view class="ai-chat-close" bindtap="onAiChatClose">×</view>
