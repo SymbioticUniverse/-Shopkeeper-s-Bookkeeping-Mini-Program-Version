@@ -689,10 +689,86 @@ Page({
       })
       this.setData({ overviewCards: enriched, customCards: [] })
     }
+    this._calcOverviewData()
     setTimeout(() => this._initOverviewCharts(), 400)
   },
 
-  _initOverviewCharts() {
+  _calcOverviewData() {
+    const personalItems = api.getItems('personal').filter(it => !it._voided)
+    const companyItems = api.getItems('company').filter(it => !it._voided)
+    const sum = (items, fn) => items.filter(fn).reduce((s, it) => s + parseFloat(it.amount || 0), 0)
+    const fmt = (n) => n.toFixed(2)
+
+    const pIncome = sum(personalItems, it => it.type === 'in')
+    const pExpense = sum(personalItems, it => it.type === 'out')
+    const pBalance = pIncome - pExpense
+
+    const cIncome = sum(companyItems, it => it.type === 'in')
+    const cExpense = sum(companyItems, it => it.type === 'out')
+    const cNet = cIncome - cExpense
+    const cReceivable = sum(companyItems, it => it.typeLabel === '垫付')
+    const cPayable = sum(companyItems, it => it.typeLabel === '应付')
+    const cUnsettled = cReceivable + cPayable
+    const cDisposable = cNet
+
+    const pSettle = personalItems.filter(it => it.typeLabel === '垫付' || it.typeLabel === '应付')
+    const cSettle = companyItems.filter(it => it.typeLabel === '垫付' || it.typeLabel === '应付')
+
+    const now = new Date()
+    const monthPrefix = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0')
+    const pmItems = personalItems.filter(it => it.date && it.date.startsWith(monthPrefix))
+    const cmItems = companyItems.filter(it => it.date && it.date.startsWith(monthPrefix))
+    const pmIn = sum(pmItems, it => it.type === 'in')
+    const pmOut = sum(pmItems, it => it.type === 'out')
+    const cmIn = sum(cmItems, it => it.type === 'in')
+    const cmOut = sum(cmItems, it => it.type === 'out')
+
+    const cards = this.data.overviewCards.map(card => {
+      if (card.type === 'overview_personal') {
+        return { ...card, rows: [
+          { label: '预算', value: fmt(0), color: 'green' },
+          { labels: ['收入', '支出', '结余'], values: [fmt(pIncome), fmt(pExpense), fmt(pBalance)], colors: ['green', 'red', pBalance >= 0 ? 'green' : 'red'], threeCol: true },
+        ]}
+      }
+      if (card.type === 'overview_company') {
+        return { ...card, rows: [
+          { label: '公司总资产', value: fmt(cIncome), color: 'green' },
+          { label: '公司总负债', value: fmt(cExpense), color: 'red' },
+          { label: '公司净资产', value: fmt(cNet), color: cNet >= 0 ? 'green' : 'red' },
+          { label: '可支配资产', value: fmt(cDisposable), color: cDisposable >= 0 ? 'green' : 'red' },
+          { labels: ['应收', '应出', '未结算'], values: [fmt(cReceivable), fmt(cPayable), fmt(cUnsettled)], colors: ['green', 'red', 'red'], threeCol: true },
+        ]}
+      }
+      if (card.type === 'jieqing_personal') {
+        return { ...card, rows: [
+          { label: '待结清笔数', value: String(pSettle.length), color: 'red' },
+          { label: '待结清总额', value: fmt(sum(pSettle, () => true)), color: 'red' },
+        ]}
+      }
+      if (card.type === 'jieqing_company') {
+        return { ...card, rows: [
+          { label: '待结清笔数', value: String(cSettle.length), color: 'red' },
+          { label: '待结清总额', value: fmt(sum(cSettle, () => true)), color: 'red' },
+        ]}
+      }
+      if (card.type === 'detail_personal') {
+        return { ...card, rows: [
+          { label: '本月收入', value: fmt(pmIn), color: 'green' },
+          { label: '本月支出', value: fmt(pmOut), color: 'red' },
+          { label: '结余', value: fmt(pmIn - pmOut), color: (pmIn - pmOut) >= 0 ? 'green' : 'red' },
+        ]}
+      }
+      if (card.type === 'detail_company') {
+        return { ...card, rows: [
+          { label: '本月收入', value: fmt(cmIn), color: 'green' },
+          { label: '本月支出', value: fmt(cmOut), color: 'red' },
+          { label: '结余', value: fmt(cmIn - cmOut), color: (cmIn - cmOut) >= 0 ? 'green' : 'red' },
+        ]}
+      }
+      return card
+    })
+    this.setData({ overviewCards: cards })
+  },
     const charts = this.data.overviewCards.filter(c =>
       c.previewStyle === 'chart_line' || c.previewStyle === 'chart_bar' || c.previewStyle === 'chart_pie'
     )
@@ -1750,6 +1826,7 @@ Page({
           return { ...item }
         })
         this.setData({ [itemsKey]: updated, modalItem: null })
+        this._calcOverviewData()
         wx.showToast({ title: '已保存', icon: 'success' })
       },
     })
@@ -1966,6 +2043,7 @@ Page({
     }
 
     this.setData({ detailItems: api.getItems(scope), showBookPopup: false })
+    this._calcOverviewData()
     wx.showToast({ title: '记账成功', icon: 'success' })
   },
 
@@ -1996,6 +2074,7 @@ Page({
           return { ...item }
         })
         this.setData({ [itemsKey]: updated, modalItem: null })
+        this._calcOverviewData()
         wx.showToast({ title: '已结清', icon: 'success' })
       },
     })
@@ -2038,6 +2117,7 @@ Page({
           return { ...item }
         })
         this.setData({ [itemsKey]: updated, modalItem: null })
+        this._calcOverviewData()
       },
     })
   },
@@ -2064,6 +2144,7 @@ Page({
           return { ...item }
         })
         this.setData({ [itemsKey]: updated, modalItem: null })
+        this._calcOverviewData()
       },
     })
   },
@@ -2078,6 +2159,7 @@ Page({
     }
     const list = this.data[itemsKey].filter(item => item.id !== id && item.id !== (found && found.linkedId))
     this.setData({ [itemsKey]: list })
+    this._calcOverviewData()
   },
 
   goOverview() {
