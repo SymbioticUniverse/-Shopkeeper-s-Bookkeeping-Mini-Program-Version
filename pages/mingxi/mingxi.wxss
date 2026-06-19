@@ -8158,12 +8158,15 @@ page {
 }
 .ai-chat-messages {
   flex: 1;
-  padding: 24rpx 36rpx;
+  padding: 24rpx 0;
 }
 .ai-msg {
   margin-bottom: 28rpx;
+  padding: 0 36rpx;
   display: flex;
   flex-direction: column;
+  width: 100%;
+  box-sizing: border-box;
 }
 .ai-msg-bubble {
   max-width: 75%;
