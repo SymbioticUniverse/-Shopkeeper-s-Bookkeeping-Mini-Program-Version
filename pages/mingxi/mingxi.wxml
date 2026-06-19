@@ -13,7 +13,7 @@
       <view class="back-arrow"></view>
       <text class="back-text">返回简览页</text>
     </view>
-    <text class="header-title">公私OPC记账</text>
+    <text class="header-title">掌柜记账</text>
     <view class="header-right-icon">
       <image class="avatar-circle" src="{{userInfo.avatarUrl}}" wx:if="{{isLoggedIn && userInfo.avatarUrl}}" mode="aspectFill"></image>
       <view class="avatar-circle" wx:else></view>
@@ -1008,7 +1008,7 @@
             </view>
             <view class="contact-gift-link-item">
               <text class="contact-gift-link-label">微信公众号</text>
-              <text class="contact-gift-link-value">公私OPC记账</text>
+              <text class="contact-gift-link-value">掌柜记账</text>
             </view>
           </view>
         </view>
@@ -1079,8 +1079,8 @@
         <view class="custom-cat-divider"></view>
         <scroll-view class="about-scroll" scroll-y enhanced show-scrollbar="{{false}}">
           <view class="about-body">
-            <view class="about-logo">OPC</view>
-            <text class="about-app-name">公私OPC记账</text>
+            <view class="about-logo">掌柜</view>
+            <text class="about-app-name">掌柜记账</text>
             <text class="about-version">v1.0.0</text>
             <view class="about-divider"></view>
             <text class="about-desc">一款简洁高效的个人与公司记账工具，支持多人协作、报表分析、自定义分类等功能。</text>
@@ -1455,7 +1455,7 @@
   <view class="guide-overlay" wx:if="{{showGuide}}">
     <!-- Step 0: 欢迎 -->
     <view class="guide-card" wx:if="{{guideStep === 0}}">
-      <text class="guide-app-name">赤兔记账</text>
+      <text class="guide-app-name">掌柜记账</text>
       <text class="guide-slogan">简单好用的智能记账工具</text>
       <view class="guide-btn" bindtap="onGuideNext">开始使用</view>
       <view class="guide-dots">
