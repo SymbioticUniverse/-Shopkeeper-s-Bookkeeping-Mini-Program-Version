@@ -1476,7 +1476,7 @@
         </view>
       </scroll-view>
       <view class="ai-chat-input-bar">
-        <input class="ai-chat-input" placeholder="试试说 "午餐 25元"" value="{{aiInputText}}" bindinput="onAiInput" bindconfirm="onAiSend" confirm-type="send"/>
+        <input class="ai-chat-input" placeholder="试试说 午餐 25元" value="{{aiInputText}}" bindinput="onAiInput" bindconfirm="onAiSend" confirm-type="send"/>
         <view class="ai-chat-send {{aiInputText ? 'ai-chat-send--active' : ''}}" bindtap="onAiSend">
           <text class="ai-send-arrow">↑</text>
         </view>
