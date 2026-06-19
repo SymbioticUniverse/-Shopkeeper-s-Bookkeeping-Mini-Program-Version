@@ -6461,6 +6461,15 @@ page {
   margin-bottom: 0;
   flex-shrink: 0;
 }
+.custom-cat-right {
+  display: flex;
+  align-items: center;
+  gap: 10rpx;
+}
+.custom-cat-icon {
+  width: 36rpx;
+  height: 36rpx;
+}
 
 .custom-cat-body {
   flex: 1;

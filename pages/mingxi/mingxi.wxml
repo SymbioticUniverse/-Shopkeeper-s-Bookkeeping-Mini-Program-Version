@@ -566,7 +566,7 @@
           <view class="custom-cat-back" bindtap="onVipBack">
             <view class="custom-cat-back-arrow"></view>
           </view>
-          <text class="custom-cat-title">{{t.vip_subscribe}}</text>
+          <view class="custom-cat-right"><image class="custom-cat-icon" src="/assets/icons/VIP.png" mode="aspectFit"/><text class="custom-cat-title">{{t.vip_subscribe}}</text></view>
         </view>
         <!-- 缩略图视图 -->
         <view class="vip-thumb-scroll" wx:if="{{vipDetailId < 0}}">
@@ -633,7 +633,7 @@
           <view class="custom-cat-back" bindtap="onCustomCategoryBack">
             <view class="custom-cat-back-arrow"></view>
           </view>
-          <text class="custom-cat-title">{{t.custom_cat_title}}</text>
+          <view class="custom-cat-right"><image class="custom-cat-icon" src="/assets/icons/fenlei.png" mode="aspectFit"/><text class="custom-cat-title">{{t.custom_cat_title}}</text></view>
         </view>
         <view class="custom-cat-divider"></view>
         <view class="custom-cat-body">
@@ -764,7 +764,7 @@
           <view class="custom-cat-back" bindtap="onCompanyShareBack">
             <view class="custom-cat-back-arrow"></view>
           </view>
-          <text class="custom-cat-title">{{t.my_link_company}}</text>
+          <view class="custom-cat-right"><image class="custom-cat-icon" src="/assets/icons/lianjiegongsigongxiangtongyizhangben.png" mode="aspectFit"/><text class="custom-cat-title">{{t.my_link_company}}</text></view>
         </view>
         <view class="custom-cat-divider"></view>
         <view class="company-share-body" wx:if="{{companyShareStep === 0}}">
@@ -865,7 +865,7 @@
           <view class="custom-cat-back" bindtap="onExportBillBack">
             <view class="custom-cat-back-arrow"></view>
           </view>
-          <text class="custom-cat-title">{{t.export_title}}</text>
+          <view class="custom-cat-right"><image class="custom-cat-icon" src="/assets/icons/daochu.png" mode="aspectFit"/><text class="custom-cat-title">{{t.export_title}}</text></view>
         </view>
         <view class="custom-cat-divider"></view>
         <view class="report-period-bar">
@@ -942,7 +942,7 @@
           <view class="custom-cat-back" bindtap="onAuditBack">
             <view class="custom-cat-back-arrow"></view>
           </view>
-          <text class="custom-cat-title">{{t.audit_title}}</text>
+          <view class="custom-cat-right"><image class="custom-cat-icon" src="/assets/icons/shenhe.png" mode="aspectFit"/><text class="custom-cat-title">{{t.audit_title}}</text></view>
         </view>
         <view class="custom-cat-divider"></view>
         <scroll-view class="audit-scroll" scroll-y enhanced show-scrollbar="{{false}}">
@@ -977,7 +977,7 @@
           <view class="custom-cat-back" bindtap="onContactBack">
             <view class="custom-cat-back-arrow"></view>
           </view>
-          <text class="custom-cat-title">{{t.contact_title}}</text>
+          <view class="custom-cat-right"><image class="custom-cat-icon" src="/assets/icons/screenshot.png" mode="aspectFit"/><text class="custom-cat-title">{{t.contact_title}}</text></view>
         </view>
         <view class="custom-cat-divider"></view>
         <view class="contact-gift-body">
@@ -1099,7 +1099,7 @@
           <view class="custom-cat-back" bindtap="onSettingsBack">
             <view class="custom-cat-back-arrow"></view>
           </view>
-          <text class="custom-cat-title">{{t.settings_title}}</text>
+          <view class="custom-cat-right"><image class="custom-cat-icon" src="/assets/icons/shezhi.png" mode="aspectFit"/><text class="custom-cat-title">{{t.settings_title}}</text></view>
         </view>
         <view class="custom-cat-divider"></view>
         <scroll-view class="settings-scroll" scroll-y enhanced show-scrollbar="{{false}}">
@@ -1171,7 +1171,7 @@
           <view class="custom-cat-back" bindtap="onNotifyBack">
             <view class="custom-cat-back-arrow"></view>
           </view>
-          <text class="custom-cat-title">{{t.notify_title}}</text>
+          <view class="custom-cat-right"><image class="custom-cat-icon" src="/assets/icons/tongzhi.png" mode="aspectFit"/><text class="custom-cat-title">{{t.notify_title}}</text></view>
         </view>
         <view class="custom-cat-divider"></view>
         <scroll-view class="notify-scroll" scroll-y enhanced show-scrollbar="{{false}}">
