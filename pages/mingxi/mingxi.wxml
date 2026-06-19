@@ -1453,10 +1453,15 @@
 
   <!-- AI 对话窗口 -->
   <view class="ai-chat-overlay" wx:if="{{showAiChat}}" catchtap="onAiChatClose">
-    <view class="ai-chat-card" catchtap="nop">
+    <view class="ai-chat-card" catchtap="nop" bindtouchend="onAiCardTouchEnd">
       <view class="ai-chat-header">
         <text class="ai-chat-title">AI 记账助手</text>
         <view class="ai-chat-close" bindtap="onAiChatClose">×</view>
+      </view>
+      <!-- 录音中指示器 -->
+      <view class="ai-recording-banner" wx:if="{{aiRecording}}">
+        <view class="ai-recording-pulse"></view>
+        <text class="ai-recording-text">正在聆听… 松开发送</text>
       </view>
       <scroll-view class="ai-chat-messages" scroll-y scroll-into-view="{{aiScrollId}}" scroll-with-animation>
         <view class="ai-msg" wx:for="{{aiMessages}}" wx:key="index" id="ai-msg-{{index}}">
@@ -1476,10 +1481,21 @@
         </view>
       </scroll-view>
       <view class="ai-chat-input-bar">
-        <input class="ai-chat-input" placeholder="试试说 午餐 25元" value="{{aiInputText}}" bindinput="onAiInput" bindconfirm="onAiSend" confirm-type="send"/>
-        <view class="ai-chat-send {{aiInputText ? 'ai-chat-send--active' : ''}}" bindtap="onAiSend">
-          <text class="ai-send-arrow">↑</text>
+        <view class="ai-input-toggle" bindtap="onAiToggleMode">
+          <text class="ai-toggle-label">{{aiVoiceMode ? 'Aa' : 'mic'}}</text>
         </view>
+        <block wx:if="{{aiVoiceMode}}">
+          <view class="ai-voice-btn {{aiRecording ? 'ai-voice-btn--recording' : ''}}"
+                bindtouchstart="onAiVoiceStart" bindtouchend="onAiVoiceEnd" bindtouchcancel="onAiVoiceEnd">
+            <text class="ai-voice-text">{{aiRecording ? '松开 结束' : '按住 说话'}}</text>
+          </view>
+        </block>
+        <block wx:else>
+          <input class="ai-chat-input" placeholder="输入记账内容" value="{{aiInputText}}" bindinput="onAiInput" bindconfirm="onAiSend" confirm-type="send"/>
+          <view class="ai-chat-send {{aiInputText ? 'ai-chat-send--active' : ''}}" bindtap="onAiSend">
+            <text class="ai-send-arrow">↑</text>
+          </view>
+        </block>
       </view>
     </view>
   </view>

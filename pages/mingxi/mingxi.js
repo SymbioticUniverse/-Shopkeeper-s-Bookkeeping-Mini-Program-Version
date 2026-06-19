@@ -253,6 +253,8 @@ Page({
     aiInputText: '',
     aiThinking: false,
     aiScrollId: '',
+    aiVoiceMode: true,
+    aiRecording: false,
     showAuditPage: false, // 审核页
     showNotifyPage: false, // 通知页
     showContactPage: false, // 联系我们获好礼页
@@ -3778,6 +3780,7 @@ Page({
   // ---- AI 对话 ----
   onAiChatOpen() {
     this._longPressTriggered = true
+    this._aiWaitingRelease = true
     const now = new Date()
     const greeting = {
       role: 'ai',
@@ -3786,15 +3789,45 @@ Page({
     }
     this.setData({
       showAiChat: true,
+      aiRecording: true,
       aiMessages: [greeting],
       aiInputText: '',
       aiThinking: false,
       aiScrollId: 'ai-msg-0'
     })
+    wx.vibrateShort({ type: 'medium' })
   },
 
   onAiChatClose() {
-    this.setData({ showAiChat: false })
+    this.setData({ showAiChat: false, aiRecording: false })
+    this._aiWaitingRelease = false
+  },
+
+  onAiCardTouchEnd() {
+    if (!this._aiWaitingRelease) return
+    this._aiWaitingRelease = false
+    if (!this.data.aiRecording) return
+    this.setData({ aiRecording: false })
+    wx.vibrateShort({ type: 'light' })
+    const demos = ['午餐 25', '打车回家 32', '咖啡 18', '买水果 45', '收到工资 8000']
+    const text = demos[Math.floor(Math.random() * demos.length)]
+    const msgs = this.data.aiMessages.slice()
+    msgs.push({ role: 'user', text, time: this._formatChatTime(new Date()) })
+    this.setData({
+      aiMessages: msgs,
+      aiThinking: true,
+      aiScrollId: 'ai-msg-' + msgs.length
+    })
+    setTimeout(() => {
+      const reply = this._mockAiReply(text)
+      const updated = this.data.aiMessages.slice()
+      updated.push(reply)
+      this.setData({
+        aiMessages: updated,
+        aiThinking: false,
+        aiScrollId: 'ai-msg-' + (updated.length - 1)
+      })
+    }, 800)
   },
 
   onAiInput(e) {
@@ -3839,6 +3872,25 @@ Page({
 
   _formatChatTime(d) {
     return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0')
+  },
+
+  onAiToggleMode() {
+    this.setData({ aiVoiceMode: !this.data.aiVoiceMode })
+  },
+
+  onAiVoiceStart() {
+    this.setData({ aiRecording: true })
+    wx.vibrateShort({ type: 'light' })
+  },
+
+  onAiVoiceEnd() {
+    if (!this.data.aiRecording) return
+    this.setData({ aiRecording: false })
+    const demos = ['午餐 25', '打车回家 32', '咖啡 18', '买水果 45']
+    const text = demos[Math.floor(Math.random() * demos.length)]
+    this.setData({ aiInputText: text })
+    this.setData({ aiVoiceMode: false })
+    setTimeout(() => this.onAiSend(), 300)
   },
 
   // ---- VIP 升级 ----
