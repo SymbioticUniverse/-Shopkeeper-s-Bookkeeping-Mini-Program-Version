@@ -148,6 +148,12 @@ function saveCompanyInfo(info) {
   _pushBackend('POST', '/company', info)
 }
 
+async function joinCompany(info) {
+  const result = await _request('POST', '/company', info)
+  _save('companyInfo', info)
+  return result
+}
+
 function removeCompanyInfo() {
   wx.removeStorageSync('companyInfo')
   _pushBackend('DELETE', '/company')
@@ -412,6 +418,7 @@ module.exports = {
 
   getCompanyInfo,
   saveCompanyInfo,
+  joinCompany,
   removeCompanyInfo,
 
   getAuditList,

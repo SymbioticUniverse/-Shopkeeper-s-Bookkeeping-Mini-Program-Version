@@ -294,7 +294,7 @@ Page({
     overviewCards: [], // 简览页实际渲染的卡片（从存储同步或默认）
     defaultOverviewCards: [
       { id: 'd_personal', name: '个人账本', subtitle: '日常收支', span: 1, type: 'overview_personal' },
-      { id: 'd_company', name: '共生宇宙公司账本', subtitle: '经营收支', span: 2, type: 'overview_company' },
+      { id: 'd_company', name: '公司账本', subtitle: '经营收支', span: 2, type: 'overview_company' },
     ],
     // 槽位拖放对话框
     showSlotModal: false,
@@ -666,16 +666,26 @@ Page({
 
   _syncOverviewCards() {
     const saved = api.getOverviewCards()
+    const userInfo = this.data.userInfo
+    const companyInfo = api.getCompanyInfo()
+    const personalize = (card) => {
+      if (card.type === 'overview_personal' && userInfo && userInfo.nickName) {
+        card.name = userInfo.nickName + '本人账本'
+      } else if (card.type === 'overview_company' && companyInfo && companyInfo.companyName) {
+        card.name = companyInfo.companyName + '账本'
+      }
+      return card
+    }
     if (saved && saved.length > 0) {
       const enriched = saved.map(card => {
         const tpl = this.data.customTemplates.find(t => t.type === card.type)
-        return { ...card, rows: tpl ? tpl.rows : [], hasAvatar: tpl ? tpl.hasAvatar : false, previewStyle: tpl ? tpl.previewStyle : 'overview' }
+        return personalize({ ...card, rows: tpl ? tpl.rows : [], hasAvatar: tpl ? tpl.hasAvatar : false, previewStyle: tpl ? tpl.previewStyle : 'overview' })
       })
       this.setData({ overviewCards: enriched, customCards: saved })
     } else {
       const enriched = this.data.defaultOverviewCards.map(card => {
         const tpl = this.data.customTemplates.find(t => t.type === card.type)
-        return { ...card, rows: tpl ? tpl.rows : [], hasAvatar: tpl ? tpl.hasAvatar : false, previewStyle: tpl ? tpl.previewStyle : 'overview' }
+        return personalize({ ...card, rows: tpl ? tpl.rows : [], hasAvatar: tpl ? tpl.hasAvatar : false, previewStyle: tpl ? tpl.previewStyle : 'overview' })
       })
       this.setData({ overviewCards: enriched, customCards: [] })
     }
@@ -1945,7 +1955,7 @@ Page({
         amount: parseFloat(amount).toFixed(2),
         date: date,
         note: note || '',
-        target: scope === 'personal' ? '个人' : '公司',
+        target: scope === 'personal' ? (this.data.userInfo && this.data.userInfo.nickName || '个人') : ((api.getCompanyInfo() || {}).companyName || '公司'),
         targetType: 'internal',
         linkedId: newItem.id,
       }
@@ -2593,9 +2603,12 @@ Page({
       return
     }
     const info = { companyUid: employeeUid.trim(), companyRole: 'employee' }
-    api.saveCompanyInfo(info)
-    wx.showToast({ title: '加入成功', icon: 'success' })
-    this.setData({ companyShareStep: 2 })
+    api.joinCompany(info).then(() => {
+      wx.showToast({ title: '已提交申请，等待审核', icon: 'success' })
+      this.setData({ companyShareStep: 2 })
+    }).catch(err => {
+      wx.showToast({ title: (err && err.error) || '加入失败，请检查 UID', icon: 'none' })
+    })
   },
 
   onCompanyNameInput(e) {
