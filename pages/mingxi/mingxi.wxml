@@ -1346,6 +1346,25 @@
     </view>
   </view>
 
+  <!-- 自定义相机扫描页 -->
+  <view class="camera-page" wx:if="{{showCamera}}">
+    <camera class="camera-view" device-position="back" flash="off" binderror="onCameraError"></camera>
+    <view class="camera-back" bindtap="onCameraClose">
+      <view class="camera-back-arrow"></view>
+    </view>
+    <view class="camera-scan-frame"></view>
+    <text class="camera-hint">将凭证放入框内拍摄</text>
+    <view class="camera-bar">
+      <view class="camera-album" bindtap="onCameraAlbum">
+        <view class="camera-album-icon"></view>
+      </view>
+      <view class="camera-shutter" bindtap="onCameraShoot">
+        <view class="camera-shutter-ring"></view>
+      </view>
+      <view class="camera-bar-spacer"></view>
+    </view>
+  </view>
+
   <!-- 凭证识别中 -->
   <view class="scan-recog-mask" wx:if="{{scanRecognizing}}">
     <view class="scan-recog-card">

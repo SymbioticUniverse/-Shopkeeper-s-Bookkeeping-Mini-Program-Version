@@ -7595,6 +7595,139 @@ page {
 .page--dark .scan-recog-text { color: #e0e0e0; }
 .page--dark .bill-modal-voucher { background: #2a2a3a; }
 
+/* ---- 自定义相机扫描页 ---- */
+.camera-page {
+  position: fixed;
+  inset: 0;
+  z-index: 9500;
+  background: #000;
+  animation: modalFadeIn 0.28s ease-out;
+}
+.camera-view {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+/* 左上角返回 */
+.camera-back {
+  position: absolute;
+  top: calc(env(safe-area-inset-top) + 24rpx);
+  left: 32rpx;
+  width: 76rpx;
+  height: 76rpx;
+  border-radius: 50%;
+  background: rgba(0,0,0,0.4);
+  backdrop-filter: blur(10px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.camera-back-arrow {
+  width: 22rpx;
+  height: 22rpx;
+  border-top: 5rpx solid #fff;
+  border-left: 5rpx solid #fff;
+  border-radius: 2rpx;
+  transform: rotate(-45deg);
+  margin-left: 6rpx;
+}
+
+/* 取景框 */
+.camera-scan-frame {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 540rpx;
+  height: 680rpx;
+  transform: translate(-50%, -54%);
+  border: 4rpx solid rgba(255,255,255,0.55);
+  border-radius: 28rpx;
+  box-shadow: 0 0 0 2000rpx rgba(0,0,0,0.28);
+}
+.camera-hint {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, 380rpx);
+  color: rgba(255,255,255,0.92);
+  font-size: 26rpx;
+  letter-spacing: 2rpx;
+  text-shadow: 0 2rpx 8rpx rgba(0,0,0,0.5);
+}
+
+/* 底部操作栏 */
+.camera-bar {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: calc(env(safe-area-inset-bottom) + 48rpx);
+  padding: 0 64rpx;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.camera-album {
+  width: 88rpx;
+  height: 88rpx;
+  border-radius: 18rpx;
+  background: rgba(255,255,255,0.16);
+  backdrop-filter: blur(10px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.camera-album-icon {
+  position: relative;
+  width: 44rpx;
+  height: 36rpx;
+  border: 4rpx solid #fff;
+  border-radius: 8rpx;
+  overflow: hidden;
+}
+.camera-album-icon::before {
+  content: '';
+  position: absolute;
+  top: 6rpx;
+  right: 7rpx;
+  width: 9rpx;
+  height: 9rpx;
+  border-radius: 50%;
+  background: #fff;
+}
+.camera-album-icon::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: -2rpx;
+  border-left: 16rpx solid transparent;
+  border-right: 16rpx solid transparent;
+  border-bottom: 18rpx solid #fff;
+}
+
+/* 快门 */
+.camera-shutter {
+  width: 132rpx;
+  height: 132rpx;
+  border-radius: 50%;
+  border: 6rpx solid rgba(255,255,255,0.9);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.camera-shutter:active { transform: scale(0.92); }
+.camera-shutter-ring {
+  width: 100rpx;
+  height: 100rpx;
+  border-radius: 50%;
+  background: #fff;
+}
+.camera-bar-spacer {
+  width: 88rpx;
+  height: 88rpx;
+}
+
 
 .book-type-bar {
   display: flex;

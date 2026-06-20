@@ -220,6 +220,7 @@ Page({
     bookForm: { type: 'expense', amount: '', category: '', date: '', note: '', target: '', targetType: 'external' },
     bookPhoto: '',           // 凭证照片本地路径（''=普通记账）
     scanRecognizing: false,  // 识别中 loading
+    showCamera: false,       // 自定义相机页
     bookScope: 'personal',
     bookScopeLabel: '个人',
     bookTypeLabel: '支出',
@@ -3797,19 +3798,7 @@ Page({
     var action = e.currentTarget.dataset.action
     var _this = this
     if (action === 'scan') {
-      wx.chooseImage({
-        count: 1, sizeType: ['compressed'], sourceType: ['camera'],
-        success: function (res) {
-          var photo = res.tempFilePaths && res.tempFilePaths[0]
-          if (!photo) return
-          _this._startScanRecognize(photo)
-        },
-        fail: function (err) {
-          if (err && err.errMsg && err.errMsg.indexOf('cancel') === -1) {
-            wx.showToast({ title: '相机调用失败', icon: 'none' })
-          }
-        }
-      })
+      this.setData({ showCamera: true })
     } else if (action === 'category') {
       this.setData({ currentTab: 4, showOverview: false })
       this.onCustomCategoryEntry()
@@ -3828,6 +3817,52 @@ Page({
         aiVoiceMode: false
       })
     }
+  },
+
+  // ---- 相机扫描 ----
+  onCameraClose() {
+    this.setData({ showCamera: false })
+  },
+
+  onCameraShoot() {
+    var _this = this
+    var ctx = wx.createCameraContext()
+    ctx.takePhoto({
+      quality: 'high',
+      success: function (res) {
+        _this.setData({ showCamera: false })
+        _this._startScanRecognize(res.tempImagePath)
+      },
+      fail: function () {
+        wx.showToast({ title: '拍照失败', icon: 'none' })
+      }
+    })
+  },
+
+  onCameraAlbum() {
+    var _this = this
+    wx.chooseMedia({
+      count: 1, mediaType: ['image'], sourceType: ['album'], sizeType: ['compressed'],
+      success: function (res) {
+        var f = res.tempFiles && res.tempFiles[0]
+        var photo = f && f.tempFilePath
+        if (!photo) return
+        _this.setData({ showCamera: false })
+        _this._startScanRecognize(photo)
+      }
+    })
+  },
+
+  onCameraError() {
+    wx.showModal({
+      title: '无法使用相机',
+      content: '请在系统设置中允许使用相机，或从相册选择凭证',
+      confirmText: '从相册选',
+      success: (r) => {
+        if (r.confirm) this.onCameraAlbum()
+        else this.setData({ showCamera: false })
+      }
+    })
   },
 
   // ---- 扫描凭证识别 ----
