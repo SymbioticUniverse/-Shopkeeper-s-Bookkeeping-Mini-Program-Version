@@ -3793,7 +3793,7 @@ Page({
   _redrawReportCharts() {
     var d = this.data
     if (d.currentTab !== 1) return
-    if (d.showExpandMenu || d.showCamera || d.scanRecognizing || d.showBookPopup || d.modalItem || d.showAiChat) return
+    if (d.showExpandMenu || d.showCamera || d.scanRecognizing || d.showBookPopup || d.modalItem || d.showAiChat || d.aiRecording || d.searchRecording) return
     setTimeout(() => {
       this.initLineChart()
       this.initBarChart()
@@ -3845,6 +3845,7 @@ Page({
   onHeaderSearchVoiceEnd() {
     if (!this.data.searchRecording) return
     this.setData({ searchRecording: false })
+    this._redrawReportCharts()
   },
 
   // ---- 相机扫描 ----
