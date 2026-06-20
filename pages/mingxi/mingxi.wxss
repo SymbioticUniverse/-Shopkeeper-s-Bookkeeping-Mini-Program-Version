@@ -131,7 +131,7 @@ page {
 /* 拓展菜单 */
 .expand-menu-overlay {
   position: fixed;
-  inset: 0;
+  top: 0; left: 0; right: 0; bottom: 0;
   z-index: 7500;
   background: rgba(0,0,0,0.15);
   animation: expandFadeIn 0.2s ease-out;
@@ -376,10 +376,11 @@ page {
   border-radius: 50%;
   background: #fff;
   box-shadow: 0 -4rpx 12rpx rgba(0,0,0,0.08);
-  z-index: 2;
+  z-index: 0;
 }
 .tab-bar {
   position: absolute;
+  z-index: 1;
   bottom: 0;
   left: 0;
   right: 0;
@@ -585,7 +586,7 @@ page {
 }
 .report-type-bg {
   position: absolute;
-  inset: 0;
+  top: 0; left: 0; right: 0; bottom: 0;
   background: #fff;
   border-radius: 22rpx;
   box-shadow: inset 0rpx 2rpx 6rpx rgba(0,0,0,0.15);
@@ -1173,7 +1174,7 @@ page {
 /* ---- 详情弹窗 ---- */
 .bill-modal-mask {
   position: fixed;
-  inset: 0;
+  top: 0; left: 0; right: 0; bottom: 0;
   background: rgba(0,0,0,0.35);
   z-index: 1000;
   display: flex;
@@ -1411,7 +1412,7 @@ page {
 
 .vip-detail-backdrop {
   position: absolute;
-  inset: 0;
+  top: 0; left: 0; right: 0; bottom: 0;
   z-index: 1;
 }
 
@@ -2678,7 +2679,7 @@ page {
 
 .custom-tpl-card .report-type-bg {
   position: absolute;
-  inset: 0;
+  top: 0; left: 0; right: 0; bottom: 0;
   background: #fff;
   border-radius: 14rpx;
   box-shadow: inset 0rpx 1rpx 3rpx rgba(0,0,0,0.15);
@@ -3234,7 +3235,7 @@ page {
 /* 空状态 */
 .custom-edit-empty {
   position: absolute;
-  inset: 0;
+  top: 0; left: 0; right: 0; bottom: 0;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -3307,7 +3308,7 @@ page {
 /* ===== 三卡槽弹窗 ===== */
 .popup-mask {
   position: fixed;
-  inset: 0;
+  top: 0; left: 0; right: 0; bottom: 0;
   z-index: 300;
   background: rgba(0,0,0,0.45);
   display: flex;
@@ -3598,7 +3599,7 @@ page {
 }
 .report-type-bg {
   position: absolute;
-  inset: 0;
+  top: 0; left: 0; right: 0; bottom: 0;
   background: #fff;
   border-radius: 22rpx;
   box-shadow: inset 0rpx 2rpx 6rpx rgba(0,0,0,0.15);
@@ -4186,7 +4187,7 @@ page {
 /* ---- 详情弹窗 ---- */
 .bill-modal-mask {
   position: fixed;
-  inset: 0;
+  top: 0; left: 0; right: 0; bottom: 0;
   background: rgba(0,0,0,0.35);
   z-index: 1000;
   display: flex;
@@ -4424,7 +4425,7 @@ page {
 
 .vip-detail-backdrop {
   position: absolute;
-  inset: 0;
+  top: 0; left: 0; right: 0; bottom: 0;
   z-index: 1;
 }
 
@@ -5691,7 +5692,7 @@ page {
 
 .custom-tpl-card .report-type-bg {
   position: absolute;
-  inset: 0;
+  top: 0; left: 0; right: 0; bottom: 0;
   background: #fff;
   border-radius: 14rpx;
   box-shadow: inset 0rpx 1rpx 3rpx rgba(0,0,0,0.15);
@@ -6229,7 +6230,7 @@ page {
 /* ===== 底部模版面板 ===== */
 .template-panel-mask {
   position: fixed;
-  inset: 0;
+  top: 0; left: 0; right: 0; bottom: 0;
   background: rgba(0,0,0,0.3);
   z-index: 100;
   opacity: 0;
@@ -6773,7 +6774,7 @@ page {
 /* 添加分类弹窗 */
 .cat-modal-mask {
   position: fixed;
-  inset: 0;
+  top: 0; left: 0; right: 0; bottom: 0;
   background: rgba(0, 0, 0, 0.4);
   z-index: 100;
 }
@@ -7525,7 +7526,7 @@ page {
 /* 凭证识别中 overlay */
 .scan-recog-mask {
   position: fixed;
-  inset: 0;
+  top: 0; left: 0; right: 0; bottom: 0;
   z-index: 9000;
   background: rgba(0,0,0,0.55);
   display: flex;
@@ -7598,14 +7599,14 @@ page {
 /* ---- 自定义相机扫描页 ---- */
 .camera-page {
   position: fixed;
-  inset: 0;
+  top: 0; left: 0; right: 0; bottom: 0;
   z-index: 9500;
   background: #000;
   animation: modalFadeIn 0.28s ease-out;
 }
 .camera-view {
   position: absolute;
-  inset: 0;
+  top: 0; left: 0; right: 0; bottom: 0;
   width: 100%;
   height: 100%;
 }
@@ -8054,7 +8055,7 @@ page {
 /* ========== 首次启动引导 ========== */
 .guide-overlay {
   position: fixed;
-  inset: 0;
+  top: 0; left: 0; right: 0; bottom: 0;
   z-index: 9999;
   background: linear-gradient(160deg, #FAF7F2 0%, #F5F0E8 40%, #EDE8DF 100%);
   display: flex;
@@ -8410,7 +8411,7 @@ page {
 /* ========== AI 对话窗口 ========== */
 .ai-chat-overlay {
   position: fixed;
-  inset: 0;
+  top: 0; left: 0; right: 0; bottom: 0;
   z-index: 8000;
   background: rgba(0,0,0,0.4);
   display: flex;
