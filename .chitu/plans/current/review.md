@@ -1,30 +1,23 @@
-# Self-Review: utils/api.js 接口文档导出项修复
+# Self-Review: 移除 Tab 中心按钮未实现事件绑定
 
 ## 修改文件
 
-| 文件 | 修复项 |
-|------|--------|
-| `.chitu/interfaces/utils-api.js.json` | 两个导出项去除注释前缀 |
+| 文件 | 修改 |
+|------|------|
+| `pages/mingxi/mingxi.wxml` | 从 `.tab-bar-center-btn` 移除 `bindlongpress="onAiChatOpen"` 和 `bindtouchend="onAiRecordEnd"`，保留 `bindtap="switchTab"` |
 
 ## 逐项审查
 
-### utils-api.js.json — exports 数组（行 35-36）
-- ✅ `"// 凭证上传\n  uploadVoucher"` → `"uploadVoucher"` — 与源码 `module.exports` 第 491 行一致
-- ✅ `"// 新增：云端同步\n  syncFromCloud"` → `"syncFromCloud"` — 与源码 `module.exports` 第 494 行一致
-- ✅ 其他 33 个导出项未改动，与源码 module.exports 完全匹配
-- ✅ `"joinCompany"` 已在列表中（源码第 459 行确认导出）
+### mingxi.wxml — 行 1451
+- ✅ 原绑定: `bindtap="switchTab" bindlongpress="onAiChatOpen" bindtouchend="onAiRecordEnd"`
+- ✅ 修改后: `bindtap="switchTab"` — 点击跳转记账 Tab 不再触发不存在的方法
+- ✅ `switchTab` 方法在 mingxi.js:859 已实现，功能完整
+- ✅ CSS（mingxi.wxss）无需改动 — 布局重构是合理的，只是事件绑定不完整
 
-## 源码对照
-```js
-// utils/api.js line 447-495
-module.exports = {
-  // ... 31 个函数 ...
-  // 凭证上传
-  uploadVoucher,    // → 接口文档应为 "uploadVoucher"
-  // 新增：云端同步
-  syncFromCloud,    // → 接口文档应为 "syncFromCloud"
-}
-```
+## 边界检查
+- ✅ 无其他文件引用 `onAiChatOpen` 或 `onAiRecordEnd`（已全文搜索确认）
+- ✅ 其他 tab-item 的 `bindtap="switchTab"` 未改动
+- ✅ 中心按钮图片、文字标签、z-index 布局均不受影响
 
 ## 结论
-两处修复与源码一致。自动扫描器曾将代码注释作为导出名的一部分捕获，现已纠正。无其他 malformed 条目。
+单行改动，零风险。事件绑定移除后按钮行为降级为纯 Tab 切换，与其余 4 个 Tab 一致。

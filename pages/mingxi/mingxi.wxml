@@ -1448,12 +1448,14 @@
   </view>
 
   <view class="tab-bar-wrapper">
-    <view class="tab-bar-center-bg"></view>
+    <view class="tab-bar-center-btn" data-index="2" bindtap="switchTab">
+      <image class="tab-icon-center-img" src="{{tabs[2].icon}}" mode="aspectFit"/>
+    </view>
+    <text class="tab-center-label">{{tabs[2].text}}</text>
     <view class="tab-bar">
-      <view class="tab-item {{index === 2 ? 'tab-item-center' : ''}}" wx:for="{{tabs}}" wx:key="index" data-index="{{index}}" bindtap="switchTab" bindlongpress="{{index === 2 ? 'onAiChatOpen' : ''}}" bindtouchend="{{index === 2 ? 'onAiRecordEnd' : ''}}">
+      <view class="tab-item" wx:for="{{tabs}}" wx:key="index" data-index="{{index}}" bindtap="switchTab">
         <view wx:if="{{index !== 2}}" class="tab-icon"><image class="tab-icon-img" src="{{item.icon}}" mode="aspectFit"/></view>
-        <view wx:if="{{index === 2}}" class="tab-icon-center-wrap"><image class="tab-icon-center-img" src="{{item.icon}}" mode="aspectFit"/></view>
-        <text class="tab-label {{index === currentTab && !showOverview ? 'tab-label-active' : ''}}">{{item.text}}</text>
+        <text wx:if="{{index !== 2}}" class="tab-label {{index === currentTab && !showOverview ? 'tab-label-active' : ''}}">{{item.text}}</text>
       </view>
     </view>
   </view>
