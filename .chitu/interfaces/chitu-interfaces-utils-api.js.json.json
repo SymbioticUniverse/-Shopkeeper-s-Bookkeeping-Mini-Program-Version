@@ -2,6 +2,6 @@
   "file": ".chitu/interfaces/utils-api.js.json",
   "exports": [],
   "imports": [],
-  "capability": "接口文档与源码一致：app.js 和 mingxi.js 的 imports 均已修正为 [\"utils/api\"]，utils/api.js 的 exports 中 syncFromCloud 格式已清理，接口图准确反映依赖关系",
-  "updatedAt": "2026-06-18T13:42:58.427Z"
+  "capability": "接口文档 utils/api.js 的导出项 uploadVoucher 和 syncFromCloud 格式已修正（去除误捕获的注释前缀），导出列表与源码 module.exports 完全一致",
+  "updatedAt": "2026-06-20T14:20:38.602Z"
 }

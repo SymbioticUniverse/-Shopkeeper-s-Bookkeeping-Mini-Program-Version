@@ -1,34 +1,30 @@
-# Self-Review: notify.js / feedback.js 文本长度校验
+# Self-Review: utils/api.js 接口文档导出项修复
 
 ## 修改文件
 
 | 文件 | 修复项 |
 |------|--------|
-| `backend/src/routes/notify.js` | POST 接口新增 `item.text` ≤2000 字符校验 |
-| `backend/src/routes/feedback.js` | POST 接口新增 `item.text` ≤2000 字符校验 |
+| `.chitu/interfaces/utils-api.js.json` | 两个导出项去除注释前缀 |
 
 ## 逐项审查
 
-### notify.js — 文本长度校验（行 41-46）
-- ✅ 校验位于事务之前，防止部分状态
-- ✅ `item.text &&` 安全处理 null/undefined/''（空文本合法通过）
-- ✅ `item.text.length > 2000` 与 items.js 的 note 校验一致
-- ✅ 返回 400 + 中文错误消息"通知内容不能超过 2000 个字符"
-- ✅ 仅校验 POST（保存列表），不校验 GET/DELETE（无文本输入）
-- ⚠️ 系统通知（source='system'）由后端生成，不经过此接口，不受影响
+### utils-api.js.json — exports 数组（行 35-36）
+- ✅ `"// 凭证上传\n  uploadVoucher"` → `"uploadVoucher"` — 与源码 `module.exports` 第 491 行一致
+- ✅ `"// 新增：云端同步\n  syncFromCloud"` → `"syncFromCloud"` — 与源码 `module.exports` 第 494 行一致
+- ✅ 其他 33 个导出项未改动，与源码 module.exports 完全匹配
+- ✅ `"joinCompany"` 已在列表中（源码第 459 行确认导出）
 
-### feedback.js — 文本长度校验（行 31-36）
-- ✅ 校验位于事务之前
-- ✅ 与 notify.js 完全相同的校验逻辑
-- ✅ 返回 "反馈内容不能超过 2000 个字符"
-
-## 边界情况覆盖
-- `item.text = null` → `null &&` 短路 → 通过 ✅
-- `item.text = undefined` → `undefined &&` 短路 → 通过 ✅
-- `item.text = ''` → 空字符串 falsy，短路 → 通过 ✅
-- `item.text = 2000 中文字符` → `2000 > 2000` false → 通过 ✅
-- `item.text = 2001 字符` → `>2000` true → 拒绝 400 ✅
-- `item` 不含 `text` 字段 → `undefined` → 通过 ✅
+## 源码对照
+```js
+// utils/api.js line 447-495
+module.exports = {
+  // ... 31 个函数 ...
+  // 凭证上传
+  uploadVoucher,    // → 接口文档应为 "uploadVoucher"
+  // 新增：云端同步
+  syncFromCloud,    // → 接口文档应为 "syncFromCloud"
+}
+```
 
 ## 结论
-两处修改逻辑正确，与 items.js 的 note 校验模式一致。无新增安全漏洞。边界情况已覆盖。
+两处修复与源码一致。自动扫描器曾将代码注释作为导出名的一部分捕获，现已纠正。无其他 malformed 条目。
