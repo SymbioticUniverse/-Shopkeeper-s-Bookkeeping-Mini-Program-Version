@@ -1448,7 +1448,7 @@
   </view>
 
   <view class="tab-bar-wrapper">
-    <view class="tab-bar-center-btn" data-index="2" bindtap="switchTab">
+    <view class="tab-bar-center-btn" data-index="{{2}}" bindtap="switchTab" bindlongpress="onAiChatOpen" bindtouchend="onAiRecordEnd">
       <image class="tab-icon-center-img" src="{{tabs[2].icon}}" mode="aspectFit"/>
     </view>
     <text class="tab-center-label">{{tabs[2].text}}</text>
