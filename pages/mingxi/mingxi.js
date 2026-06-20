@@ -350,7 +350,7 @@ Page({
           { label: '公司总负债', value: '0.00', color: 'red' },
           { label: '公司净资产', value: '0.00', color: 'green' },
           { label: '可支配资产', value: '0.00', color: 'green' },
-          { labels: ['应收', '应出', '未结算'], values: ['0.00', '0.00', '0.00'], colors: ['green', 'red', 'red'], threeCol: true },
+          { labels: ['应收', '应付'], values: ['0.00', '0.00'], colors: ['green', 'red'], threeCol: true },
         ],
       },
       // === 明细页卡片（个人/公司分开） ===
@@ -745,13 +745,12 @@ Page({
     const cIncome = sum(companyItems, it => it.type === 'in')
     const cExpense = sum(companyItems, it => it.type === 'out')
     const cNet = cIncome - cExpense
-    const cReceivable = sum(companyItems, it => it.typeLabel === '垫付')
-    const cPayable = sum(companyItems, it => it.typeLabel === '应付')
-    const cUnsettled = cReceivable + cPayable
+    const cReceivable = sum(companyItems, it => it.typeLabel === '垫付' && it.settleStatus !== 'settled')
+    const cPayable = sum(companyItems, it => it.typeLabel === '应付' && it.settleStatus !== 'settled')
     const cDisposable = cNet
 
-    const pSettle = personalItems.filter(it => it.typeLabel === '垫付' || it.typeLabel === '应付')
-    const cSettle = companyItems.filter(it => it.typeLabel === '垫付' || it.typeLabel === '应付')
+    const pSettle = personalItems.filter(it => (it.typeLabel === '垫付' || it.typeLabel === '应付') && it.settleStatus !== 'settled')
+    const cSettle = companyItems.filter(it => (it.typeLabel === '垫付' || it.typeLabel === '应付') && it.settleStatus !== 'settled')
 
     const now = new Date()
     const monthPrefix = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0')
@@ -775,7 +774,7 @@ Page({
           { label: '公司总负债', value: fmt(cExpense), color: 'red' },
           { label: '公司净资产', value: fmt(cNet), color: cNet >= 0 ? 'green' : 'red' },
           { label: '可支配资产', value: fmt(cDisposable), color: cDisposable >= 0 ? 'green' : 'red' },
-          { labels: ['应收', '应出', '未结算'], values: [fmt(cReceivable), fmt(cPayable), fmt(cUnsettled)], colors: ['green', 'red', 'red'], threeCol: true },
+          { labels: ['应收', '应付'], values: [fmt(cReceivable), fmt(cPayable)], colors: ['green', 'red'], threeCol: true },
         ]}
       }
       if (card.type === 'jieqing_personal') {
