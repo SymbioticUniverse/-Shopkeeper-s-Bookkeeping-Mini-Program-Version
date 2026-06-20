@@ -17,6 +17,10 @@
       "from": "fs"
     },
     {
+      "symbol": "crypto",
+      "from": "crypto"
+    },
+    {
       "symbol": "db",
       "from": "../db"
     },
@@ -25,6 +29,6 @@
       "from": "../middleware/auth"
     }
   ],
-  "capability": "后端安全加固：amount NaN/负数校验拒绝入库（POST/PUT/linked）、note ≤2000字符限制、linkedId=0 拒绝、DELETE 级联去重防重复删除、migrate || 修复 0 值丢失、notifyId 改用 crypto.randomInt 防碰撞",
-  "updatedAt": "2026-06-20T14:18:18.760Z"
+  "capability": "用户可通过 API 预览结清差额（GET /items/settle/preview）并执行结清操作（POST /items/settle/execute），系统自动生成双向平账流水记录（settleType: 'single'/'all'），通知模块支持结清相关字段；所有 CRUD 接口均已升级支持 settleStatus/settleTargetId/settleAmount/settleCurrency/settleNote/settleType/settleExecutedAt 字段的读写与防删保护。",
+  "updatedAt": "2026-06-20T14:49:55.774Z"
 }

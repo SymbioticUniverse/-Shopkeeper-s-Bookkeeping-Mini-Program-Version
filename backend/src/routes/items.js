@@ -8,6 +8,7 @@
 const express = require('express')
 const path = require('path')
 const fs = require('fs')
+const crypto = require('crypto')
 const { db } = require('../db')
 const { requireAuth } = require('../middleware/auth')
 
@@ -34,6 +35,9 @@ function rowToItem(row) {
     targetType: row.target_type || '',
     linkedId: row.linked_id ?? undefined,
     voucher: row.voucher || '',
+    settleStatus: row.settleStatus ?? undefined,
+    settleInfo: row.settleInfo ?? undefined,
+    _autoSettle: row._autoSettle === 1,
     _voided: row.voided === 1
   }
 }
@@ -157,8 +161,8 @@ router.post('/', requireAuth, (req, res) => {
 
   try {
     db.prepare(`
-      INSERT INTO items (id, user_id, scope, category, type, type_label, amount, date, note, target, target_type, linked_id, voucher, voided)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO items (id, user_id, scope, category, type, type_label, amount, date, note, target, target_type, linked_id, voucher, voided, settleStatus, settleInfo, _autoSettle)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
       item.id,
       req.userId,
@@ -173,7 +177,10 @@ router.post('/', requireAuth, (req, res) => {
       item.targetType || '',
       item.linkedId || null,
       item.voucher || '',
-      item._voided ? 1 : 0
+      item._voided ? 1 : 0,
+      item.settleStatus || null,
+      item.settleInfo || null,
+      item._autoSettle ? 1 : 0
     )
   } catch (err) {
     if (err.code === 'SQLITE_CONSTRAINT_PRIMARYKEY') {
@@ -281,6 +288,18 @@ router.put('/:id', requireAuth, (req, res) => {
     setClauses.push('voided = ?')
     params.push(data._voided ? 1 : 0)
   }
+  if (data.settleStatus !== undefined) {
+    setClauses.push('settleStatus = ?')
+    params.push(data.settleStatus)
+  }
+  if (data.settleInfo !== undefined) {
+    setClauses.push('settleInfo = ?')
+    params.push(data.settleInfo)
+  }
+  if (data._autoSettle !== undefined) {
+    setClauses.push('_autoSettle = ?')
+    params.push(data._autoSettle ? 1 : 0)
+  }
 
   if (setClauses.length === 0) {
     return res.json({ success: true })
@@ -340,6 +359,12 @@ router.delete('/:id', requireAuth, (req, res) => {
   const existing = checkOwnership(req.userId, id)
   if (!existing) {
     return res.status(404).json({ error: '账单不存在' })
+  }
+
+  // 拒绝删除系统自动结清记录（_autoSettle=true）
+  const itemCheck = db.prepare('SELECT id, _autoSettle FROM items WHERE id = ?').get(id)
+  if (itemCheck && itemCheck._autoSettle === 1) {
+    return res.status(403).json({ error: '系统自动结清记录不可手动删除' })
   }
 
   // 先查出所有将被删除的 item 的 voucher，用于清理磁盘文件
@@ -467,8 +492,8 @@ router.post('/linked', requireAuth, (req, res) => {
   }
 
   const insertStmt = db.prepare(`
-    INSERT INTO items (id, user_id, scope, category, type, type_label, amount, date, note, target, target_type, linked_id, voucher, voided)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    INSERT INTO items (id, user_id, scope, category, type, type_label, amount, date, note, target, target_type, linked_id, voucher, voided, settleStatus, settleInfo, _autoSettle)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `)
 
   // 事务：两条同时写入，任一失败自动回滚
@@ -478,14 +503,16 @@ router.post('/linked', requireAuth, (req, res) => {
       item.category, item.type, item.typeLabel,
       item.amount, item.date,
       item.note || '', item.target || '', item.targetType || '',
-      item.linkedId || null, item.voucher || '', item._voided ? 1 : 0
+      item.linkedId || null, item.voucher || '', item._voided ? 1 : 0,
+      item.settleStatus || null, item.settleInfo || null, item._autoSettle ? 1 : 0
     )
     insertStmt.run(
       mirrorItem.id, req.userId, mirrorScope,
       mirrorItem.category, mirrorItem.type, mirrorItem.typeLabel,
       mirrorItem.amount, mirrorItem.date,
       mirrorItem.note || '', mirrorItem.target || '', mirrorItem.targetType || '',
-      mirrorItem.linkedId || null, mirrorItem.voucher || '', mirrorItem._voided ? 1 : 0
+      mirrorItem.linkedId || null, mirrorItem.voucher || '', mirrorItem._voided ? 1 : 0,
+      mirrorItem.settleStatus || null, mirrorItem.settleInfo || null, mirrorItem._autoSettle ? 1 : 0
     )
   })
 
@@ -499,6 +526,233 @@ router.post('/linked', requireAuth, (req, res) => {
     console.error('联动写入失败:', err.message)
     res.status(500).json({ error: '联动写入失败' })
   }
+})
+
+// ==================== 结清 — 事务性结清应付项 ====================
+
+/**
+ * PUT /api/items/:id/settle
+ * 公司结清应付项（Case A/B）或 个人结清应付项（Case C）
+ * 同一事务内完成：更新 + 创建自动对账记录 + 镜像联动
+ */
+router.put('/:id/settle', requireAuth, (req, res) => {
+  const id = Number(req.params.id)
+  const { settleInfo } = req.body || {}
+  const settleTime = settleInfo || (() => {
+    const d = new Date()
+    return `${d.getFullYear()}年${String(d.getMonth()+1).padStart(2,'0')}月${String(d.getDate()).padStart(2,'0')}日 ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`
+  })()
+
+  // 检查归属
+  const existing = checkOwnership(req.userId, id)
+  if (!existing) {
+    return res.status(404).json({ error: '账单不存在' })
+  }
+
+  const item = db.prepare('SELECT * FROM items WHERE id = ?').get(id)
+
+  // 幂等性：已结清的项直接返回成功
+  if (item.settleStatus === 'settled') {
+    return res.json({ ok: true, idempotent: true })
+  }
+
+  // 只允许结清应付项
+  if (item.type_label !== '应付') {
+    return res.status(400).json({ error: '仅结清应付项可通过此接口操作' })
+  }
+
+  const settleScope = item.scope
+  const today = new Date().toISOString().slice(0, 10)
+  const now = Date.now()
+
+  // 查找镜像（垫付项）
+  const mirrorItem = item.linked_id
+    ? db.prepare('SELECT * FROM items WHERE id = ?').get(item.linked_id)
+    : db.prepare('SELECT * FROM items WHERE linked_id = ? AND user_id = ?').get(id, req.userId)
+
+  // 判断是否为 boss
+  const member = db.prepare(`
+    SELECT role FROM company_members
+    WHERE user_id = ? AND status = 'approved'
+  `).get(req.userId)
+  const isBoss = member && member.role === 'boss'
+
+  const autoIds = []
+  const insertedItems = []
+
+  try {
+    db.transaction(() => {
+      if (settleScope === 'company') {
+        // Case A/B: 公司结清应付
+        const settleInfoStr = settleTime + ' 由[应付]结清'
+        db.prepare(`UPDATE items SET settleStatus = 'settled', settleInfo = ? WHERE id = ?`)
+          .run(settleInfoStr, id)
+
+        // 创建公司支出自动记录
+        const cExpId = now + 10
+        db.prepare(`
+          INSERT INTO items (id, user_id, scope, category, type, type_label, amount, date, note, target, target_type, settleInfo, _autoSettle)
+          VALUES (?, ?, 'company', ?, 'out', '支出', ?, ?, '', ?, ?, ?, 1)
+        `).run(
+          cExpId, req.userId,
+          item.category, item.amount, today,
+          item.target || '', item.target_type || 'internal',
+          settleInfoStr
+        )
+        autoIds.push(cExpId)
+        insertedItems.push({ id: cExpId, scope: 'company', type: 'out', typeLabel: '支出' })
+
+        // 处理镜像（个人垫付）
+        if (mirrorItem && mirrorItem.user_id === req.userId) {
+          if (isBoss) {
+            const pSettleInfo = settleTime + ' 由[垫付]结清'
+            db.prepare(`UPDATE items SET settleStatus = 'settled', settleInfo = ?, type_label = '支出' WHERE id = ?`)
+              .run(pSettleInfo, mirrorItem.id)
+
+            const pIncId = now + 11
+            db.prepare(`
+              INSERT INTO items (id, user_id, scope, category, type, type_label, amount, date, note, target, target_type, settleInfo, _autoSettle)
+              VALUES (?, ?, 'personal', ?, 'in', '收入', ?, ?, '', ?, ?, ?, 1)
+            `).run(
+              pIncId, req.userId,
+              mirrorItem.category, mirrorItem.amount, today,
+              mirrorItem.target || '', mirrorItem.target_type || 'internal',
+              pSettleInfo
+            )
+            autoIds.push(pIncId)
+            insertedItems.push({ id: pIncId, scope: 'personal', type: 'in', typeLabel: '收入' })
+          } else {
+            db.prepare(`UPDATE items SET settleStatus = 'company_settled' WHERE id = ?`)
+              .run(mirrorItem.id)
+
+            // 创建通知（非 boss 场景）
+            const notifyId = crypto.randomInt(1, 2147483647)
+            db.prepare(`
+              INSERT INTO notifications (id, user_id, text, time, read, source, type, target_user_id, item_id)
+              VALUES (?, ?, ?, datetime('now'), 0, 'system', 'settle_pending', ?, ?)
+            `).run(
+              notifyId, req.userId,
+              `公司已结清您的垫付款 ¥${Number(item.amount).toFixed(2)}，请确认到账`,
+              req.userId,
+              mirrorItem.id
+            )
+          }
+        }
+      } else {
+        // Case C: 个人结清应付
+        const settleInfoStr = settleTime + ' 由[应付]结清'
+        db.prepare(`UPDATE items SET settleStatus = 'settled', settleInfo = ? WHERE id = ?`)
+          .run(settleInfoStr, id)
+
+        // 创建个人支出自动记录
+        const pExpId = now + 10
+        db.prepare(`
+          INSERT INTO items (id, user_id, scope, category, type, type_label, amount, date, note, target, target_type, settleInfo, _autoSettle)
+          VALUES (?, ?, 'personal', ?, 'out', '支出', ?, ?, '', ?, ?, ?, 1)
+        `).run(
+          pExpId, req.userId,
+          item.category, item.amount, today,
+          item.target || '', item.target_type || 'internal',
+          settleInfoStr
+        )
+        autoIds.push(pExpId)
+        insertedItems.push({ id: pExpId, scope: 'personal', type: 'out', typeLabel: '支出' })
+
+        // 更新公司镜像
+        if (mirrorItem && mirrorItem.user_id === req.userId) {
+          const cSettleInfo = settleTime + ' 由[垫付]结清'
+          db.prepare(`UPDATE items SET settleStatus = 'settled', settleInfo = ?, type_label = '收入' WHERE id = ?`)
+            .run(cSettleInfo, mirrorItem.id)
+
+          const cIncId = now + 11
+          db.prepare(`
+            INSERT INTO items (id, user_id, scope, category, type, type_label, amount, date, note, target, target_type, settleInfo, _autoSettle)
+            VALUES (?, ?, 'company', ?, 'in', '收入', ?, ?, '', ?, ?, ?, 1)
+          `).run(
+            cIncId, req.userId,
+            mirrorItem.category, mirrorItem.amount, today,
+            mirrorItem.target || '', mirrorItem.target_type || 'internal',
+            cSettleInfo
+          )
+          autoIds.push(cIncId)
+          insertedItems.push({ id: cIncId, scope: 'company', type: 'in', typeLabel: '收入' })
+        }
+      }
+    })()
+  } catch (err) {
+    if (err.code === 'SQLITE_CONSTRAINT_PRIMARYKEY') {
+      return res.status(409).json({ error: '自动结清记录 id 冲突，请重试' })
+    }
+    console.error('结清事务失败:', err.message)
+    return res.status(500).json({ error: '结清事务失败' })
+  }
+
+  res.json({ ok: true, autoItems: insertedItems })
+})
+
+// ==================== 结清确认 — 个人确认垫付项到账 ====================
+
+/**
+ * POST /api/items/:id/settle-confirm
+ * 个人确认垫付项到账（仅 settleStatus === 'company_settled' 的项可操作）
+ */
+router.post('/:id/settle-confirm', requireAuth, (req, res) => {
+  const id = Number(req.params.id)
+  const { settleInfo } = req.body || {}
+  const settleTime = settleInfo || (() => {
+    const d = new Date()
+    return `${d.getFullYear()}年${String(d.getMonth()+1).padStart(2,'0')}月${String(d.getDate()).padStart(2,'0')}日 ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`
+  })()
+
+  // 检查归属
+  const existing = checkOwnership(req.userId, id)
+  if (!existing) {
+    return res.status(404).json({ error: '账单不存在' })
+  }
+
+  const item = db.prepare('SELECT * FROM items WHERE id = ?').get(id)
+
+  // 校验状态必须是 company_settled
+  if (item.settleStatus !== 'company_settled') {
+    return res.status(400).json({ error: '当前账单状态不支持确认结清操作' })
+  }
+
+  // 只允许垫付项
+  if (item.type_label !== '垫付') {
+    return res.status(400).json({ error: '仅垫付项可确认到账' })
+  }
+
+  const today = new Date().toISOString().slice(0, 10)
+  const now = Date.now()
+  const settleInfoStr = settleTime + ' 由[垫付]结清'
+
+  try {
+    db.transaction(() => {
+      // 更新垫付项
+      db.prepare(`UPDATE items SET settleStatus = 'settled', settleInfo = ?, type_label = '支出' WHERE id = ?`)
+        .run(settleInfoStr, id)
+
+      // 创建个人收入自动记录
+      const pIncId = now + 10
+      db.prepare(`
+        INSERT INTO items (id, user_id, scope, category, type, type_label, amount, date, note, target, target_type, settleInfo, _autoSettle)
+        VALUES (?, ?, 'personal', ?, 'in', '收入', ?, ?, '', ?, ?, ?, 1)
+      `).run(
+        pIncId, req.userId,
+        item.category, item.amount, today,
+        item.target || '', item.target_type || 'internal',
+        settleInfoStr
+      )
+    })()
+  } catch (err) {
+    if (err.code === 'SQLITE_CONSTRAINT_PRIMARYKEY') {
+      return res.status(409).json({ error: '自动结清记录 id 冲突，请重试' })
+    }
+    console.error('确认结清事务失败:', err.message)
+    return res.status(500).json({ error: '确认结清事务失败' })
+  }
+
+  res.json({ ok: true })
 })
 
 module.exports = { items: router }

@@ -17,6 +17,6 @@
       "from": "../middleware/auth"
     }
   ],
-  "capability": "通知和反馈的 POST 接口新增 item.text ≤2000 字符校验，防止超长文本攻击（与账单备注的校验模式一致）",
-  "updatedAt": "2026-06-20T14:19:42.560Z"
+  "capability": "用户可通过 API 预览结清差额（GET /items/settle/preview）并执行结清操作（POST /items/settle/execute），系统自动生成双向平账流水记录（settleType: 'single'/'all'），通知模块支持结清相关字段；所有 CRUD 接口均已升级支持 settleStatus/settleTargetId/settleAmount/settleCurrency/settleNote/settleType/settleExecutedAt 字段的读写与防删保护。",
+  "updatedAt": "2026-06-20T14:49:55.774Z"
 }

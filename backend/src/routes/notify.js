@@ -15,7 +15,7 @@ const router = express.Router()
 
 router.get('/', requireAuth, (req, res) => {
   const rows = db.prepare(`
-    SELECT id, text, time, read, source
+    SELECT id, text, time, read, source, type, target_user_id, item_id
     FROM notifications
     WHERE user_id = ?
     ORDER BY id DESC
@@ -26,7 +26,10 @@ router.get('/', requireAuth, (req, res) => {
     text: r.text,
     time: r.time,
     read: r.read === 1,
-    source: r.source
+    source: r.source,
+    type: r.type || '',
+    targetUserId: r.target_user_id || null,
+    itemId: r.item_id || null
   })))
 })
 
@@ -46,8 +49,8 @@ router.post('/', requireAuth, (req, res) => {
   }
 
   const insertStmt = db.prepare(`
-    INSERT OR IGNORE INTO notifications (id, user_id, text, time, read, source)
-    VALUES (?, ?, ?, ?, ?, 'user')
+    INSERT OR IGNORE INTO notifications (id, user_id, text, time, read, source, type, target_user_id, item_id)
+    VALUES (?, ?, ?, ?, ?, 'user', ?, ?, ?)
   `)
 
   db.transaction(() => {
@@ -60,7 +63,10 @@ router.post('/', requireAuth, (req, res) => {
         req.userId,
         item.text,
         item.time,
-        item.read ? 1 : 0
+        item.read ? 1 : 0,
+        item.type || '',
+        item.targetUserId || null,
+        item.itemId || null
       )
     }
   })()
