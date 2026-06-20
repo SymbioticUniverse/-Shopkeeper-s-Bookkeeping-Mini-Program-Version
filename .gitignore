@@ -1,1 +1,5 @@
 .horsewhip/
+backend/data/
+backend/node_modules/
+.chitu/
+node_modules/
