@@ -3804,6 +3804,7 @@ Page({
     })
     setTimeout(() => {
       const reply = this._mockAiReply(text)
+      this._saveAiRecord(reply)
       const updated = this.data.aiMessages.slice()
       updated.push(reply)
       this.setData({
@@ -3821,34 +3822,22 @@ Page({
   onAiBillTap(e) {
     const idx = e.currentTarget.dataset.idx
     const msg = this.data.aiMessages[idx]
-    if (!msg || !msg.card || msg.card.saved) return
-    const c = msg.card
-    const scope = this.data.bookScope || 'personal'
-    const newItem = {
-      id: Date.now(),
-      category: c.category,
-      type: c.type,
-      typeLabel: c.typeLabel,
-      scope: scope,
-      amount: c.amount,
-      date: c.date,
-      note: c.note || '',
-      target: '',
-      targetType: 'external',
+    if (!msg || !msg.card) return
+    var scope = this.data.bookScope || 'personal'
+    var items = api.getItems(scope)
+    var found = null
+    if (msg.card.itemId) {
+      for (var i = 0; i < items.length; i++) {
+        if (items[i].id === msg.card.itemId) { found = items[i]; break }
+      }
     }
-    api.addItem(scope, newItem)
-    const msgs = this.data.aiMessages.slice()
-    msgs[idx].card.saved = true
     this.setData({
-      aiMessages: msgs,
       showAiChat: false,
       currentTab: 0,
       showOverview: false,
-      detailItems: api.getItems(scope),
-      modalItem: newItem,
+      detailItems: items,
+      modalItem: found,
     })
-    this._calcOverviewData()
-    wx.showToast({ title: '已添加到明细', icon: 'success' })
   },
 
   onAiInput(e) {
@@ -3872,6 +3861,7 @@ Page({
 
     setTimeout(() => {
       const reply = this._mockAiReply(text)
+      this._saveAiRecord(reply)
       const updated = this.data.aiMessages.slice()
       updated.push(reply)
       this.setData({
@@ -3902,6 +3892,28 @@ Page({
       }
     }
     return { role: 'ai', text: '收到！AI 记账功能正在开发中，敬请期待\n\n目前你可以用格式 "描述 金额" 来快速记一笔。', time: time }
+  },
+
+  _saveAiRecord(reply) {
+    if (!reply.card) return
+    var c = reply.card
+    var scope = this.data.bookScope || 'personal'
+    var newItem = {
+      id: Date.now(),
+      category: c.category,
+      type: c.type,
+      typeLabel: c.typeLabel,
+      scope: scope,
+      amount: c.amount,
+      date: c.date,
+      note: c.note || '',
+      target: '',
+      targetType: 'external',
+    }
+    api.addItem(scope, newItem)
+    reply.card.itemId = newItem.id
+    this.setData({ detailItems: api.getItems(scope) })
+    this._calcOverviewData()
   },
 
   _formatChatTime(d) {
