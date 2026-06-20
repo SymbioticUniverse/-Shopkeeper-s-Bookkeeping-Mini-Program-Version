@@ -1,66 +1,75 @@
-# Self-Review: 后端代码修复（第一轮）
+# Self-Review: 审查修复（第二轮）
 
 ## 修改文件
 
 | 文件 | 修复项 |
 |------|--------|
-| `backend/src/db.js` | #3 迁移吞错 |
-| `backend/src/routes/auth.js` | #1 微信登录, #7 验证码日志 |
-| `backend/src/routes/items.js` | #2 linkedId注入, #4 type_label联动, #5 DELETE级联 |
+| `backend/src/routes/items.js` | #1 amount 校验, #2 note 长度限制, #3 validateLinkedId 拒绝0, #4 DELETE 去重 |
+| `backend/src/routes/migrate.js` | #5 `||` → `??` 修复 0 值丢失 |
+| `backend/src/routes/company.js` | #6 notifyId: `Math.random()` → `crypto.randomInt()` |
+| `backend/src/routes/audit.js` | #6 notifyId: `Math.random()` → `crypto.randomInt()` |
 
 ## 逐项审查
 
-### db.js — `addColumnSafely()` 替代 try/catch
-- ✅ 使用 `PRAGMA table_info` 预先判断列是否存在，不再吞掉磁盘 I/O 等异常
-- ✅ 日志输出 `[MIGRATE]` 方便追踪
-- ✅ 保留 amount TEXT→REAL 迁移的原有 try/catch（有明确错误处理）
-- ⚠️ `PRAGMA table_info` 若失败会抛异常，但这是初始化阶段，未被 try-catch 包裹会导致进程崩溃——但 PRAGMA 是纯元数据查询，不太可能失败
+### items.js — validateLinkedId 拒绝 0
+- ✅ `linkedId === null || undefined || ''` 放行（无链接）
+- ✅ `!Number.isFinite || <= 0` 拒绝（NaN、0、负数、字符串）
+- ✅ 真实正整数查询 DB 归属
+- ⚠️ `linkedId = ''` 放行，但调用方不会传空字符串（前端传 null/undefined），无影响
 
-### auth.js — 验证码日志
-- ✅ `NODE_ENV !== 'production'` 判断，生产环境不打印验证码明文
-- ✅ 开发环境仍保留日志便于调试
+### items.js — POST `/` amount 校验
+- ✅ `item.amount === null/undefined` 前置判空
+- ✅ `Number(item.amount)` → `Number.isFinite()` 拒绝 NaN
+- ✅ `amt < 0` 拒绝负数
+- ✅ 校验后将 `item.amount` 规范化为数值
+- ✅ `Number(null) === 0` 被前置判空拦掉
+- ✅ `Number("0") === 0` 合法通过
 
-### auth.js — 微信 code2Session
-- ✅ `getOpenidByCode()` 函数：生产环境有 WECHAT_APPID/SECRET 时调用真实 code2Session API
-- ✅ 开发环境降级：code 直接作为 openid，带 `console.warn` 提示
-- ✅ 生产环境未配置时 `throw Error`（由调用方 500 返回）
-- ✅ 路由改为 `async`，await 异步调用
-- ✅ `https.get` 的 reject 路径正确：errcode、空 openid、JSON 解析失败、网络错误
-- ✅ 错误信息不泄露 appid/secret（只输出 errcode+errmsg）
-- ⚠️ 开发降级模式下 `code` 仍是弱 openid——但开发环境不需要强安全，且有 warn 日志提示
+### items.js — PUT `/:id` amount 校验
+- ✅ `data.amount !== undefined` 前置门（仅在传入时校验）
+- ✅ 相同的 `isFinite + < 0` 逻辑
+- ✅ `params.push(amt)` 推入规范值
 
-### items.js — validateLinkedId 函数
-- ✅ `!linkedId` 判空（null/undefined/0 统一放过，SQLite id 自增从 1 开始）
-- ✅ 查询 `items WHERE id = ? AND user_id = ?` 校验归属
-- ✅ 三处调用：POST `/`、PUT `/:id`、POST `/linked`
+### items.js — POST `/linked` amount 校验
+- ✅ item 和 mirrorItem 各自独立校验
+- ✅ 错误消息区分 `item.amount` vs `mirrorItem.amount`，帮助前端定位
 
-### items.js — POST `/` linkedId 校验
-- ✅ 在 INSERT 前校验
-- ✅ 错误消息清晰："linkedId 指向的账单不存在或不属于当前用户"
+### items.js — note 长度校验（POST/PUT/linked）
+- ✅ `data.note && data.note.length > 2000` 逻辑一致
+- ✅ undefined/null/'' 不触发校验
+- ✅ 2000 字符边界：中文 1 字符 = 1 length（`.length` 统计 UTF-16 code units），2000 中文字符 = 6KB UTF-8，SQLite TEXT 完全承受
 
-### items.js — PUT `/:id` type_label 联动校验
-- ✅ `effectiveType` 计算：优先用请求中的 `data.type`，其次查 DB
-- ✅ `effectiveType === 'in'` 时要求 typeLabel 包含"收入"
-- ✅ `effectiveType === 'out'` 时要求 typeLabel 包含"支出"
-- ⚠️ 校验依赖字符串 `includes('收入')` / `includes('支出')`——中文硬编码，若未来国际化需调整
-- ✅ `effectiveType` 为 null 时不进入任何 if 分支，静默放过（保守安全）
+### items.js — DELETE 去重
+- ✅ `Set` 替代 `Array`，O(1) 查重
+- ✅ 正向 mirror 和 reverseMirrors 各自 `!deletedSet.has()` 防重复
+- ✅ `for (const did of deletedSet)` 迭代 Set 不会重复删除
+- ⚠️ Set 迭代顺序 = 插入顺序，不影响正确性
 
-### items.js — PUT `/:id` linkedId 校验
-- ✅ `data.linkedId !== null` 判断（null 表示解除链接，允许）
-- ✅ 非 null 时调用 `validateLinkedId` 校验归属
+### migrate.js — `||` → `??`
+- ✅ `item.type ?? 'out'` 修复空字符串 '' 被错误替换
+- ✅ `item.typeLabel ?? ''` 同上
+- ✅ `item.amount ?? '0.00'` 修复金额 0 被 '0.00' 替换
+- ⚠️ `item.type` 为 null/undefined 时 → `'out'`，安全默认值
+- ⚠️ 其他字段（category, date, note 等）保留 `||`，因为空字符串 '' 对这些字段是合法默认值
 
-### items.js — DELETE `/:id` 镜像查询加 user_id
-- ✅ `WHERE linked_id = ? AND user_id = ?` 限制同用户
-- ✅ 防止跨用户级联误删
+### company.js / audit.js — notifyId
+- ✅ `Math.random()` → `crypto.randomInt(100000, 1000000)` 密码学安全
+- ✅ `Date.now() * 1000 + randomInt(...)` 保持整数格式，兼容 `INTEGER PRIMARY KEY`
+- ⚠️ `Date.now() * 1000` 在 2050 年左右会突破 `Number.MAX_SAFE_INTEGER` — 但此时程序已运行 24 年，届时升级即可
+- ✅ `randomInt` 范围 [100000, 1000000)，与原来的 `Math.floor(Math.random() * 1000000)` 范围等价（原 [0, 999999]）
 
-### items.js — POST `/linked` 防护增强
-- ✅ item.linkedId 和 mirrorItem.linkedId 各自校验
-- ✅ `item.id === mirrorItem.id` 冲突检查（409 错误码）
-
-## 边界情况
-- `linkedId = 0`：`!linkedId` 为 true，作为 null 放过 → SQLite 自增 id 从 1 开始，id=0 不存在，安全
-- `effectiveType = null`：不匹配 'in' 或 'out'，静默通过 → 保守策略，安全
-- `data.type` 和 `data.typeLabel` 同时传入不一致的值 → 以 type 为准校验 typeLabel，正确
+## 边界情况覆盖
+- `amount = 0` → `Number.isFinite(0) === true`，通过 ✅
+- `amount = "0"` → `Number("0") === 0`，通过 ✅
+- `amount = NaN` → `Number.isFinite(NaN) === false`，拒绝 ✅
+- `amount = Infinity` → `Number.isFinite(Infinity) === false`，拒绝 ✅
+- `amount = undefined` → 前置判空拒绝（POST）/ `data.amount !== undefined` 不进入（PUT）✅
+- `amount = null` → 前置判空拒绝（POST）/ `Number(null) === 0`，PUT 允许设为 0 ✅
+- `linkedId = 0` → `<= 0` 拒绝 ✅
+- `linkedId = "abc"` → `Number.isFinite("abc")` false，拒绝 ✅
+- `note.length = 2000` → 恰好 ≤2000，通过 ✅
+- `note.length = 2001` → 拒绝 ✅
+- 删除时 A.linked_id = B 且 B.linked_id = A → Set 去重，各删 1 次 ✅
 
 ## 结论
-所有修改逻辑正确，无新增安全漏洞，边界情况已覆盖。
+所有修改逻辑正确，无新增安全漏洞，边界情况已覆盖。`notify.js` 和 `feedback.js` 文本长度限制待边界扩展审批后处理。

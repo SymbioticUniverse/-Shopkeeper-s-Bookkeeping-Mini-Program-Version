@@ -2,6 +2,7 @@
  * 审核路由 — 老板审核员工加入申请
  */
 const express = require('express')
+const { randomInt } = require('crypto')
 const { db } = require('../db')
 const { requireAuth } = require('../middleware/auth')
 
@@ -106,7 +107,7 @@ router.post('/', requireAuth, (req, res) => {
   const now = new Date().toISOString()
   for (const n of notifications) {
     try {
-      const notifyId = Date.now() * 1000 + Math.floor(Math.random() * 1000000)
+      const notifyId = Date.now() * 1000 + randomInt(100000, 1000000)
       db.prepare(`
         INSERT INTO notifications (id, user_id, text, time, read, source)
         VALUES (?, ?, ?, ?, 0, 'system')

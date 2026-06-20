@@ -2,6 +2,7 @@
  * 公司路由 — 创建 / 加入 / 退出 / 查询公司信息
  */
 const express = require('express')
+const { randomInt } = require('crypto')
 const { db } = require('../db')
 const { requireAuth } = require('../middleware/auth')
 
@@ -107,7 +108,7 @@ router.post('/', requireAuth, (req, res) => {
 
   // 通知写入在事务外，避免 ID 碰撞回滚业务事务
   try {
-    const notifyId = Date.now() * 1000 + Math.floor(Math.random() * 1000000)
+    const notifyId = Date.now() * 1000 + randomInt(100000, 1000000)
     const now = new Date().toISOString()
     db.prepare(`
       INSERT INTO notifications (id, user_id, text, time, read, source)
@@ -159,7 +160,7 @@ router.delete('/', requireAuth, (req, res) => {
     `)
     for (const emp of employees) {
       try {
-        const notifyId = Date.now() * 1000 + Math.floor(Math.random() * 1000000)
+        const notifyId = Date.now() * 1000 + randomInt(100000, 1000000)
         notifyStmt.run(notifyId, emp.user_id, '您所在的公司已被老板解散', now)
       } catch (err) {
         console.error(`[NOTIFY] 解散通知失败 user_id=${emp.user_id}:`, err.message)

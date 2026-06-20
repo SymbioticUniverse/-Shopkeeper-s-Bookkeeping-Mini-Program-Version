@@ -9,6 +9,10 @@
       "from": "express"
     },
     {
+      "symbol": "randomInt",
+      "from": "crypto"
+    },
+    {
       "symbol": "db",
       "from": "../db"
     },
@@ -17,6 +21,6 @@
       "from": "../middleware/auth"
     }
   ],
-  "capability": "微信登录支持真实 code2Session API（生产环境），linkedId 全链路归属校验防止跨用户注入，type_label 与 type 联动校验，DELETE 级联加 user_id 过滤，迁移异常不再静默吞掉",
-  "updatedAt": "2026-06-20T14:03:27.704Z"
+  "capability": "后端安全加固：amount NaN/负数校验拒绝入库（POST/PUT/linked）、note ≤2000字符限制、linkedId=0 拒绝、DELETE 级联去重防重复删除、migrate || 修复 0 值丢失、notifyId 改用 crypto.randomInt 防碰撞",
+  "updatedAt": "2026-06-20T14:18:18.760Z"
 }

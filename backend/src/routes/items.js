@@ -43,9 +43,10 @@ function checkOwnership(userId, id) {
   return db.prepare('SELECT id, scope FROM items WHERE id = ? AND user_id = ?').get(id, userId)
 }
 
-/** 校验 linkedId 合法：存在且属于当前用户 */
+/** 校验 linkedId 合法：存在且属于当前用户。拒绝 0（非合法 id） */
 function validateLinkedId(userId, linkedId) {
-  if (!linkedId) return true  // null/undefined 允许
+  if (linkedId === null || linkedId === undefined || linkedId === '') return true
+  if (!Number.isFinite(linkedId) || linkedId <= 0) return false
   const row = db.prepare('SELECT id FROM items WHERE id = ? AND user_id = ?').get(linkedId, userId)
   return !!row
 }
@@ -137,6 +138,18 @@ router.post('/', requireAuth, (req, res) => {
     item.voucher = valid
   }
 
+  // 校验 amount 类型（拒绝 NaN、非数字、负数）
+  const amt = Number(item.amount)
+  if (item.amount === undefined || item.amount === null || !Number.isFinite(amt) || amt < 0) {
+    return res.status(400).json({ error: 'amount 必须为非负数字' })
+  }
+  item.amount = amt
+
+  // 校验 note 长度（≤2000 字符）
+  if (item.note && item.note.length > 2000) {
+    return res.status(400).json({ error: 'note 不能超过 2000 字符' })
+  }
+
   // 校验 linkedId 归属
   if (item.linkedId && !validateLinkedId(req.userId, item.linkedId)) {
     return res.status(400).json({ error: 'linkedId 指向的账单不存在或不属于当前用户' })
@@ -226,14 +239,21 @@ router.put('/:id', requireAuth, (req, res) => {
     params.push(data.typeLabel)
   }
   if (data.amount !== undefined) {
+    const amt = Number(data.amount)
+    if (!Number.isFinite(amt) || amt < 0) {
+      return res.status(400).json({ error: 'amount 必须为非负数字' })
+    }
     setClauses.push('amount = ?')
-    params.push(data.amount)
+    params.push(amt)
   }
   if (data.date !== undefined) {
     setClauses.push('date = ?')
     params.push(data.date)
   }
   if (data.note !== undefined) {
+    if (data.note && data.note.length > 2000) {
+      return res.status(400).json({ error: 'note 不能超过 2000 字符' })
+    }
     setClauses.push('note = ?')
     params.push(data.note)
   }
@@ -329,7 +349,8 @@ router.delete('/:id', requireAuth, (req, res) => {
     const linkedId = item ? item.linked_id : null
 
     // 收集所有将被删除的 id 及其 voucher
-    const deletedIds = [id]
+    const deletedSet = new Set()
+    deletedSet.add(id)
     const vouchersToClean = []
     if (item && item.voucher) {
       vouchersToClean.push({ id: item.id, voucher: item.voucher })
@@ -338,8 +359,8 @@ router.delete('/:id', requireAuth, (req, res) => {
     // 级联镜像
     if (linkedId) {
       const mirror = db.prepare('SELECT id, voucher FROM items WHERE id = ?').get(linkedId)
-      if (mirror) {
-        deletedIds.push(mirror.id)
+      if (mirror && !deletedSet.has(mirror.id)) {
+        deletedSet.add(mirror.id)
         if (mirror.voucher) {
           vouchersToClean.push({ id: mirror.id, voucher: mirror.voucher })
         }
@@ -348,14 +369,16 @@ router.delete('/:id', requireAuth, (req, res) => {
     // linked_id 指向本记录的镜像（限制同用户，防跨用户级联误删）
     const reverseMirrors = db.prepare('SELECT id, voucher FROM items WHERE linked_id = ? AND user_id = ?').all(id, req.userId)
     for (const m of reverseMirrors) {
-      deletedIds.push(m.id)
-      if (m.voucher) {
-        vouchersToClean.push({ id: m.id, voucher: m.voucher })
+      if (!deletedSet.has(m.id)) {
+        deletedSet.add(m.id)
+        if (m.voucher) {
+          vouchersToClean.push({ id: m.id, voucher: m.voucher })
+        }
       }
     }
 
     // 执行删除
-    for (const did of deletedIds) {
+    for (const did of deletedSet) {
       db.prepare('DELETE FROM items WHERE id = ?').run(did)
     }
 
@@ -408,6 +431,26 @@ router.post('/linked', requireAuth, (req, res) => {
       return res.status(400).json({ error: 'mirrorItem voucher 凭证路径不合法' })
     }
     mirrorItem.voucher = valid
+  }
+
+  // 校验 amount
+  const amt1 = Number(item.amount)
+  const amt2 = Number(mirrorItem.amount)
+  if (!Number.isFinite(amt1) || amt1 < 0) {
+    return res.status(400).json({ error: 'item.amount 必须为非负数字' })
+  }
+  if (!Number.isFinite(amt2) || amt2 < 0) {
+    return res.status(400).json({ error: 'mirrorItem.amount 必须为非负数字' })
+  }
+  item.amount = amt1
+  mirrorItem.amount = amt2
+
+  // 校验 note 长度（≤2000 字符）
+  if (item.note && item.note.length > 2000) {
+    return res.status(400).json({ error: 'item.note 不能超过 2000 字符' })
+  }
+  if (mirrorItem.note && mirrorItem.note.length > 2000) {
+    return res.status(400).json({ error: 'mirrorItem.note 不能超过 2000 字符' })
   }
 
   // 校验 linkedId 归属
