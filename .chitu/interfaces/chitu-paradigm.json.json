@@ -2,6 +2,6 @@
   "file": ".chitu/paradigm.json",
   "exports": [],
   "imports": [],
-  "capability": "mingxi.js 接口文档 imports 恢复为 [\"utils/api\"]，与源码 require('../../utils/api') 一致",
-  "updatedAt": "2026-06-18T11:17:18.059Z"
+  "capability": "mingxi 页面中心 Tab 按钮 CSS 与 WXML 对齐：浮动圆形按钮 flex 居中 + 下方文字标签，废弃的 tab-item-center/tab-icon-center-wrap 类已清理",
+  "updatedAt": "2026-06-20T14:43:41.516Z"
 }
