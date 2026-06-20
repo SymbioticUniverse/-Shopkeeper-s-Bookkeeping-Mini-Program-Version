@@ -516,21 +516,21 @@
             </view>
           </view>
           <view class="report-chart-block">
-            <canvas type="2d" id="lineChart" class="report-canvas" bindtouchstart="onChartTap"></canvas>
+            <canvas wx:if="{{!showExpandMenu && !showCamera && !scanRecognizing && !showBookPopup && !modalItem && !showAiChat}}" type="2d" id="lineChart" class="report-canvas" bindtouchstart="onChartTap"></canvas>
           </view>
           <text class="report-chart-label">收入 / 支出柱状图</text>
           <view class="report-chart-block">
-            <canvas type="2d" id="barChart" class="report-canvas"></canvas>
+            <canvas wx:if="{{!showExpandMenu && !showCamera && !scanRecognizing && !showBookPopup && !modalItem && !showAiChat}}" type="2d" id="barChart" class="report-canvas"></canvas>
           </view>
           <view class="report-pie-block">
             <view class="report-pie-row">
               <view class="report-pie-cell">
                 <text class="report-pie-label">收入来源</text>
-                <canvas type="2d" id="pieIncome" class="report-pie-canvas" bindtouchstart="onPieIncomeTap"></canvas>
+                <canvas wx:if="{{!showExpandMenu && !showCamera && !scanRecognizing && !showBookPopup && !modalItem && !showAiChat}}" type="2d" id="pieIncome" class="report-pie-canvas" bindtouchstart="onPieIncomeTap"></canvas>
               </view>
               <view class="report-pie-cell">
                 <text class="report-pie-label">支出类别</text>
-                <canvas type="2d" id="pieExpense" class="report-pie-canvas" bindtouchstart="onPieExpenseTap"></canvas>
+                <canvas wx:if="{{!showExpandMenu && !showCamera && !scanRecognizing && !showBookPopup && !modalItem && !showAiChat}}" type="2d" id="pieExpense" class="report-pie-canvas" bindtouchstart="onPieExpenseTap"></canvas>
               </view>
             </view>
           </view>

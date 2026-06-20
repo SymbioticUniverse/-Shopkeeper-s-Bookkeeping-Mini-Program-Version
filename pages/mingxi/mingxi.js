@@ -1993,6 +1993,7 @@ Page({
       this.setData({ showBookCatPanel: false })
     } else {
       this.setData({ showBookPopup: false, bookPhoto: '' })
+      this._redrawReportCharts()
     }
   },
 
@@ -2161,6 +2162,7 @@ Page({
     this.setData({ detailItems: api.getItems(scope), showBookPopup: false, bookPhoto: '' })
     this._calcOverviewData()
     wx.showToast({ title: '记账成功', icon: 'success' })
+    this._redrawReportCharts()
   },
 
   onModalClose() {
@@ -3791,8 +3793,21 @@ Page({
   },
 
   // ---- 拓展菜单 ----
+  // 报表 canvas 是原生组件，全屏遮罩期间用 wx:if 移除以避免穿透；遮罩关闭后在此重绘
+  _redrawReportCharts() {
+    var d = this.data
+    if (d.currentTab !== 1) return
+    if (d.showExpandMenu || d.showCamera || d.scanRecognizing || d.showBookPopup || d.modalItem || d.showAiChat) return
+    setTimeout(() => {
+      this.initLineChart()
+      this.initBarChart()
+      this.initPieCharts()
+    }, 300)
+  },
+
   onExpandMenuTap() {
     this.setData({ showExpandMenu: !this.data.showExpandMenu })
+    if (!this.data.showExpandMenu) this._redrawReportCharts()
   },
 
   onExpandMenuItem(e) {
@@ -3839,6 +3854,7 @@ Page({
   // ---- 相机扫描 ----
   onCameraClose() {
     this.setData({ showCamera: false })
+    this._redrawReportCharts()
   },
 
   onCameraShoot() {
@@ -3963,6 +3979,7 @@ Page({
 
   onAiChatClose() {
     this.setData({ showAiChat: false, aiRecording: false })
+    this._redrawReportCharts()
   },
 
   onAiBillTap(e) {
