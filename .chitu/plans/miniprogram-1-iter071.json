@@ -1,0 +1,15 @@
+{
+  "project": "miniprogram-1",
+  "goal": "unknown",
+  "targetFiles": [
+    "backend/src/db.js",
+    "backend/src/routes/items.js",
+    "backend/src/routes/upload.js",
+    "backend/src/app.js",
+    "utils/api.js",
+    "backend/package.json",
+    "backend/src/routes/migrate.js"
+  ],
+  "steps": [],
+  "createdAt": "2026-06-20T10:16:25.591Z"
+}
