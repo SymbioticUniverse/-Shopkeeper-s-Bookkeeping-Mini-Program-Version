@@ -16,9 +16,7 @@
     <text class="header-title">掌柜记账</text>
     <view class="header-right-icon" bindtap="onExpandMenuTap">
       <view class="header-expand-btn">
-        <view class="expand-dot"></view>
-        <view class="expand-dot"></view>
-        <view class="expand-dot"></view>
+        <view class="expand-plus"></view>
       </view>
     </view>
   </view>
