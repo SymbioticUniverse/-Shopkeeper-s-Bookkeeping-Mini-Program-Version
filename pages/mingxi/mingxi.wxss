@@ -18,7 +18,7 @@ page {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  min-height: 68rpx;
+  height: 80rpx;
   margin-top: 30rpx;
   margin-bottom: -20rpx;
   flex-shrink: 0;
