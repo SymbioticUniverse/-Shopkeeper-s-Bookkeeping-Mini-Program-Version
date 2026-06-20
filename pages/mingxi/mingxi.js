@@ -255,6 +255,7 @@ Page({
     aiScrollId: '',
     aiVoiceMode: true,
     aiRecording: false,
+    showExpandMenu: false, // 拓展菜单
     showAuditPage: false, // 审核页
     showNotifyPage: false, // 通知页
     showContactPage: false, // 联系我们获好礼页
@@ -3775,6 +3776,37 @@ Page({
     this.setData({ showGuide: false })
     this.initDetailItems()
     this._calcOverviewData()
+  },
+
+  // ---- 拓展菜单 ----
+  onExpandMenuTap() {
+    this.setData({ showExpandMenu: !this.data.showExpandMenu })
+  },
+
+  onExpandMenuItem(e) {
+    this.setData({ showExpandMenu: false })
+    var action = e.currentTarget.dataset.action
+    var _this = this
+    if (action === 'scan') {
+      wx.showToast({ title: '扫描凭证记账功能开发中', icon: 'none' })
+    } else if (action === 'category') {
+      this.setData({ currentTab: 4, showOverview: false })
+      this.onCustomCategoryEntry()
+    } else if (action === 'ai') {
+      var greeting = {
+        role: 'ai',
+        text: '你好！我是你的 AI 记账助手\n\n试试对我说：\n• "午餐 25"\n• "打车 15 交通"\n• "收到工资 8000"',
+        time: this._formatChatTime(new Date())
+      }
+      this.setData({
+        showAiChat: true,
+        aiMessages: [greeting],
+        aiInputText: '',
+        aiThinking: false,
+        aiScrollId: 'ai-msg-0',
+        aiVoiceMode: false
+      })
+    }
   },
 
   // ---- AI 对话 ----

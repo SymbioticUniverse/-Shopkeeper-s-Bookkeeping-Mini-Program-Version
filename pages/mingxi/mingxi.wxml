@@ -14,9 +14,40 @@
       <text class="back-text">返回简览页</text>
     </view>
     <text class="header-title">掌柜记账</text>
-    <view class="header-right-icon">
-      <image class="avatar-circle" src="{{userInfo.avatarUrl}}" wx:if="{{isLoggedIn && userInfo.avatarUrl}}" mode="aspectFill"></image>
-      <view class="avatar-circle" wx:else></view>
+    <view class="header-right-icon" bindtap="onExpandMenuTap">
+      <view class="header-expand-btn">
+        <view class="expand-dot"></view>
+        <view class="expand-dot"></view>
+        <view class="expand-dot"></view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 拓展菜单 -->
+  <view class="expand-menu-overlay" wx:if="{{showExpandMenu}}" catchtap="onExpandMenuTap">
+    <view class="expand-menu-card" catchtap="nop">
+      <view class="expand-menu-item" bindtap="onExpandMenuItem" data-action="scan">
+        <view class="expand-menu-icon expand-menu-icon--scan">
+          <text class="expand-icon-text">+</text>
+        </view>
+        <text class="expand-menu-label">扫描凭证记账</text>
+        <text class="expand-menu-arrow">></text>
+      </view>
+      <view class="expand-menu-item" bindtap="onExpandMenuItem" data-action="category">
+        <view class="expand-menu-icon expand-menu-icon--category">
+          <text class="expand-icon-text expand-icon-text--cat">::</text>
+        </view>
+        <text class="expand-menu-label">自定义分类</text>
+        <text class="expand-menu-arrow">></text>
+      </view>
+      <view class="expand-menu-divider"></view>
+      <view class="expand-menu-item" bindtap="onExpandMenuItem" data-action="ai">
+        <view class="expand-menu-icon expand-menu-icon--ai">
+          <text class="expand-icon-text expand-icon-text--ai">*</text>
+        </view>
+        <text class="expand-menu-label">AI 对话</text>
+        <text class="expand-menu-arrow">></text>
+      </view>
     </view>
   </view>
 
