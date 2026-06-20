@@ -866,11 +866,7 @@ Page({
     const wasOverview = this.data.showOverview
     let dir = ''
     if (index === 2) {
-      if (this.data.currentTab === 1) {
-        this.setData({ currentTab: 0, showOverview: false, tabSlideDir: 'slide-left' })
-        setTimeout(() => this.setData({ tabSlideDir: '' }), 400)
-        this.initDetailItems()
-      }
+      // 报表 canvas 是原生组件，记账弹窗打开时已被 wx:if 移除、不再穿透盖住弹窗，故无需先跳明细页规避
       this.onBookEntry({ currentTarget: { dataset: { type: 'expense' } } })
       return
     }
