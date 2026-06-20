@@ -18,6 +18,6 @@
       "from": "fs"
     }
   ],
-  "capability": "微信登录支持真实 code2Session API（生产环境），linkedId 全链路归属校验防止跨用户注入，type_label 与 type 联动校验，DELETE 级联加 user_id 过滤，迁移异常不再静默吞掉",
-  "updatedAt": "2026-06-20T14:03:27.703Z"
+  "capability": "数据库 items 表新增 settleStatus/settleInfo/_autoSettle 三列，notifications 表新增 type/target_user_id/item_id 三列，幂等迁移兼容旧数据",
+  "updatedAt": "2026-06-20T14:45:39.190Z"
 }

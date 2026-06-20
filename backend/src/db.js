@@ -177,6 +177,16 @@ function initSchema() {
   // Migration: 添加 voucher 列（凭证图片 URL）
   addColumnSafely('items', 'voucher', "TEXT DEFAULT ''")
 
+  // Migration: 添加结清相关列
+  addColumnSafely('items', 'settleStatus', "TEXT DEFAULT NULL")
+  addColumnSafely('items', 'settleInfo', 'TEXT DEFAULT NULL')
+  addColumnSafely('items', '_autoSettle', 'INTEGER NOT NULL DEFAULT 0')
+
+  // Migration: 通知表加 type 列（区分结清通知等类型）
+  addColumnSafely('notifications', 'type', "TEXT DEFAULT ''")
+  addColumnSafely('notifications', 'target_user_id', 'INTEGER DEFAULT NULL')
+  addColumnSafely('notifications', 'item_id', 'INTEGER DEFAULT NULL')
+
   // Migration: amount TEXT → REAL（旧库存在时重建表）
   try {
     const colInfo = db.pragma('table_info(items)')
@@ -199,13 +209,17 @@ function initSchema() {
             linked_id INTEGER DEFAULT NULL,
             voucher TEXT DEFAULT '',
             voided INTEGER NOT NULL DEFAULT 0,
+            settleStatus TEXT DEFAULT NULL,
+            settleInfo TEXT DEFAULT NULL,
+            _autoSettle INTEGER NOT NULL DEFAULT 0,
             created_at TEXT NOT NULL DEFAULT (datetime('now')),
             FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
           );
           INSERT INTO items_mig
             SELECT id, user_id, scope, category, type, type_label,
                    CAST(amount AS REAL), date, note, target, target_type,
-                   linked_id, voucher, voided, created_at
+                   linked_id, voucher, voided,
+                   settleStatus, settleInfo, _autoSettle, created_at
             FROM items;
           DROP TABLE items;
           ALTER TABLE items_mig RENAME TO items;
