@@ -25,6 +25,6 @@
       "from": "../middleware/auth"
     }
   ],
-  "capability": "凭证安全加固：凭证访问需登录+归属校验（替代裸静态目录）、上传时 magic bytes 校验真实图片类型防 MIME 伪造 XSS、扩展名服务端白名单生成、voucher 字段入库校验归属、删除账单同步清理磁盘凭证文件、/linked 接口 scope 校验 + id 冲突返回 409",
-  "updatedAt": "2026-06-20T11:53:06.313Z"
+  "capability": "微信登录支持真实 code2Session API（生产环境），linkedId 全链路归属校验防止跨用户注入，type_label 与 type 联动校验，DELETE 级联加 user_id 过滤，迁移异常不再静默吞掉",
+  "updatedAt": "2026-06-20T14:03:27.703Z"
 }

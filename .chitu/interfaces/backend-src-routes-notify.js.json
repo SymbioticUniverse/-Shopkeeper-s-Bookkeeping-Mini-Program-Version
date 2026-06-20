@@ -17,6 +17,6 @@
       "from": "../middleware/auth"
     }
   ],
-  "capability": "修复5个问题：通知POST先删后插消除跨用户覆盖+支持删除；PUT级联更新加事务保证原子性；amount返回String()匹配前端格式；旧库amount自动TEXT→REAL迁移",
-  "updatedAt": "2026-06-18T15:39:25.512Z"
+  "capability": "微信登录支持真实 code2Session API（生产环境），linkedId 全链路归属校验防止跨用户注入，type_label 与 type 联动校验，DELETE 级联加 user_id 过滤，迁移异常不再静默吞掉",
+  "updatedAt": "2026-06-20T14:03:27.704Z"
 }

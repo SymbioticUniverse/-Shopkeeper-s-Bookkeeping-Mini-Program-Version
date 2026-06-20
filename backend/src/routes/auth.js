@@ -37,8 +37,10 @@ router.post('/send-verify-code', (req, res) => {
     ON CONFLICT(phone) DO UPDATE SET code = excluded.code, expires_at = excluded.expires_at
   `).run(phone, code, expiresAt)
 
-  // 开发环境打印验证码到控制台
-  console.log(`[DEV] 验证码 → ${phone}: ${code}`)
+  // 仅开发环境打印验证码到控制台
+  if (process.env.NODE_ENV !== 'production') {
+    console.log(`[DEV] 验证码 → ${phone}: ${code}`)
+  }
 
   res.json({ success: true })
 })
@@ -111,30 +113,81 @@ router.post('/login-by-phone', (req, res) => {
   })
 })
 
+// ==================== 微信 code2Session 工具函数 ====================
+
+/**
+ * 调用微信 code2Session 换取 openid
+ * 生产环境：设置 WECHAT_APPID + WECHAT_SECRET 启用真实调用
+ * 开发环境：未配置时降级为 code 直接作为 openid（仅用于本地测试）
+ */
+function getOpenidByCode(wechatCode) {
+  const appId = process.env.WECHAT_APPID
+  const appSecret = process.env.WECHAT_SECRET
+
+  if (!appId || !appSecret) {
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error('生产环境必须设置 WECHAT_APPID 和 WECHAT_SECRET')
+    }
+    // 开发环境降级：code 作为 openid（仅本地测试可用）
+    console.warn('[DEV] 微信登录降级模式：code 直接用作 openid（仅开发环境）')
+    return Promise.resolve(wechatCode)
+  }
+
+  // 生产环境：真实调用微信 code2Session API
+  const https = require('https')
+  const url = `https://api.weixin.qq.com/sns/jscode2session?appid=${appId}&secret=${appSecret}&js_code=${wechatCode}&grant_type=authorization_code`
+
+  return new Promise((resolve, reject) => {
+    https.get(url, (resp) => {
+      let data = ''
+      resp.on('data', chunk => data += chunk)
+      resp.on('end', () => {
+        try {
+          const result = JSON.parse(data)
+          if (result.errcode) {
+            reject(new Error(`微信 code2Session 失败: ${result.errmsg} (errcode=${result.errcode})`))
+          } else if (!result.openid) {
+            reject(new Error('微信 code2Session 未返回 openid'))
+          } else {
+            resolve(result.openid)
+          }
+        } catch (e) {
+          reject(new Error('微信 code2Session 响应解析失败'))
+        }
+      })
+    }).on('error', reject)
+  })
+}
+
 // ==================== 微信授权登录 ====================
 
-router.post('/login-by-wechat', (req, res) => {
+router.post('/login-by-wechat', async (req, res) => {
   const { nickName, avatarUrl, code } = req.body || {}
 
-  // 必须提供微信 code（生产环境：前端调用 wx.login 获取 code，后端调 code2Session 换 openid）
   if (!code) {
     return res.status(400).json({ error: '缺少微信登录凭证(code)' })
+  }
+
+  // 调用 code2Session 获取真实 openid
+  let openid
+  try {
+    openid = await getOpenidByCode(code)
+  } catch (err) {
+    console.error('[WECHAT] code2Session 失败:', err.message)
+    return res.status(500).json({ error: '微信登录失败，请稍后重试' })
   }
 
   const nickname = nickName || '微信用户'
   const avatar = avatarUrl || ''
 
-  // 用 openid 精确匹配用户（生产环境 code 应为微信 code2Session 返回的 openid）
-  let user = db.prepare('SELECT id, nick_name, avatar_url FROM users WHERE openid = ?').get(code)
+  let user = db.prepare('SELECT id, nick_name, avatar_url FROM users WHERE openid = ?').get(openid)
 
   if (!user) {
-    // 创建新用户
     const result = db.prepare(
       'INSERT INTO users (nick_name, avatar_url, openid) VALUES (?, ?, ?)'
-    ).run(nickname, avatar, code)
+    ).run(nickname, avatar, openid)
     user = { id: result.lastInsertRowid, nick_name: nickname, avatar_url: avatar }
   } else {
-    // 更新头像和昵称（微信可能更新）
     db.prepare(
       'UPDATE users SET nick_name = ?, avatar_url = ?, updated_at = datetime(\'now\') WHERE id = ?'
     ).run(nickname, avatar, user.id)
@@ -142,7 +195,6 @@ router.post('/login-by-wechat', (req, res) => {
     user.avatar_url = avatar
   }
 
-  // 生成 token 并存入会话表
   const token = generateToken(user.id)
   db.prepare(
     'INSERT OR REPLACE INTO sessions (token, user_id, expires_at) VALUES (?, ?, ?)'

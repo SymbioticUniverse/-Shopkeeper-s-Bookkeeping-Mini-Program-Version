@@ -158,23 +158,24 @@ function initSchema() {
     CREATE INDEX IF NOT EXISTS idx_notifications_user ON notifications(user_id);
   `)
 
+  // Migration helper: 仅在列不存在时执行 ALTER TABLE
+  function addColumnSafely(table, column, definition) {
+    const colInfo = db.pragma(`table_info('${table}')`)
+    if (!colInfo.some(c => c.name === column)) {
+      db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`)
+      console.log(`[MIGRATE] ${table}.${column} 已添加`)
+    }
+  }
+
   // Migration: 为已有 verify_codes 表添加防暴力破解列
-  try {
-    db.exec('ALTER TABLE verify_codes ADD COLUMN failed_attempts INTEGER NOT NULL DEFAULT 0')
-  } catch (e) { /* 列已存在 */ }
-  try {
-    db.exec('ALTER TABLE verify_codes ADD COLUMN locked_until TEXT')
-  } catch (e) { /* 列已存在 */ }
+  addColumnSafely('verify_codes', 'failed_attempts', 'INTEGER NOT NULL DEFAULT 0')
+  addColumnSafely('verify_codes', 'locked_until', 'TEXT')
 
   // Migration: 通知表加 source 列（user/system 区分，防止全量覆盖竞态）
-  try {
-    db.exec('ALTER TABLE notifications ADD COLUMN source TEXT NOT NULL DEFAULT \'user\' CHECK(source IN (\'user\',\'system\'))')
-  } catch (e) { /* 列已存在 */ }
+  addColumnSafely('notifications', 'source', "TEXT NOT NULL DEFAULT 'user' CHECK(source IN ('user','system'))")
 
   // Migration: 添加 voucher 列（凭证图片 URL）
-  try {
-    db.exec('ALTER TABLE items ADD COLUMN voucher TEXT DEFAULT \'\'')
-  } catch (e) { /* 列已存在 */ }
+  addColumnSafely('items', 'voucher', "TEXT DEFAULT ''")
 
   // Migration: amount TEXT → REAL（旧库存在时重建表）
   try {

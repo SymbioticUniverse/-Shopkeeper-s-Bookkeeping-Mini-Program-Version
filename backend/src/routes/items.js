@@ -43,6 +43,13 @@ function checkOwnership(userId, id) {
   return db.prepare('SELECT id, scope FROM items WHERE id = ? AND user_id = ?').get(id, userId)
 }
 
+/** 校验 linkedId 合法：存在且属于当前用户 */
+function validateLinkedId(userId, linkedId) {
+  if (!linkedId) return true  // null/undefined 允许
+  const row = db.prepare('SELECT id FROM items WHERE id = ? AND user_id = ?').get(linkedId, userId)
+  return !!row
+}
+
 /** 防御性 sanitize userId（与 upload.js 一致） */
 function sanitizeUserId(userId) {
   return String(userId).replace(/[\/\\\.]+/g, '_').replace(/^_+|_+$/g, '') || 'unknown'
@@ -130,6 +137,11 @@ router.post('/', requireAuth, (req, res) => {
     item.voucher = valid
   }
 
+  // 校验 linkedId 归属
+  if (item.linkedId && !validateLinkedId(req.userId, item.linkedId)) {
+    return res.status(400).json({ error: 'linkedId 指向的账单不存在或不属于当前用户' })
+  }
+
   try {
     db.prepare(`
       INSERT INTO items (id, user_id, scope, category, type, type_label, amount, date, note, target, target_type, linked_id, voucher, voided)
@@ -197,6 +209,19 @@ router.put('/:id', requireAuth, (req, res) => {
     params.push(data.type)
   }
   if (data.typeLabel !== undefined) {
+    // 校验 typeLabel 与 type 一致性：如果同时传了 type，以 type 为准；
+    // 如果未传 type，以 DB 中已有的 type 为准验证
+    let effectiveType = data.type
+    if (effectiveType === undefined) {
+      const row = db.prepare('SELECT type FROM items WHERE id = ?').get(id)
+      effectiveType = row ? row.type : null
+    }
+    if (effectiveType === 'in' && !data.typeLabel.includes('收入')) {
+      return res.status(400).json({ error: 'typeLabel 与 type 不匹配：收入类账单 typeLabel 应包含"收入"' })
+    }
+    if (effectiveType === 'out' && !data.typeLabel.includes('支出')) {
+      return res.status(400).json({ error: 'typeLabel 与 type 不匹配：支出类账单 typeLabel 应包含"支出"' })
+    }
     setClauses.push('type_label = ?')
     params.push(data.typeLabel)
   }
@@ -221,6 +246,10 @@ router.put('/:id', requireAuth, (req, res) => {
     params.push(data.targetType)
   }
   if (data.linkedId !== undefined) {
+    // 校验 linkedId 归属
+    if (data.linkedId !== null && !validateLinkedId(req.userId, data.linkedId)) {
+      return res.status(400).json({ error: 'linkedId 指向的账单不存在或不属于当前用户' })
+    }
     setClauses.push('linked_id = ?')
     params.push(data.linkedId)
   }
@@ -316,8 +345,8 @@ router.delete('/:id', requireAuth, (req, res) => {
         }
       }
     }
-    // linked_id 指向本记录的镜像
-    const reverseMirrors = db.prepare('SELECT id, voucher FROM items WHERE linked_id = ?').all(id)
+    // linked_id 指向本记录的镜像（限制同用户，防跨用户级联误删）
+    const reverseMirrors = db.prepare('SELECT id, voucher FROM items WHERE linked_id = ? AND user_id = ?').all(id, req.userId)
     for (const m of reverseMirrors) {
       deletedIds.push(m.id)
       if (m.voucher) {
@@ -379,6 +408,19 @@ router.post('/linked', requireAuth, (req, res) => {
       return res.status(400).json({ error: 'mirrorItem voucher 凭证路径不合法' })
     }
     mirrorItem.voucher = valid
+  }
+
+  // 校验 linkedId 归属
+  if (item.linkedId && !validateLinkedId(req.userId, item.linkedId)) {
+    return res.status(400).json({ error: 'item.linkedId 指向的账单不存在或不属于当前用户' })
+  }
+  if (mirrorItem.linkedId && !validateLinkedId(req.userId, mirrorItem.linkedId)) {
+    return res.status(400).json({ error: 'mirrorItem.linkedId 指向的账单不存在或不属于当前用户' })
+  }
+
+  // 防止 item.id 与 mirrorItem.id 相同，造成主键冲突
+  if (item.id === mirrorItem.id) {
+    return res.status(409).json({ error: '账单 id 冲突：item.id 与 mirrorItem.id 相同' })
   }
 
   const insertStmt = db.prepare(`

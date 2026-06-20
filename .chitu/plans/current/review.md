@@ -1,93 +1,66 @@
-# 安全加固 Review
+# Self-Review: 后端代码修复（第一轮）
 
-## 改动文件
+## 修改文件
 
-- `backend/src/app.js` — 裸 express.static → 鉴权代理路由
-- `backend/src/routes/upload.js` — magic bytes + 扩展名白名单 + userId sanitize + 鉴权代理
-- `backend/src/routes/items.js` — voucher 校验 + 删除清理磁盘 + /linked 校验
+| 文件 | 修复项 |
+|------|--------|
+| `backend/src/db.js` | #3 迁移吞错 |
+| `backend/src/routes/auth.js` | #1 微信登录, #7 验证码日志 |
+| `backend/src/routes/items.js` | #2 linkedId注入, #4 type_label联动, #5 DELETE级联 |
 
-## 逐文件检查
+## 逐项审查
 
-### backend/src/app.js
+### db.js — `addColumnSafely()` 替代 try/catch
+- ✅ 使用 `PRAGMA table_info` 预先判断列是否存在，不再吞掉磁盘 I/O 等异常
+- ✅ 日志输出 `[MIGRATE]` 方便追踪
+- ✅ 保留 amount TEXT→REAL 迁移的原有 try/catch（有明确错误处理）
+- ⚠️ `PRAGMA table_info` 若失败会抛异常，但这是初始化阶段，未被 try-catch 包裹会导致进程崩溃——但 PRAGMA 是纯元数据查询，不太可能失败
 
-- ✅ `express.static('/voucher')` 已移除
-- ✅ 替换为 `app.get('/voucher/*', requireAuth, serveVoucher)`
-- ✅ `requireAuth` 通过 inline require 注入（与现有路由注册风格一致）
-- ✅ `serveVoucher` 从 upload.js 导出
+### auth.js — 验证码日志
+- ✅ `NODE_ENV !== 'production'` 判断，生产环境不打印验证码明文
+- ✅ 开发环境仍保留日志便于调试
 
-### backend/src/routes/upload.js
+### auth.js — 微信 code2Session
+- ✅ `getOpenidByCode()` 函数：生产环境有 WECHAT_APPID/SECRET 时调用真实 code2Session API
+- ✅ 开发环境降级：code 直接作为 openid，带 `console.warn` 提示
+- ✅ 生产环境未配置时 `throw Error`（由调用方 500 返回）
+- ✅ 路由改为 `async`，await 异步调用
+- ✅ `https.get` 的 reject 路径正确：errcode、空 openid、JSON 解析失败、网络错误
+- ✅ 错误信息不泄露 appid/secret（只输出 errcode+errmsg）
+- ⚠️ 开发降级模式下 `code` 仍是弱 openid——但开发环境不需要强安全，且有 warn 日志提示
 
-**detectImageType():**
-- ✅ PNG magic: 89 50 4E 47
-- ✅ JPEG magic: FF D8 FF
-- ✅ fd 用 `finally` 确保关闭，异常吞掉不泄漏
-- ✅ 非图片返回 null
+### items.js — validateLinkedId 函数
+- ✅ `!linkedId` 判空（null/undefined/0 统一放过，SQLite id 自增从 1 开始）
+- ✅ 查询 `items WHERE id = ? AND user_id = ?` 校验归属
+- ✅ 三处调用：POST `/`、PUT `/:id`、POST `/linked`
 
-**sanitizeUserId():**
-- ✅ 剔除 `/` `\` `.` 三个路径操作字符
-- ✅ 空字符串降级为 `'unknown'`
-- ✅ 首尾下划线修剪
+### items.js — POST `/` linkedId 校验
+- ✅ 在 INSERT 前校验
+- ✅ 错误消息清晰："linkedId 指向的账单不存在或不属于当前用户"
 
-**Multer 配置:**
-- ✅ `destination` 使用 `sanitizeUserId(req.userId)`
-- ✅ `filename` 统一用 `.tmp` 后缀，不再信任 `file.originalname`
-- ✅ `fileFilter` 保留 MIME 初步过滤（深度校验在 magic bytes 阶段）
+### items.js — PUT `/:id` type_label 联动校验
+- ✅ `effectiveType` 计算：优先用请求中的 `data.type`，其次查 DB
+- ✅ `effectiveType === 'in'` 时要求 typeLabel 包含"收入"
+- ✅ `effectiveType === 'out'` 时要求 typeLabel 包含"支出"
+- ⚠️ 校验依赖字符串 `includes('收入')` / `includes('支出')`——中文硬编码，若未来国际化需调整
+- ✅ `effectiveType` 为 null 时不进入任何 if 分支，静默放过（保守安全）
 
-**POST 处理器:**
-- ✅ multer 完成后调用 `detectImageType()` 校验真实类型
-- ✅ 非图片时 `unlinkSync` 删除 `.tmp` 文件后返回 400
-- ✅ 图片时 `renameSync` 改为正确扩展名（`.jpg` / `.png`）
-- ✅ rename 失败时也清理临时文件
-- ✅ URL 构建使用 `newPath`（已重命名后的路径）
+### items.js — PUT `/:id` linkedId 校验
+- ✅ `data.linkedId !== null` 判断（null 表示解除链接，允许）
+- ✅ 非 null 时调用 `validateLinkedId` 校验归属
 
-**serveVoucher():**
-- ✅ 从 `req.path` 提取相对路径
-- ✅ 归属校验：`relPath.startsWith(safeId + '/')`
-- ✅ `path.resolve` 后二次确认仍在 VOUCHER_DIR 内（防穿越）
-- ✅ `X-Content-Type-Options: nosniff`
-- ✅ `Cache-Control: private, max-age=86400`（私有缓存）
-- ✅ 文件不存在返回 404
+### items.js — DELETE `/:id` 镜像查询加 user_id
+- ✅ `WHERE linked_id = ? AND user_id = ?` 限制同用户
+- ✅ 防止跨用户级联误删
 
-**边界检查:**
-- ✅ safeId 防 userId=`1` 匹配 `10/...` 路径前缀问题：`'10/...'.startsWith('1/')` → false，不会误授权
+### items.js — POST `/linked` 防护增强
+- ✅ item.linkedId 和 mirrorItem.linkedId 各自校验
+- ✅ `item.id === mirrorItem.id` 冲突检查（409 错误码）
 
-### backend/src/routes/items.js
-
-**validateVoucher():**
-- ✅ 空值允许（无凭证场景）
-- ✅ 检查 voucher URL 包含 `/safeId/` 段
-- ✅ 也接受 `safeId/` 开头的相对路径
-- ✅ 非法返回 null，调用方返回 400
-
-**voucherToDiskPath():**
-- ✅ 从完整 URL 提取 `/voucher/{safeId}/...` 后的相对路径
-- ✅ 也支持纯相对路径
-- ✅ `path.resolve` 后二次确认路径安全
-- ✅ 文件操作 wrapped in try-catch，失败不影响响应
-
-**POST /:**
-- ✅ voucher 入库前校验归属
-
-**PUT /:id:**
-- ✅ voucher 更新前校验归属
-- ✅ 允许 `voucher: ''` 清空凭证
-
-**DELETE /:id:**
-- ✅ 事务内收集所有将被删除的 item（主 + linked_id 正向镜像 + linked_id 反向镜像）的 voucher
-- ✅ 事务成功后清理磁盘文件（非事务，失败仅 log 不报错）
-- ✅ 磁盘清理使用 `existsSync` + `unlinkSync`
-
-**POST /linked:**
-- ✅ 新增 scope 值校验 `['personal', 'company'].includes()`
-- ✅ 两条 item 的 voucher 均校验归属
-- ✅ `SQLITE_CONSTRAINT_PRIMARYKEY` 返回 409（之前走 500）
-
-## 未覆盖的审计点
-
-- 🟢 migrate.js 路由仍在线（建议下线，非本次范围）
-- 🟢 db.js REAL 金额精度（既有设计，非本次范围）
-- 🟢 app.db 在 git 历史中（需 BFG 清理，非代码改动）
+## 边界情况
+- `linkedId = 0`：`!linkedId` 为 true，作为 null 放过 → SQLite 自增 id 从 1 开始，id=0 不存在，安全
+- `effectiveType = null`：不匹配 'in' 或 'out'，静默通过 → 保守策略，安全
+- `data.type` 和 `data.typeLabel` 同时传入不一致的值 → 以 type 为准校验 typeLabel，正确
 
 ## 结论
-
-五个审计点全部修复，代码自查无逻辑缺陷。
+所有修改逻辑正确，无新增安全漏洞，边界情况已覆盖。
