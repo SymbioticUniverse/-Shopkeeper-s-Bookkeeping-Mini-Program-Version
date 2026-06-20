@@ -218,6 +218,8 @@ Page({
     // 记账弹窗
     showBookPopup: false,
     bookForm: { type: 'expense', amount: '', category: '', date: '', note: '', target: '', targetType: 'external' },
+    bookPhoto: '',           // 凭证照片本地路径（''=普通记账）
+    scanRecognizing: false,  // 识别中 loading
     bookScope: 'personal',
     bookScopeLabel: '个人',
     bookTypeLabel: '支出',
@@ -1955,6 +1957,7 @@ Page({
     const td = this._getBookTargetDefaults(this.data.bookScope, type)
     this.setData({
       showBookPopup: true,
+      bookPhoto: '',
       'bookForm.type': type,
       'bookForm.amount': '',
       'bookForm.category': '',
@@ -1986,7 +1989,7 @@ Page({
     if (this.data.showBookCatPanel) {
       this.setData({ showBookCatPanel: false })
     } else {
-      this.setData({ showBookPopup: false })
+      this.setData({ showBookPopup: false, bookPhoto: '' })
     }
   },
 
@@ -2106,6 +2109,11 @@ Page({
       wx.showToast({ title: '请选择对象', icon: 'none' })
       return
     }
+    let voucher = ''
+    if (this.data.bookPhoto) {
+      try { voucher = wx.getFileSystemManager().saveFileSync(this.data.bookPhoto) }
+      catch (e) { voucher = this.data.bookPhoto }
+    }
     const typeLabelMap = { income: '收入', expense: '支出', payForward: '垫付', payable: '应付' }
     const itemType = type === 'income' ? 'in' : 'out'
     const newItem = {
@@ -2119,6 +2127,7 @@ Page({
       note: note || '',
       target: target || '',
       targetType: targetType || 'external',
+      voucher: voucher,
     }
     const scope = this.data.bookScope
 
@@ -2146,7 +2155,7 @@ Page({
       api.addItem(scope, newItem)
     }
 
-    this.setData({ detailItems: api.getItems(scope), showBookPopup: false })
+    this.setData({ detailItems: api.getItems(scope), showBookPopup: false, bookPhoto: '' })
     this._calcOverviewData()
     wx.showToast({ title: '记账成功', icon: 'success' })
   },
@@ -3788,7 +3797,19 @@ Page({
     var action = e.currentTarget.dataset.action
     var _this = this
     if (action === 'scan') {
-      wx.showToast({ title: '扫描凭证记账功能开发中', icon: 'none' })
+      wx.chooseImage({
+        count: 1, sizeType: ['compressed'], sourceType: ['camera'],
+        success: function (res) {
+          var photo = res.tempFilePaths && res.tempFilePaths[0]
+          if (!photo) return
+          _this._startScanRecognize(photo)
+        },
+        fail: function (err) {
+          if (err && err.errMsg && err.errMsg.indexOf('cancel') === -1) {
+            wx.showToast({ title: '相机调用失败', icon: 'none' })
+          }
+        }
+      })
     } else if (action === 'category') {
       this.setData({ currentTab: 4, showOverview: false })
       this.onCustomCategoryEntry()
@@ -3807,6 +3828,47 @@ Page({
         aiVoiceMode: false
       })
     }
+  },
+
+  // ---- 扫描凭证识别 ----
+  _startScanRecognize(photo) {
+    this.setData({ scanRecognizing: true, bookPhoto: photo })
+    setTimeout(() => {
+      var mock = this._mockOcrParse()
+      this.onBookEntry({ currentTarget: { dataset: { type: 'expense' } } })
+      this.setData({
+        scanRecognizing: false,
+        bookPhoto: photo,
+        'bookForm.amount': mock.amount,
+        'bookForm.category': mock.category,
+        'bookForm.note': mock.note,
+      })
+    }, 1200)
+  },
+
+  _mockOcrParse() {
+    var pool = [
+      { category: '餐饮', note: '餐饮消费' },
+      { category: '超市', note: '超市购物' },
+      { category: '交通', note: '交通出行' },
+      { category: '日用', note: '日用百货' },
+      { category: '医疗', note: '药店购药' },
+    ]
+    var p = pool[Math.floor(Math.random() * pool.length)]
+    return { category: p.category, note: p.note, amount: (Math.random() * 200 + 10).toFixed(2) }
+  },
+
+  onBookPhotoPreview() {
+    if (this.data.bookPhoto) wx.previewImage({ urls: [this.data.bookPhoto] })
+  },
+
+  onBookPhotoRemove() {
+    this.setData({ bookPhoto: '' })
+  },
+
+  onVoucherPreview(e) {
+    var s = e.currentTarget.dataset.src
+    if (s) wx.previewImage({ urls: [s] })
   },
 
   // ---- AI 对话 ----

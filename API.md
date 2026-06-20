@@ -23,6 +23,7 @@
 | `target` | `string` | 否 | 目标对象名称，如 `'公司'`、`'个人'`、`'外部'`、自定义名称 |
 | `targetType` | `string` | 否 | 目标对象类型：`'internal'`（内部，触发联动）/ `'external'`（外部） |
 | `linkedId` | `number` | 否 | 联动账单的 id（垫付/应付 内部对象时产生） |
+| `voucher` | `string` | 否 | 凭证图片 URL（扫描凭证记账时产生），默认 `''`。须为后端返回的可跨端访问 URL，**不可存本地路径** |
 | `_voided` | `boolean` | 否 | 是否已作废，默认 `false` |
 
 **type 与 typeLabel 映射关系：**
@@ -449,6 +450,43 @@
 
 ---
 
+### 2.12 凭证上传 (Voucher)
+
+> 与其他接口不同：图片是二进制文件，走 `wx.uploadFile`（multipart）而非 `wx.request`（JSON）。
+> 图片**不进数据库**，存对象存储（OSS / COS / 微信云存储），数据库的 `voucher` 字段只存返回的 URL。
+
+#### `uploadVoucher(filePath)`
+
+上传一张凭证图片，返回可跨端访问的 URL。
+
+| 参数 | 类型 | 说明 |
+|------|------|------|
+| `filePath` | `string` | 微信临时文件路径（`wx.chooseImage` / `wx.chooseMedia` 返回的 `tempFilePath`） |
+
+**返回值：** `Promise<string>` — 解析为图片 URL（如 `'https://cdn.xxx.com/voucher/2026/06/abc.jpg'`）。
+
+**底层请求（后端需实现）：** `POST /api/upload`
+
+`wx.uploadFile` 以 `multipart/form-data` 提交：
+
+| 字段 | 说明 |
+|------|------|
+| `file`（文件字段名） | 图片二进制 |
+| `header.Authorization` | 登录 token（同其他鉴权接口） |
+
+**响应：**
+```json
+{ "ok": true, "url": "https://cdn.xxx.com/voucher/2026/06/abc.jpg" }
+```
+
+**约束：**
+- 仅接受图片类型：`jpg` / `jpeg` / `png`
+- 单张大小上限：建议 ≤ 5MB（前端已用 `sizeType: ['compressed']` 压缩）
+- 须校验登录态，按 `user_id` 归档
+- 返回的 URL 须长期有效、可跨设备/跨用户访问（公司账本共享场景）
+
+---
+
 ## 三、接口总览
 
 | # | 方法 | 参数 | 返回值 | 说明 |
@@ -483,6 +521,7 @@
 | 28 | `getOverviewCards()` | — | `OverviewCard[]` | 获取简览卡片 |
 | 29 | `saveOverviewCards(cards)` | cards | — | 保存简览卡片 |
 | 30 | `migrate()` | — | — | 旧数据迁移（可废弃） |
+| 31 | `uploadVoucher(filePath)` | filePath | `Promise<string>` | 上传凭证图片，返回 URL |
 
 ---
 
@@ -659,6 +698,36 @@
 
 ---
 
+### 4.11 扫描凭证记账与图片存储
+
+用户在拓展菜单点「扫描凭证记账」→ 拍照 → 识别 → 自动填充金额/分类 → 确认保存。凭证图片随账单一起留存，详情页可回看。
+
+**完整流程：**
+
+```
+1. wx.chooseImage(camera) → 拿到临时路径 tempFilePath
+2. （识别）当前为前端模拟，后期替换为真实 OCR
+3. url = await api.uploadVoucher(tempFilePath)   ← 上传，拿到跨端 URL
+4. api.addItem(scope, { ...item, voucher: url }) ← URL 存进账单
+5. 详情页 <image src="{{item.voucher}}"> 直接展示
+```
+
+**为什么图片必须走后端：**
+
+| 方案 | 结果 |
+|------|------|
+| 本地 `saveFileSync`（返回 `wxfile://` 路径） | ❌ 路径仅本设备本用户有效；换设备/重装/公司账本共享给他人 → 图裂；本地存储 10MB 上限 |
+| 后端上传 → 对象存储 → 返回 https URL | ✅ 跨设备、跨用户、长期可访问 |
+
+> 前端骨架阶段临时用本地路径占位；后端上传接口就绪后，`utils/api.js` 内把 `saveFileSync` 替换为 `uploadVoucher` 即可，页面层零改动。
+
+**`voucher` 字段贯穿：**
+- `addItem` / `addLinkedItems`：写入时携带 `voucher`（镜像账单可不带）
+- `getItems`：返回须包含 `voucher`
+- `updateItem`：编辑账单时 `voucher` 字段保持不变（合并更新，不覆盖）
+
+---
+
 ## 五、后端任务清单
 
 ### 任务 1：用户认证系统
@@ -702,7 +771,7 @@ verify_codes: { phone, code, expires_at }
 **数据表设计建议：**
 ```
 items: { id, user_id, scope, category, type, typeLabel, amount, date, note,
-         target, targetType, linkedId, _voided, created_at }
+         target, targetType, linkedId, voucher, _voided, created_at }
 ```
 
 ---
@@ -813,6 +882,29 @@ user_settings: { user_id, key, value, updated_at }
 |------|---------|
 | `getOverviewCards()` | 按 user_id 查询自定义布局 |
 | `saveOverviewCards(cards)` | 整体覆盖保存 |
+
+---
+
+### 任务 10：凭证图片上传与存储
+
+**优先级：中**（扫描凭证记账功能依赖；接口未就绪前前端用本地路径占位）
+
+| 接口 | 后端工作 |
+|------|---------|
+| `uploadVoucher(filePath)` → `POST /api/upload` | 接收 multipart 图片 → 校验类型/大小 → 存对象存储 → 返回可访问 URL |
+
+**关键点：**
+- 用对象存储（阿里云 OSS / 腾讯云 COS / 微信云存储），**不要把图片塞进数据库**，库里 `items.voucher` 只存 URL
+- 校验登录态，按 `user_id` 归档目录（如 `voucher/{user_id}/{yyyy}/{mm}/`）
+- 限制类型（jpg/jpeg/png）与大小（≤ 5MB）
+- 返回 URL 须长期有效、可跨设备/跨用户访问（公司账本共享需要）
+- 可选：删除账单时清理对应图片（避免孤儿文件），或留存做凭证审计
+
+**对象存储建议：**
+```
+存储路径: voucher/{user_id}/{date}/{uuid}.jpg
+返回:     https://{bucket-cdn}/voucher/{user_id}/{date}/{uuid}.jpg
+```
 
 ---
 

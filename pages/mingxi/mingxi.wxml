@@ -1346,6 +1346,17 @@
     </view>
   </view>
 
+  <!-- 凭证识别中 -->
+  <view class="scan-recog-mask" wx:if="{{scanRecognizing}}">
+    <view class="scan-recog-card">
+      <view class="scan-recog-frame">
+        <image class="scan-recog-photo" src="{{bookPhoto}}" mode="aspectFill"></image>
+        <view class="scan-recog-line"></view>
+      </view>
+      <text class="scan-recog-text">正在识别凭证…</text>
+    </view>
+  </view>
+
   <!-- 账单详情弹窗 -->
   <view class="bill-modal-mask" wx:if="{{modalItem}}" catchtap="onModalClose">
     <view class="bill-modal" catchtap="nop">
@@ -1374,6 +1385,10 @@
       <view class="bill-modal-row">
         <text class="bill-modal-label">日期</text>
         <text class="bill-modal-value">{{modalItem.date}}</text>
+      </view>
+      <view wx:if="{{modalItem.voucher}}" class="bill-modal-row">
+        <text class="bill-modal-label">凭证</text>
+        <image class="bill-modal-voucher" src="{{modalItem.voucher}}" mode="aspectFill" catchtap="onVoucherPreview" data-src="{{modalItem.voucher}}"></image>
       </view>
       <view wx:if="{{modalItem.settleInfo}}" class="bill-modal-row">
         <text class="bill-modal-label">结清</text>
@@ -1416,7 +1431,15 @@
   </view>
 
   <view class="book-mask" wx:if="{{showBookPopup}}" bindtap="onBookClose">
-    <view class="book-sheet" catchtap="nop">
+    <view class="book-sheet {{bookPhoto ? 'book-sheet--with-photo' : ''}}" catchtap="nop">
+      <view class="book-photo-row" wx:if="{{bookPhoto}}">
+        <image class="book-photo-thumb" src="{{bookPhoto}}" mode="aspectFill" bindtap="onBookPhotoPreview"></image>
+        <view class="book-photo-meta">
+          <text class="book-photo-tag">凭证已识别</text>
+          <text class="book-photo-hint">请核对金额与分类</text>
+        </view>
+        <view class="book-photo-remove" catchtap="onBookPhotoRemove"><text>✕</text></view>
+      </view>
       <view class="book-date-row">
         <picker mode="date" value="{{bookForm.date}}" bindchange="onBookDateChange">
           <view class="book-date-picker">

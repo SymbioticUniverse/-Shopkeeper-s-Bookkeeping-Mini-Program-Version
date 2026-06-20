@@ -7486,6 +7486,115 @@ page {
   flex-direction: column;
   padding: 24rpx 28rpx 0;
 }
+.book-sheet--with-photo { height: 64vh; }
+
+/* 记账弹窗 - 凭证预览行 */
+.book-photo-row {
+  display: flex;
+  align-items: center;
+  padding: 8rpx 0 20rpx;
+  border-bottom: 2rpx solid #f0f0f0;
+  margin-bottom: 12rpx;
+  flex-shrink: 0;
+}
+.book-photo-thumb {
+  width: 120rpx;
+  height: 120rpx;
+  border-radius: 16rpx;
+  background: #f5f5f5;
+  flex-shrink: 0;
+}
+.book-photo-meta {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  margin-left: 20rpx;
+}
+.book-photo-tag { font-size: 28rpx; font-weight: 600; color: #333; }
+.book-photo-hint { font-size: 22rpx; color: #999; margin-top: 6rpx; }
+.book-photo-remove {
+  width: 48rpx; height: 48rpx;
+  border-radius: 50%;
+  background: #f0f0f0;
+  color: #888;
+  font-size: 24rpx;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+
+/* 凭证识别中 overlay */
+.scan-recog-mask {
+  position: fixed;
+  inset: 0;
+  z-index: 9000;
+  background: rgba(0,0,0,0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: modalFadeIn 0.28s ease-out;
+}
+.scan-recog-card {
+  width: 560rpx;
+  background: rgba(255,255,255,0.95);
+  backdrop-filter: blur(20px);
+  border-radius: 28rpx;
+  padding: 36rpx;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  box-shadow: 0 16rpx 48rpx rgba(0,0,0,0.2);
+  animation: modalSlideUp 0.28s ease-out;
+}
+.scan-recog-frame {
+  position: relative;
+  width: 100%;
+  height: 480rpx;
+  border-radius: 20rpx;
+  overflow: hidden;
+}
+.scan-recog-photo { width: 100%; height: 100%; }
+.scan-recog-line {
+  position: absolute;
+  left: 0; right: 0;
+  height: 6rpx;
+  background: linear-gradient(90deg, transparent, #07C160, transparent);
+  box-shadow: 0 0 20rpx 4rpx rgba(7,193,96,0.6);
+  animation: scanLine 1.6s linear infinite;
+}
+.scan-recog-text {
+  font-size: 30rpx;
+  font-weight: 600;
+  color: #333;
+  margin-top: 28rpx;
+  letter-spacing: 2rpx;
+}
+@keyframes scanLine {
+  0% { top: 0; }
+  50% { top: calc(100% - 6rpx); }
+  100% { top: 0; }
+}
+
+/* 详情弹窗凭证缩略图 */
+.bill-modal-voucher {
+  width: 120rpx;
+  height: 120rpx;
+  border-radius: 12rpx;
+  background: #f5f5f5;
+}
+
+/* 暗色模式 - 扫描凭证 */
+.page--dark .book-photo-row { border-bottom-color: #333; }
+.page--dark .book-photo-tag { color: #eee; }
+.page--dark .book-photo-hint { color: #888; }
+.page--dark .book-photo-thumb { background: #2a2a3a; }
+.page--dark .book-photo-remove { background: #2a2a3a; color: #aaa; }
+.page--dark .scan-recog-card {
+  background: rgba(30,30,46,0.95);
+  box-shadow: 0 16rpx 48rpx rgba(0,0,0,0.4);
+}
+.page--dark .scan-recog-text { color: #e0e0e0; }
+.page--dark .bill-modal-voucher { background: #2a2a3a; }
+
 
 .book-type-bar {
   display: flex;
