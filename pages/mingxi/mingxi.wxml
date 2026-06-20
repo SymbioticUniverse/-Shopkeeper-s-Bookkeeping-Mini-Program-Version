@@ -11,7 +11,7 @@
     </view>
     <view class="header-back-btn" wx:if="{{!showOverview || showCustomOverview}}" bindtap="goOverview">
       <view class="back-arrow"></view>
-      <text class="back-text">返回简览页</text>
+      <text class="back-text">返回简览</text>
     </view>
     <text class="header-title">掌柜记账</text>
     <view class="header-right-icon" bindtap="onExpandMenuTap">
