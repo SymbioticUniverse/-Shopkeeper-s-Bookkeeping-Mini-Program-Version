@@ -28,8 +28,8 @@ router.post('/migrate', requireAuth, (req, res) => {
 
   const insertStmt = db.prepare(`
     INSERT OR IGNORE INTO items
-      (id, user_id, scope, category, type, type_label, amount, date, note, target, target_type, linked_id, voided)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      (id, user_id, scope, category, type, type_label, amount, date, note, target, target_type, linked_id, voucher, voided)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `)
 
   let count = 0
@@ -51,6 +51,7 @@ router.post('/migrate', requireAuth, (req, res) => {
           item.target || '',
           item.targetType || '',
           item.linkedId || null,
+          item.voucher || '',
           item._voided ? 1 : 0
         )
         if (result.changes > 0) count++

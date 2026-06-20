@@ -404,6 +404,44 @@ function _findScope(id) {
   return 'company'
 }
 
+// ==================== 凭证上传 ====================
+
+/**
+ * 上传一张凭证图片，返回可跨端访问的 URL
+ * 走 wx.uploadFile（multipart），不走 wx.request（JSON）
+ * @param {string} filePath — wx.chooseImage/chooseMedia 返回的 tempFilePath
+ * @returns {Promise<string>} — 解析为图片 URL
+ */
+function uploadVoucher(filePath) {
+  const token = _getToken()
+  return new Promise((resolve, reject) => {
+    wx.uploadFile({
+      url: BASE_URL + '/upload',
+      filePath,
+      name: 'file',
+      header: {
+        ...(token ? { 'Authorization': 'Bearer ' + token } : {})
+      },
+      success(res) {
+        try {
+          const data = JSON.parse(res.data)
+          if (data.ok && data.url) {
+            resolve(data.url)
+          } else {
+            reject(data)
+          }
+        } catch (e) {
+          reject(res)
+        }
+      },
+      fail(err) {
+        console.error('[API] uploadVoucher 失败', err)
+        reject(err)
+      }
+    })
+  })
+}
+
 // ==================== 导出 ====================
 
 module.exports = {
@@ -448,6 +486,9 @@ module.exports = {
   saveOverviewCards,
 
   migrate,
+
+  // 凭证上传
+  uploadVoucher,
 
   // 新增：云端同步
   syncFromCloud,

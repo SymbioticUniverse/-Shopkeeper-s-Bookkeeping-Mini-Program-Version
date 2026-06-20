@@ -3,6 +3,7 @@
  * v1.1.0 — 安全加固版
  */
 const express = require('express')
+const path = require('path')
 const { initSchema, db } = require('./db')
 
 const app = express()
@@ -90,6 +91,13 @@ app.use('/api/overview', overviewRouter)
 // 数据迁移（一次性）
 const { migrate: migrateRouter } = require('./routes/migrate')
 app.use('/api', migrateRouter)
+
+// 凭证上传
+const { upload: uploadRouter } = require('./routes/upload')
+app.use('/api/upload', uploadRouter)
+
+// 凭证图片静态文件服务（本地开发用，生产环境由 CDN 接管）
+app.use('/voucher', express.static(path.join(__dirname, 'data', 'voucher')))
 
 // ==================== 全局错误处理 ====================
 

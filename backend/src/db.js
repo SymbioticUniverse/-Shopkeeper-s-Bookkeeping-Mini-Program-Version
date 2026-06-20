@@ -171,6 +171,11 @@ function initSchema() {
     db.exec('ALTER TABLE notifications ADD COLUMN source TEXT NOT NULL DEFAULT \'user\' CHECK(source IN (\'user\',\'system\'))')
   } catch (e) { /* 列已存在 */ }
 
+  // Migration: 添加 voucher 列（凭证图片 URL）
+  try {
+    db.exec('ALTER TABLE items ADD COLUMN voucher TEXT DEFAULT \'\'')
+  } catch (e) { /* 列已存在 */ }
+
   // Migration: amount TEXT → REAL（旧库存在时重建表）
   try {
     const colInfo = db.pragma('table_info(items)')
@@ -191,6 +196,7 @@ function initSchema() {
             target TEXT DEFAULT '',
             target_type TEXT DEFAULT '',
             linked_id INTEGER DEFAULT NULL,
+            voucher TEXT DEFAULT '',
             voided INTEGER NOT NULL DEFAULT 0,
             created_at TEXT NOT NULL DEFAULT (datetime('now')),
             FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
@@ -198,7 +204,7 @@ function initSchema() {
           INSERT INTO items_mig
             SELECT id, user_id, scope, category, type, type_label,
                    CAST(amount AS REAL), date, note, target, target_type,
-                   linked_id, voided, created_at
+                   linked_id, voucher, voided, created_at
             FROM items;
           DROP TABLE items;
           ALTER TABLE items_mig RENAME TO items;

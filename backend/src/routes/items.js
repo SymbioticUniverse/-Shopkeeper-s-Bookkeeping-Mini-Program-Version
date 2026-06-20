@@ -24,6 +24,7 @@ function rowToItem(row) {
     target: row.target || '',
     targetType: row.target_type || '',
     linkedId: row.linked_id ?? undefined,
+    voucher: row.voucher || '',
     _voided: row.voided === 1
   }
 }
@@ -63,8 +64,8 @@ router.post('/', requireAuth, (req, res) => {
 
   try {
     db.prepare(`
-      INSERT INTO items (id, user_id, scope, category, type, type_label, amount, date, note, target, target_type, linked_id, voided)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO items (id, user_id, scope, category, type, type_label, amount, date, note, target, target_type, linked_id, voucher, voided)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
       item.id,
       req.userId,
@@ -78,6 +79,7 @@ router.post('/', requireAuth, (req, res) => {
       item.target || '',
       item.targetType || '',
       item.linkedId || null,
+      item.voucher || '',
       item._voided ? 1 : 0
     )
   } catch (err) {
@@ -141,6 +143,10 @@ router.put('/:id', requireAuth, (req, res) => {
   if (data.linkedId !== undefined) {
     setClauses.push('linked_id = ?')
     params.push(data.linkedId)
+  }
+  if (data.voucher !== undefined) {
+    setClauses.push('voucher = ?')
+    params.push(data.voucher)
   }
   if (data._voided !== undefined) {
     setClauses.push('voided = ?')
@@ -239,8 +245,8 @@ router.post('/linked', requireAuth, (req, res) => {
   }
 
   const insertStmt = db.prepare(`
-    INSERT INTO items (id, user_id, scope, category, type, type_label, amount, date, note, target, target_type, linked_id, voided)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    INSERT INTO items (id, user_id, scope, category, type, type_label, amount, date, note, target, target_type, linked_id, voucher, voided)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `)
 
   // 事务：两条同时写入，任一失败自动回滚
@@ -250,14 +256,14 @@ router.post('/linked', requireAuth, (req, res) => {
       item.category, item.type, item.typeLabel,
       item.amount, item.date,
       item.note || '', item.target || '', item.targetType || '',
-      item.linkedId || null, item._voided ? 1 : 0
+      item.linkedId || null, item.voucher || '', item._voided ? 1 : 0
     )
     insertStmt.run(
       mirrorItem.id, req.userId, mirrorScope,
       mirrorItem.category, mirrorItem.type, mirrorItem.typeLabel,
       mirrorItem.amount, mirrorItem.date,
       mirrorItem.note || '', mirrorItem.target || '', mirrorItem.targetType || '',
-      mirrorItem.linkedId || null, mirrorItem._voided ? 1 : 0
+      mirrorItem.linkedId || null, mirrorItem.voucher || '', mirrorItem._voided ? 1 : 0
     )
   })
 

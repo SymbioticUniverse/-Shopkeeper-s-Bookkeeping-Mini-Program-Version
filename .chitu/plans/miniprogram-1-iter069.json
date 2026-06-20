@@ -1,0 +1,15 @@
+{
+  "project": "miniprogram-1",
+  "goal": "对照API.md 修复完善backend的代码，用本身技术栈",
+  "targetFiles": [
+    "backend/src/db.js",
+    "backend/src/routes/items.js",
+    "backend/src/routes/upload.js",
+    "backend/src/app.js",
+    "utils/api.js",
+    "backend/package.json",
+    "backend/src/routes/migrate.js"
+  ],
+  "steps": [],
+  "createdAt": "2026-06-20T10:13:57.516Z"
+}
