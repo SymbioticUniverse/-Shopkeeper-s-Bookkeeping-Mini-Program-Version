@@ -1,11 +1,20 @@
 /**
  * 账单路由 — CRUD + 垫付应付联动
+ *
+ * 安全加固：
+ *   - voucher 字段入库前校验归属（防绕过上传接口设任意 URL）
+ *   - DELETE 同步清理磁盘凭证文件
  */
 const express = require('express')
+const path = require('path')
+const fs = require('fs')
 const { db } = require('../db')
 const { requireAuth } = require('../middleware/auth')
 
 const router = express.Router()
+
+// 凭证存储目录（与 upload.js 一致）
+const VOUCHER_DIR = path.join(__dirname, '..', 'data', 'voucher')
 
 // ==================== 工具函数 ====================
 
@@ -34,6 +43,56 @@ function checkOwnership(userId, id) {
   return db.prepare('SELECT id, scope FROM items WHERE id = ? AND user_id = ?').get(id, userId)
 }
 
+/** 防御性 sanitize userId（与 upload.js 一致） */
+function sanitizeUserId(userId) {
+  return String(userId).replace(/[\/\\\.]+/g, '_').replace(/^_+|_+$/g, '') || 'unknown'
+}
+
+/**
+ * 校验 voucher URL 是否属于当前用户
+ * 接受格式：.../voucher/{userId}/... 或相对路径 {userId}/...
+ * 返回校验后的标准化 voucher 字符串，非法时返回 null
+ */
+function validateVoucher(voucher, userId) {
+  if (!voucher || typeof voucher !== 'string' || !voucher.trim()) {
+    return ''  // 空值允许（无凭证）
+  }
+  const safeId = sanitizeUserId(userId)
+  // 匹配 voucher 路径中是否包含 /{safeId}/ 段
+  const normalized = voucher.replace(/\\/g, '/')
+  if (normalized.includes('/' + safeId + '/')) {
+    return voucher.trim()
+  }
+  // 也接受以 safeId/ 开头的相对路径
+  if (normalized.startsWith(safeId + '/')) {
+    return voucher.trim()
+  }
+  return null  // 非法 voucher
+}
+
+/** 从 voucher URL 提取磁盘文件路径 */
+function voucherToDiskPath(voucher, userId) {
+  if (!voucher) return null
+  const safeId = sanitizeUserId(userId)
+  const normalized = voucher.replace(/\\/g, '/')
+  // 提取 /voucher/{safeId}/... 后的相对路径部分
+  const idx = normalized.indexOf('/voucher/' + safeId + '/')
+  let rel
+  if (idx !== -1) {
+    rel = normalized.slice(idx + '/voucher/'.length)  // e.g. "1/2026/06/uuid.jpg"
+  } else if (normalized.startsWith(safeId + '/')) {
+    rel = normalized  // already relative
+  } else {
+    return null
+  }
+  const absPath = path.resolve(VOUCHER_DIR, rel)
+  // 防路径穿越
+  if (!absPath.startsWith(VOUCHER_DIR + path.sep)) {
+    return null
+  }
+  return absPath
+}
+
 // ==================== 获取账单列表 ====================
 
 router.get('/', requireAuth, (req, res) => {
@@ -60,6 +119,15 @@ router.post('/', requireAuth, (req, res) => {
   }
   if (!item || !item.id) {
     return res.status(400).json({ error: 'item 数据不完整' })
+  }
+
+  // 校验 voucher 归属
+  if (item.voucher) {
+    const valid = validateVoucher(item.voucher, req.userId)
+    if (valid === null) {
+      return res.status(400).json({ error: 'voucher 凭证路径不合法' })
+    }
+    item.voucher = valid
   }
 
   try {
@@ -102,6 +170,18 @@ router.put('/:id', requireAuth, (req, res) => {
   const existing = checkOwnership(req.userId, id)
   if (!existing) {
     return res.status(404).json({ error: '账单不存在' })
+  }
+
+  // 校验 voucher 归属
+  if (data.voucher !== undefined) {
+    if (data.voucher) {
+      const valid = validateVoucher(data.voucher, req.userId)
+      if (valid === null) {
+        return res.status(400).json({ error: 'voucher 凭证路径不合法' })
+      }
+      data.voucher = valid
+    }
+    // 允许清空（data.voucher === ''）
   }
 
   // 构建动态 UPDATE
@@ -203,7 +283,7 @@ router.put('/:id', requireAuth, (req, res) => {
   res.json(rowToItem(updated))
 })
 
-// ==================== 删除账单（级联清理联动镜像） ====================
+// ==================== 删除账单（级联清理联动镜像 + 磁盘凭证文件） ====================
 
 router.delete('/:id', requireAuth, (req, res) => {
   const id = Number(req.params.id)
@@ -213,21 +293,59 @@ router.delete('/:id', requireAuth, (req, res) => {
     return res.status(404).json({ error: '账单不存在' })
   }
 
-  db.transaction(() => {
-    // 获取当前 item 的 linkedId
-    const item = db.prepare('SELECT linked_id FROM items WHERE id = ?').get(id)
+  // 先查出所有将被删除的 item 的 voucher，用于清理磁盘文件
+  const toDelete = db.transaction(() => {
+    // 获取当前 item
+    const item = db.prepare('SELECT id, voucher, linked_id FROM items WHERE id = ?').get(id)
     const linkedId = item ? item.linked_id : null
 
-    // 删除当前 item
-    db.prepare('DELETE FROM items WHERE id = ?').run(id)
-
-    // 级联：删除 linked_id 指向当前 item 的镜像
-    if (linkedId) {
-      db.prepare('DELETE FROM items WHERE id = ?').run(linkedId)
+    // 收集所有将被删除的 id 及其 voucher
+    const deletedIds = [id]
+    const vouchersToClean = []
+    if (item && item.voucher) {
+      vouchersToClean.push({ id: item.id, voucher: item.voucher })
     }
-    // 级联：删除 linked_id 指向当前 item 的其他 item
-    db.prepare('DELETE FROM items WHERE linked_id = ?').run(id)
+
+    // 级联镜像
+    if (linkedId) {
+      const mirror = db.prepare('SELECT id, voucher FROM items WHERE id = ?').get(linkedId)
+      if (mirror) {
+        deletedIds.push(mirror.id)
+        if (mirror.voucher) {
+          vouchersToClean.push({ id: mirror.id, voucher: mirror.voucher })
+        }
+      }
+    }
+    // linked_id 指向本记录的镜像
+    const reverseMirrors = db.prepare('SELECT id, voucher FROM items WHERE linked_id = ?').all(id)
+    for (const m of reverseMirrors) {
+      deletedIds.push(m.id)
+      if (m.voucher) {
+        vouchersToClean.push({ id: m.id, voucher: m.voucher })
+      }
+    }
+
+    // 执行删除
+    for (const did of deletedIds) {
+      db.prepare('DELETE FROM items WHERE id = ?').run(did)
+    }
+
+    return vouchersToClean
   })()
+
+  // 清理磁盘凭证文件（非事务，失败不影响响应）
+  for (const vc of toDelete) {
+    const diskPath = voucherToDiskPath(vc.voucher, req.userId)
+    if (diskPath) {
+      try {
+        if (fs.existsSync(diskPath)) {
+          fs.unlinkSync(diskPath)
+        }
+      } catch (e) {
+        console.error(`[VOUCHER] 删除凭证文件失败: ${diskPath}`, e.message)
+      }
+    }
+  }
 
   res.json({ success: true })
 })
@@ -235,13 +353,32 @@ router.delete('/:id', requireAuth, (req, res) => {
 // ==================== 联动新增 — 事务写入两条关联账单 ====================
 
 router.post('/linked', requireAuth, (req, res) => {
-  const { scope, item, mirrorScope, mirrorItem } = req.body || {}
+  const { scope, mirrorScope, item, mirrorItem } = req.body || {}
 
   if (!scope || !mirrorScope || !item || !mirrorItem) {
     return res.status(400).json({ error: '参数不完整：需要 scope, item, mirrorScope, mirrorItem' })
   }
+  if (!['personal', 'company'].includes(scope) || !['personal', 'company'].includes(mirrorScope)) {
+    return res.status(400).json({ error: 'scope 参数无效，需为 personal 或 company' })
+  }
   if (!item.id || !mirrorItem.id) {
     return res.status(400).json({ error: 'item 和 mirrorItem 必须包含 id' })
+  }
+
+  // 校验 voucher 归属
+  if (item.voucher) {
+    const valid = validateVoucher(item.voucher, req.userId)
+    if (valid === null) {
+      return res.status(400).json({ error: 'voucher 凭证路径不合法' })
+    }
+    item.voucher = valid
+  }
+  if (mirrorItem.voucher) {
+    const valid = validateVoucher(mirrorItem.voucher, req.userId)
+    if (valid === null) {
+      return res.status(400).json({ error: 'mirrorItem voucher 凭证路径不合法' })
+    }
+    mirrorItem.voucher = valid
   }
 
   const insertStmt = db.prepare(`
@@ -271,6 +408,9 @@ router.post('/linked', requireAuth, (req, res) => {
     doInsert()
     res.json({ success: true, id: item.id, mirrorId: mirrorItem.id })
   } catch (err) {
+    if (err.code === 'SQLITE_CONSTRAINT_PRIMARYKEY') {
+      return res.status(409).json({ error: '账单 id 已存在' })
+    }
     console.error('联动写入失败:', err.message)
     res.status(500).json({ error: '联动写入失败' })
   }

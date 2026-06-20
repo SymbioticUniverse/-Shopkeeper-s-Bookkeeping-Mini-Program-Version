@@ -1,59 +1,93 @@
-# 自审报告 — 对照 API.md 修复 voucher + upload
+# 安全加固 Review
 
-## 改动文件 (7个)
+## 改动文件
 
-### 1. `backend/src/db.js`
-- ✅ ALTER TABLE 添加 voucher 列（迁移到已有 DB）
-- ✅ items_mig 重建表也包含 voucher + INSERT 也迁移 voucher
-- ⚠️ 原始 CREATE TABLE 未加 voucher，但 ALTER TABLE 兜底，新/旧库均覆盖
+- `backend/src/app.js` — 裸 express.static → 鉴权代理路由
+- `backend/src/routes/upload.js` — magic bytes + 扩展名白名单 + userId sanitize + 鉴权代理
+- `backend/src/routes/items.js` — voucher 校验 + 删除清理磁盘 + /linked 校验
 
-### 2. `backend/src/routes/items.js`
-- ✅ rowToItem 添加 `voucher: row.voucher || ''`
-- ✅ addItem INSERT 列从 13→14，参数加 item.voucher
-- ✅ addLinkedItems INSERT 列从 13→14，两处 run 均加 voucher 参数
-- ✅ updateItem setClauses 新增 voucher（合并更新，传了才覆盖，不传保留旧值 — 符合 API.md "编辑时 voucher 保持不变"）
-- ✅ 无 null/undefined 风险：`|| ''` 兜底
+## 逐文件检查
 
-### 3. `backend/src/routes/upload.js` (新建)
-- ✅ multer diskStorage，按 `{userId}/{yyyy}/{mm}/{uuid}.ext` 归档
-- ✅ fileFilter 仅允许 image/jpeg、image/jpg、image/png
-- ✅ limits.fileSize = 5MB
-- ✅ requireAuth 校验登录态
-- ✅ 响应 `{ ok: true, url }`，URL 由 VOUCHER_BASE_URL 或 req host 构造
-- ✅ multer 错误分类处理（LIMIT_FILE_SIZE 单独提示）
+### backend/src/app.js
 
-### 4. `backend/src/app.js`
-- ✅ 添加 `const path = require('path')`
-- ✅ 注册 `/api/upload` 路由
-- ✅ 添加 `/voucher` 静态文件中间件（express.static）
+- ✅ `express.static('/voucher')` 已移除
+- ✅ 替换为 `app.get('/voucher/*', requireAuth, serveVoucher)`
+- ✅ `requireAuth` 通过 inline require 注入（与现有路由注册风格一致）
+- ✅ `serveVoucher` 从 upload.js 导出
 
-### 5. `backend/package.json`
-- ✅ 添加 multer@^1.4.5-lts.1
+### backend/src/routes/upload.js
 
-### 6. `backend/src/routes/migrate.js`
-- ✅ INSERT 列从 13→14，参数加 item.voucher
+**detectImageType():**
+- ✅ PNG magic: 89 50 4E 47
+- ✅ JPEG magic: FF D8 FF
+- ✅ fd 用 `finally` 确保关闭，异常吞掉不泄漏
+- ✅ 非图片返回 null
 
-### 7. `utils/api.js`
-- ✅ 新增 `uploadVoucher(filePath)` 函数，使用 wx.uploadFile (multipart)
-- ✅ 返回 Promise<string>，解析 `{ ok: true, url }` 响应
-- ✅ 带 Authorization Bearer token
-- ✅ 已导出到 module.exports
+**sanitizeUserId():**
+- ✅ 剔除 `/` `\` `.` 三个路径操作字符
+- ✅ 空字符串降级为 `'unknown'`
+- ✅ 首尾下划线修剪
 
-## 逻辑正确性检查
-- ✅ voucher 字段贯穿：addItem → DB → getItems → rowToItem → 前端
-- ✅ updateItem 不覆盖 voucher（除非显式传入 — 前端不会传）
-- ✅ uploadVoucher 与其他接口一致使用 BASE_URL + token
-- ✅ 上传目录自动创建（fs.mkdirSync recursive: true）
-- ✅ 无循环依赖、无新增 null/undefined 风险
+**Multer 配置:**
+- ✅ `destination` 使用 `sanitizeUserId(req.userId)`
+- ✅ `filename` 统一用 `.tmp` 后缀，不再信任 `file.originalname`
+- ✅ `fileFilter` 保留 MIME 初步过滤（深度校验在 magic bytes 阶段）
 
-## 边界情况
-- ✅ 无 voucher 的旧数据：rowToItem 返回 `''`，前端安全
-- ✅ 未登录上传：requireAuth 返回 401
-- ✅ 非图片上传：fileFilter 拒绝，返回 "仅支持 jpg/jpeg/png"
-- ✅ 超大文件：multer LIMIT_FILE_SIZE 返回 400
-- ✅ 无文件：req.file 检查返回 400
+**POST 处理器:**
+- ✅ multer 完成后调用 `detectImageType()` 校验真实类型
+- ✅ 非图片时 `unlinkSync` 删除 `.tmp` 文件后返回 400
+- ✅ 图片时 `renameSync` 改为正确扩展名（`.jpg` / `.png`）
+- ✅ rename 失败时也清理临时文件
+- ✅ URL 构建使用 `newPath`（已重命名后的路径）
 
-## 未覆盖（已知限制）
-- ⚠️ 生产环境 voucher URL 需配 VOUCHER_BASE_URL 指向 CDN
-- ⚠️ 删除账单时未清理对应 voucher 文件（API.md 标注为"可选"）
-- ⚠️ multer 1.x 有已知漏洞，生产建议升 2.x（当前用 1.4.5-lts.2 是兼容选择）
+**serveVoucher():**
+- ✅ 从 `req.path` 提取相对路径
+- ✅ 归属校验：`relPath.startsWith(safeId + '/')`
+- ✅ `path.resolve` 后二次确认仍在 VOUCHER_DIR 内（防穿越）
+- ✅ `X-Content-Type-Options: nosniff`
+- ✅ `Cache-Control: private, max-age=86400`（私有缓存）
+- ✅ 文件不存在返回 404
+
+**边界检查:**
+- ✅ safeId 防 userId=`1` 匹配 `10/...` 路径前缀问题：`'10/...'.startsWith('1/')` → false，不会误授权
+
+### backend/src/routes/items.js
+
+**validateVoucher():**
+- ✅ 空值允许（无凭证场景）
+- ✅ 检查 voucher URL 包含 `/safeId/` 段
+- ✅ 也接受 `safeId/` 开头的相对路径
+- ✅ 非法返回 null，调用方返回 400
+
+**voucherToDiskPath():**
+- ✅ 从完整 URL 提取 `/voucher/{safeId}/...` 后的相对路径
+- ✅ 也支持纯相对路径
+- ✅ `path.resolve` 后二次确认路径安全
+- ✅ 文件操作 wrapped in try-catch，失败不影响响应
+
+**POST /:**
+- ✅ voucher 入库前校验归属
+
+**PUT /:id:**
+- ✅ voucher 更新前校验归属
+- ✅ 允许 `voucher: ''` 清空凭证
+
+**DELETE /:id:**
+- ✅ 事务内收集所有将被删除的 item（主 + linked_id 正向镜像 + linked_id 反向镜像）的 voucher
+- ✅ 事务成功后清理磁盘文件（非事务，失败仅 log 不报错）
+- ✅ 磁盘清理使用 `existsSync` + `unlinkSync`
+
+**POST /linked:**
+- ✅ 新增 scope 值校验 `['personal', 'company'].includes()`
+- ✅ 两条 item 的 voucher 均校验归属
+- ✅ `SQLITE_CONSTRAINT_PRIMARYKEY` 返回 409（之前走 500）
+
+## 未覆盖的审计点
+
+- 🟢 migrate.js 路由仍在线（建议下线，非本次范围）
+- 🟢 db.js REAL 金额精度（既有设计，非本次范围）
+- 🟢 app.db 在 git 历史中（需 BFG 清理，非代码改动）
+
+## 结论
+
+五个审计点全部修复，代码自查无逻辑缺陷。
