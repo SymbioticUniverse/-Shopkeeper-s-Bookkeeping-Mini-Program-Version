@@ -18,5 +18,5 @@
     }
   ],
   "capability": "凭证图片上传：前端 uploadVoucher(filePath) → 后端 POST /api/upload 接收 multipart 图片，校验类型(jpg/png)和大小(≤5MB)，按用户归档存储，返回可跨端访问 URL；账单 voucher 字段贯穿 CRUD 全链路，getItems 返回包含 voucher",
-  "updatedAt": "2026-06-20T10:13:57.592Z"
+  "updatedAt": "2026-06-20T10:15:06.365Z"
 }

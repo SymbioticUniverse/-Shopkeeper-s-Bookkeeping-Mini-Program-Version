@@ -1,0 +1,44 @@
+{
+  "file": ".claude/skills/ui-ux-pro-max/scripts/design_system.py",
+  "exports": [
+    "format_ascii_box",
+    "format_markdown",
+    "generate_design_system",
+    "persist_design_system",
+    "format_master_md",
+    "format_page_override_md",
+    "DesignSystemGenerator"
+  ],
+  "imports": [
+    {
+      "symbol": "datetime",
+      "from": "datetime"
+    },
+    {
+      "symbol": "Path",
+      "from": "pathlib"
+    },
+    {
+      "symbol": "search",
+      "from": "core"
+    },
+    {
+      "symbol": "DATA_DIR",
+      "from": "core"
+    },
+    {
+      "symbol": "csv",
+      "from": "csv"
+    },
+    {
+      "symbol": "json",
+      "from": "json"
+    },
+    {
+      "symbol": "os",
+      "from": "os"
+    }
+  ],
+  "capability": "",
+  "updatedAt": "2026-06-20T10:13:59.605Z"
+}

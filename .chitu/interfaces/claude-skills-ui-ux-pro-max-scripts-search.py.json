@@ -1,0 +1,50 @@
+{
+  "file": ".claude/skills/ui-ux-pro-max/scripts/search.py",
+  "exports": [
+    "format_output"
+  ],
+  "imports": [
+    {
+      "symbol": "CSV_CONFIG",
+      "from": "core"
+    },
+    {
+      "symbol": "AVAILABLE_STACKS",
+      "from": "core"
+    },
+    {
+      "symbol": "MAX_RESULTS",
+      "from": "core"
+    },
+    {
+      "symbol": "search",
+      "from": "core"
+    },
+    {
+      "symbol": "search_stack",
+      "from": "core"
+    },
+    {
+      "symbol": "generate_design_system",
+      "from": "design_system"
+    },
+    {
+      "symbol": "persist_design_system",
+      "from": "design_system"
+    },
+    {
+      "symbol": "argparse",
+      "from": "argparse"
+    },
+    {
+      "symbol": "sys",
+      "from": "sys"
+    },
+    {
+      "symbol": "io",
+      "from": "io"
+    }
+  ],
+  "capability": "",
+  "updatedAt": "2026-06-20T10:13:59.606Z"
+}

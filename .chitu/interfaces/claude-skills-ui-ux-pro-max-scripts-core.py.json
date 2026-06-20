@@ -1,0 +1,33 @@
+{
+  "file": ".claude/skills/ui-ux-pro-max/scripts/core.py",
+  "exports": [
+    "detect_domain",
+    "search",
+    "search_stack",
+    "BM25"
+  ],
+  "imports": [
+    {
+      "symbol": "Path",
+      "from": "pathlib"
+    },
+    {
+      "symbol": "log",
+      "from": "math"
+    },
+    {
+      "symbol": "defaultdict",
+      "from": "collections"
+    },
+    {
+      "symbol": "csv",
+      "from": "csv"
+    },
+    {
+      "symbol": "re",
+      "from": "re"
+    }
+  ],
+  "capability": "",
+  "updatedAt": "2026-06-20T10:13:59.604Z"
+}
