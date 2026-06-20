@@ -38,6 +38,13 @@ router.post('/', requireAuth, (req, res) => {
     return res.status(400).json({ error: 'list 必须是数组' })
   }
 
+  // 文本长度校验
+  for (const item of list) {
+    if (item.text && item.text.length > 2000) {
+      return res.status(400).json({ error: '通知内容不能超过 2000 个字符' })
+    }
+  }
+
   const insertStmt = db.prepare(`
     INSERT OR IGNORE INTO notifications (id, user_id, text, time, read, source)
     VALUES (?, ?, ?, ?, ?, 'user')

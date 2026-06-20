@@ -3,7 +3,20 @@
   "exports": [
     "feedback"
   ],
-  "imports": [],
-  "capability": "完整审计 API.md 契约与后端实现的一致性：30/30 接口全部匹配，HTTP method、参数、认证流程、业务逻辑均已验证零偏差。",
-  "updatedAt": "2026-06-18T10:39:05.430Z"
+  "imports": [
+    {
+      "symbol": "express",
+      "from": "express"
+    },
+    {
+      "symbol": "db",
+      "from": "../db"
+    },
+    {
+      "symbol": "requireAuth",
+      "from": "../middleware/auth"
+    }
+  ],
+  "capability": "通知和反馈的 POST 接口新增 item.text ≤2000 字符校验，防止超长文本攻击（与账单备注的校验模式一致）",
+  "updatedAt": "2026-06-20T14:19:42.560Z"
 }

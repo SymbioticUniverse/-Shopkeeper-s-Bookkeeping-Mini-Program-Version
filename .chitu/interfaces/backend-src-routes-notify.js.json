@@ -17,6 +17,6 @@
       "from": "../middleware/auth"
     }
   ],
-  "capability": "微信登录支持真实 code2Session API（生产环境），linkedId 全链路归属校验防止跨用户注入，type_label 与 type 联动校验，DELETE 级联加 user_id 过滤，迁移异常不再静默吞掉",
-  "updatedAt": "2026-06-20T14:03:27.704Z"
+  "capability": "通知和反馈的 POST 接口新增 item.text ≤2000 字符校验，防止超长文本攻击（与账单备注的校验模式一致）",
+  "updatedAt": "2026-06-20T14:19:42.560Z"
 }
