@@ -259,6 +259,8 @@ Page({
     aiVoiceMode: true,
     aiRecording: false,
     showExpandMenu: false, // 拓展菜单
+    searchText: '', // 顶部搜索关键词
+    searchRecording: false, // 顶部语音搜索录音中
     showAuditPage: false, // 审核页
     showNotifyPage: false, // 通知页
     showContactPage: false, // 联系我们获好礼页
@@ -3817,6 +3819,21 @@ Page({
         aiVoiceMode: false
       })
     }
+  },
+
+  // ---- 顶部搜索 ----
+  onHeaderSearchInput(e) {
+    this.setData({ searchText: e.detail.value })
+  },
+  onHeaderSearch() {
+    // 搜索逻辑待接入
+  },
+  onHeaderSearchVoiceStart() {
+    this.setData({ searchRecording: true })
+  },
+  onHeaderSearchVoiceEnd() {
+    if (!this.data.searchRecording) return
+    this.setData({ searchRecording: false })
   },
 
   // ---- 相机扫描 ----

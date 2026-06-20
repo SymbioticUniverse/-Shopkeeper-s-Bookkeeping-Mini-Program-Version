@@ -1,22 +1,33 @@
 <view class="page {{isDarkMode ? 'page--dark' : ''}} {{tabSlideDir}}">
   <!-- 标题栏 -->
   <view class="header">
-    <view class="header-left" wx:if="{{showOverview && !showCustomOverview && !showCustomCategory}}">
-      <text class="year-text">2026年</text>
-      <view class="date-badge">
-        <text class="date-month-num">06</text>
-        <text class="date-month-label">月</text>
-        <view class="date-arrow"></view>
+    <view class="header-left-group">
+      <view class="header-left" wx:if="{{showOverview && !showCustomOverview && !showCustomCategory}}">
+        <text class="year-text">2026年</text>
+        <view class="date-badge">
+          <text class="date-month-num">06</text>
+          <text class="date-month-label">月</text>
+          <view class="date-arrow"></view>
+        </view>
+      </view>
+      <view class="header-back-btn" wx:if="{{!showOverview || showCustomOverview}}" bindtap="goOverview">
+        <view class="back-arrow"></view>
+        <text class="back-text">返回简览</text>
       </view>
     </view>
-    <view class="header-back-btn" wx:if="{{!showOverview || showCustomOverview}}" bindtap="goOverview">
-      <view class="back-arrow"></view>
-      <text class="back-text">返回简览</text>
-    </view>
     <text class="header-title">掌柜记账</text>
-    <view class="header-right-icon" bindtap="onExpandMenuTap">
-      <view class="header-expand-btn">
-        <view class="expand-plus"></view>
+    <view class="header-right-group">
+      <view class="header-search">
+        <view class="header-search-mic" bindlongpress="onHeaderSearchVoiceStart" bindtouchend="onHeaderSearchVoiceEnd">
+          <view class="mic-head"></view>
+          <view class="mic-base"></view>
+        </view>
+        <input class="header-search-input" placeholder="" value="{{searchText}}" bindinput="onHeaderSearchInput" confirm-type="search" bindconfirm="onHeaderSearch" />
+      </view>
+      <view class="header-right-icon" bindtap="onExpandMenuTap">
+        <view class="header-expand-btn">
+          <view class="expand-plus"></view>
+        </view>
       </view>
     </view>
   </view>
@@ -1425,7 +1436,7 @@
 
   <!-- 底部 TabBar -->
   <!-- 语音录入指示器 -->
-  <view class="ai-voice-indicator" wx:if="{{aiRecording && !showAiChat}}">
+  <view class="ai-voice-indicator {{(aiRecording || searchRecording) && !showAiChat ? 'ai-voice-indicator--show' : ''}}">
     <view class="ai-voice-wave">
       <view class="ai-voice-bar"></view>
       <view class="ai-voice-bar"></view>
