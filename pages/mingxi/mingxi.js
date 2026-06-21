@@ -764,15 +764,6 @@ Page({
     const pSettle = personalItems.filter(it => (it.typeLabel === '垫付' || it.typeLabel === '应付') && it.settleStatus !== 'settled')
     const cSettle = companyItems.filter(it => (it.typeLabel === '垫付' || it.typeLabel === '应付') && it.settleStatus !== 'settled')
 
-    const now = new Date()
-    const monthPrefix = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0')
-    const pmItems = personalItems.filter(it => it.date && it.date.startsWith(monthPrefix))
-    const cmItems = companyItems.filter(it => it.date && it.date.startsWith(monthPrefix))
-    const pmIn = sum(pmItems, it => it.type === 'in')
-    const pmOut = sum(pmItems, it => it.type === 'out')
-    const cmIn = sum(cmItems, it => it.type === 'in')
-    const cmOut = sum(cmItems, it => it.type === 'out')
-
     const cards = this.data.overviewCards.map(card => {
       if (card.type === 'overview_personal') {
         return { ...card, rows: [
@@ -802,22 +793,25 @@ Page({
         ]}
       }
       if (card.type === 'detail_personal') {
-        return { ...card, rows: [
-          { label: '本月收入', value: fmt(pmIn), color: 'green' },
-          { label: '本月支出', value: fmt(pmOut), color: 'red' },
-          { label: '结余', value: fmt(pmIn - pmOut), color: (pmIn - pmOut) >= 0 ? 'green' : 'red' },
-        ]}
+        return { ...card, previewItems: this._buildDetailPreview('personal') }
       }
       if (card.type === 'detail_company') {
-        return { ...card, rows: [
-          { label: '本月收入', value: fmt(cmIn), color: 'green' },
-          { label: '本月支出', value: fmt(cmOut), color: 'red' },
-          { label: '结余', value: fmt(cmIn - cmOut), color: (cmIn - cmOut) >= 0 ? 'green' : 'red' },
-        ]}
+        return { ...card, previewItems: this._buildDetailPreview('company') }
       }
       return card
     })
     this.setData({ overviewCards: cards })
+  },
+  // 明细简览卡截断预览：取该账本前 4 条真实流水，复用明细页同源数据
+  _buildDetailPreview(scope) {
+    return api.getItems(scope).slice(0, 4).map(it => ({
+      category: it.category,
+      typeLabel: it.typeLabel,
+      type: it.type,
+      note: it.note || '-',
+      amount: it.amount,
+      dateShort: (it.date || '').slice(5, 10) || it.date || '',
+    }))
   },
   _initOverviewCharts() {
     const charts = this.data.overviewCards.filter(c =>

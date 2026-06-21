@@ -328,8 +328,8 @@
         <canvas wx:if="{{item.previewStyle === 'chart_bar'}}" type="2d" id="ovBar_{{item.id}}" class="overview-canvas"></canvas>
         <!-- 饼状图 canvas（复用报表页 drawPieChart） -->
         <canvas wx:if="{{item.previewStyle === 'chart_pie'}}" type="2d" id="ovPie_{{item.id}}" class="overview-canvas"></canvas>
-        <!-- 非图表卡片：渲染 rows -->
-        <block wx:if="{{!item.previewStyle || item.previewStyle === 'overview' || item.previewStyle === 'detail'}}" wx:for="{{item.rows}}" wx:key="label" wx:for-item="row">
+        <!-- 非图表卡片：渲染 rows（简览/汇总样式） -->
+        <block wx:if="{{!item.previewStyle || item.previewStyle === 'overview'}}" wx:for="{{item.rows}}" wx:key="label" wx:for-item="row">
           <block wx:if="{{!row.threeCol}}">
             <view class="card-row">
               <text class="row-label">{{row.label}}</text>
@@ -351,6 +351,26 @@
               </view>
             </view>
           </block>
+        </block>
+        <!-- 明细页风格：真实流水截断列表 -->
+        <block wx:if="{{item.previewStyle === 'detail'}}">
+          <view class="ov-detail-cols">
+            <text class="ov-detail-col" style="width:64rpx">分类</text>
+            <text class="ov-detail-col" style="width:52rpx">类型</text>
+            <text class="ov-detail-col" style="flex:1">备注</text>
+            <text class="ov-detail-col" style="width:88rpx;text-align:right">金额</text>
+            <text class="ov-detail-col" style="width:72rpx;text-align:right">日期</text>
+          </view>
+          <view class="ov-detail-row" wx:for="{{item.previewItems}}" wx:key="index" wx:for-item="bill">
+            <view class="ov-detail-dot {{bill.type === 'in' ? 'ov-detail-dot--in' : 'ov-detail-dot--out'}}"></view>
+            <text class="ov-detail-cat">{{bill.category}}</text>
+            <text class="ov-detail-type">{{bill.typeLabel}}</text>
+            <text class="ov-detail-note">{{bill.note}}</text>
+            <text class="ov-detail-val {{bill.type === 'in' ? 'ov-detail-val--in' : 'ov-detail-val--out'}}">¥{{bill.amount}}</text>
+            <text class="ov-detail-date">{{bill.dateShort}}</text>
+          </view>
+          <view class="ov-detail-empty" wx:if="{{!item.previewItems || item.previewItems.length === 0}}">暂无流水</view>
+          <view class="ov-detail-cut" wx:if="{{item.previewItems.length >= 4}}">···</view>
         </block>
       </view>
     </block>

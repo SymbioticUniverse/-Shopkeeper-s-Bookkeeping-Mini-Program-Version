@@ -7098,6 +7098,97 @@ page {
   padding: 16rpx 28rpx;
 }
 
+/* 明细简览卡：真实流水截断列表 */
+.ov-detail-cols {
+  display: flex;
+  align-items: center;
+  gap: 8rpx;
+  padding: 0 4rpx 6rpx 20rpx;
+  margin-top: 4rpx;
+}
+.ov-detail-col {
+  font-size: 20rpx;
+  font-weight: 500;
+  color: #b0b0b0;
+}
+.ov-detail-row {
+  display: flex;
+  align-items: center;
+  gap: 8rpx;
+  padding: 8rpx 4rpx;
+}
+.ov-detail-dot {
+  width: 8rpx;
+  height: 8rpx;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.18);
+  flex-shrink: 0;
+}
+.ov-detail-dot--in { background: #00d042; }
+.ov-detail-dot--out { background: #ed2e2e; }
+.ov-detail-cat {
+  font-size: 22rpx;
+  font-weight: 500;
+  color: #333;
+  width: 64rpx;
+  flex-shrink: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.ov-detail-type {
+  font-size: 22rpx;
+  color: #888;
+  width: 52rpx;
+  flex-shrink: 0;
+}
+.ov-detail-note {
+  font-size: 22rpx;
+  color: #b0b0b0;
+  flex: 1;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.ov-detail-val {
+  font-size: 22rpx;
+  font-weight: 600;
+  color: #000;
+  width: 88rpx;
+  text-align: right;
+  flex-shrink: 0;
+}
+.ov-detail-val--in { color: #00d042; }
+.ov-detail-val--out { color: #ed2e2e; }
+.ov-detail-date {
+  font-size: 22rpx;
+  color: #b0b0b0;
+  width: 72rpx;
+  text-align: right;
+  flex-shrink: 0;
+}
+.ov-detail-empty {
+  text-align: center;
+  font-size: 22rpx;
+  color: #b0b0b0;
+  padding: 24rpx 0;
+}
+.ov-detail-cut {
+  text-align: center;
+  font-size: 24rpx;
+  color: rgba(0, 0, 0, 0.18);
+  letter-spacing: 4rpx;
+  margin-top: 2rpx;
+}
+.page--dark .ov-detail-col,
+.page--dark .ov-detail-note,
+.page--dark .ov-detail-date,
+.page--dark .ov-detail-empty { color: #888; }
+.page--dark .ov-detail-cat { color: #ddd; }
+.page--dark .ov-detail-type { color: #aaa; }
+.page--dark .ov-detail-val { color: #eee; }
+.page--dark .ov-detail-cut { color: rgba(255, 255, 255, 0.2); }
+
 .settings-group {
   margin-bottom: 28rpx;
   padding: 0 60rpx 0 8rpx;
