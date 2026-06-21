@@ -2,7 +2,8 @@
   "file": "backend/src/routes/upload.js",
   "exports": [
     "upload",
-    "serveVoucher"
+    "serveVoucher",
+    "servePublicVoucher"
   ],
   "imports": [
     {
@@ -30,6 +31,6 @@
       "from": "../middleware/auth"
     }
   ],
-  "capability": "凭证安全加固：凭证访问需登录+归属校验（替代裸静态目录）、上传时 magic bytes 校验真实图片类型防 MIME 伪造 XSS、扩展名服务端白名单生成、voucher 字段入库校验归属、删除账单同步清理磁盘凭证文件、/linked 接口 scope 校验 + id 冲突返回 409",
-  "updatedAt": "2026-06-20T11:53:06.313Z"
+  "capability": "API.md 7.1: 登录接口返回 isNew 标识新老用户；API.md 7.2: 头像通过 /public/voucher/* 免鉴权路由直接加载，无需 downloadAuthedImage 绕过",
+  "updatedAt": "2026-06-21T12:25:35.246Z"
 }

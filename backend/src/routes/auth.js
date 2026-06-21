@@ -88,8 +88,10 @@ router.post('/login-by-phone', (req, res) => {
 
   // 查找或创建用户
   let user = db.prepare('SELECT id, nick_name, avatar_url FROM users WHERE phone = ?').get(phone)
+  let isNew = false
   if (!user) {
     // 新用户，使用手机号脱敏作为默认昵称
+    isNew = true
     const maskedPhone = phone.slice(0, 3) + '****' + phone.slice(7)
     const result = db.prepare(
       'INSERT INTO users (phone, nick_name) VALUES (?, ?)'
@@ -109,7 +111,8 @@ router.post('/login-by-phone', (req, res) => {
   res.json({
     nickName: user.nick_name,
     avatarUrl: user.avatar_url,
-    token
+    token,
+    isNew
   })
 })
 
@@ -181,8 +184,10 @@ router.post('/login-by-wechat', async (req, res) => {
   const avatar = avatarUrl || ''
 
   let user = db.prepare('SELECT id, nick_name, avatar_url FROM users WHERE openid = ?').get(openid)
+  let isNew = false
 
   if (!user) {
+    isNew = true
     const result = db.prepare(
       'INSERT INTO users (nick_name, avatar_url, openid) VALUES (?, ?, ?)'
     ).run(nickname, avatar, openid)
@@ -203,7 +208,8 @@ router.post('/login-by-wechat', async (req, res) => {
   res.json({
     nickName: user.nick_name,
     avatarUrl: user.avatar_url,
-    token
+    token,
+    isNew
   })
 })
 

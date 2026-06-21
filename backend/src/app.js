@@ -93,12 +93,15 @@ const { migrate: migrateRouter } = require('./routes/migrate')
 app.use('/api', migrateRouter)
 
 // 凭证上传
-const { upload: uploadRouter, serveVoucher } = require('./routes/upload')
+const { upload: uploadRouter, serveVoucher, servePublicVoucher } = require('./routes/upload')
 app.use('/api/upload', uploadRouter)
 
 // 凭证图片鉴权代理 —— 替代裸 express.static
 // 校验登录态 + 凭证归属当前用户，防止越权访问
 app.get('/voucher/*', require('./middleware/auth').requireAuth, serveVoucher)
+
+// 头像公开访问 —— 免鉴权，供 <image src> 直接加载
+app.get('/public/voucher/*', servePublicVoucher)
 
 // ==================== 全局错误处理 ====================
 

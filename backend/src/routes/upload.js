@@ -73,9 +73,11 @@ const storage = multer.diskStorage({
   destination: function (req, file, cb) {
     const now = new Date()
     const safeId = sanitizeUserId(req.userId)
-    const dir = path.join(VOUCHER_DIR, safeId,
+    const isAvatar = req.query.type === 'avatar'
+    const subDir = isAvatar ? path.join(safeId, 'avatar') : path.join(safeId,
       String(now.getFullYear()),
       String(now.getMonth() + 1).padStart(2, '0'))
+    const dir = path.join(VOUCHER_DIR, subDir)
     fs.mkdirSync(dir, { recursive: true })
     cb(null, dir)
   },
@@ -145,7 +147,9 @@ router.post('/', requireAuth, (req, res, next) => {
     const baseUrl = process.env.VOUCHER_BASE_URL ||
       `${req.protocol}://${req.get('host')}`
     const relativePath = path.relative(VOUCHER_DIR, newPath)
-    const url = baseUrl + '/voucher/' + relativePath.replace(/\\/g, '/')
+    const isAvatar = req.query.type === 'avatar'
+    const urlPrefix = isAvatar ? '/public/voucher/' : '/voucher/'
+    const url = baseUrl + urlPrefix + relativePath.replace(/\\/g, '/')
 
     res.json({ ok: true, url })
   })
@@ -188,4 +192,45 @@ function serveVoucher(req, res, next) {
   fs.createReadStream(absPath).pipe(res)
 }
 
-module.exports = { upload: router, serveVoucher }
+module.exports = { upload: router, serveVoucher, servePublicVoucher }
+
+// ==================== GET /public/voucher/* — 免鉴权静态服务（头像等公开资源） ====================
+
+/**
+ * 公开凭证服务 — 无需登录，用于 <image src> 直接加载
+ * 仅接受 /public/voucher/{safeId}/avatar/ 路径（头像专用）
+ * 安全头：X-Content-Type-Options: nosniff
+ */
+function servePublicVoucher(req, res) {
+  const relPath = req.path.replace(/^\/+/, '')  // e.g. "1/avatar/uuid.jpg"
+
+  // 仅允许 avatar 子路径（防止越权访问非公开凭证）
+  const parts = relPath.replace(/\\/g, '/').split('/')
+  if (parts.length < 3 || parts[1] !== 'avatar') {
+    return res.status(403).json({ error: '仅支持头像公开访问' })
+  }
+
+  const safeId = sanitizeUserId(parts[0])
+  if (parts[0] !== safeId) {
+    return res.status(403).json({ error: '非法用户标识' })
+  }
+
+  const absPath = path.resolve(VOUCHER_DIR, relPath)
+
+  // 防路径穿越
+  if (!absPath.startsWith(VOUCHER_DIR + path.sep)) {
+    return res.status(403).json({ error: '非法路径' })
+  }
+
+  if (!fs.existsSync(absPath)) {
+    return res.status(404).json({ error: '资源不存在' })
+  }
+
+  const ext = path.extname(absPath).toLowerCase()
+  const contentType = EXT_CONTENT_TYPE[ext] || 'application/octet-stream'
+
+  res.setHeader('Content-Type', contentType)
+  res.setHeader('X-Content-Type-Options', 'nosniff')
+  res.setHeader('Cache-Control', 'public, max-age=86400')
+  fs.createReadStream(absPath).pipe(res)
+}
