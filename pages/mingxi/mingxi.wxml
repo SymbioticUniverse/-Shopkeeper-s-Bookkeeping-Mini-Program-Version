@@ -314,7 +314,7 @@
 
     <!-- ===== 默认简览（动态渲染 overviewCards） ===== -->
     <block wx:if="{{!showCustomOverview && showOverview}}">
-      <view class="card grid-span-{{item.span}}" wx:for="{{overviewCards}}" wx:key="id" bindtap="switchTab" data-index="0">
+      <view class="card grid-span-{{item.span}}" wx:for="{{overviewCards}}" wx:key="id" bindtap="onOverviewCardTap" data-type="{{item.type}}">
         <view class="card-header {{item.span >= 2 ? 'compact' : ''}}">
           <view class="card-avatar" wx:if="{{item.hasAvatar}}"></view>
           <text class="card-title">{{item.name}}</text>
@@ -1239,6 +1239,17 @@
           </view>
         </scroll-view>
       </view>
+      <!-- 账本页（个人/公司） -->
+      <view class="card grid-span-3 my-card ledger-card" wx:elif="{{showLedgerPage}}">
+        <view class="custom-cat-header">
+          <view class="custom-cat-back" bindtap="onLedgerBack">
+            <view class="custom-cat-back-arrow"></view>
+          </view>
+          <view class="custom-cat-right"><image class="custom-cat-icon" src="{{ledgerScope === 'company' ? '/assets/icons/gongsizhangben.png' : '/assets/icons/gerenzhangben.png'}}" mode="aspectFit"/><text class="custom-cat-title">{{ledgerScope === 'company' ? t.detail_company_ledger : t.detail_personal_ledger}}</text></view>
+        </view>
+        <view class="custom-cat-divider"></view>
+        <scroll-view class="ledger-scroll" scroll-y enhanced show-scrollbar="{{false}}"></scroll-view>
+      </view>
       <!-- 正常我的页面 -->
       <view class="card grid-span-3 my-card" wx:else>
         <view class="my-profile">
@@ -1257,8 +1268,8 @@
             <text class="my-item-arrow">〉</text>
           </view>
           <view class="my-icon-row">
-            <view class="my-icon-item" bindtap="onLinkCompany"><image class="my-icon-circle" src="/assets/icons/lianjiegongsi.png" mode="aspectFit"/><text class="my-icon-label">{{t.my_link_company}}</text></view>
-            <view class="my-icon-item" bindtap="onInviteEmployee"><image class="my-icon-circle" src="/assets/icons/yaoqingyuangong.png" mode="aspectFit"/><text class="my-icon-label">{{t.my_invite_employee}}</text></view>
+            <view class="my-icon-item" bindtap="onGotoPersonalLedger"><image class="my-icon-circle" src="/assets/icons/gerenzhangben.png" mode="aspectFit"/><text class="my-icon-label">{{t.detail_personal_ledger}}</text></view>
+            <view class="my-icon-item" bindtap="onGotoCompanyLedger"><image class="my-icon-circle" src="/assets/icons/gongsizhangben.png" mode="aspectFit"/><text class="my-icon-label">{{t.detail_company_ledger}}</text></view>
             <view class="my-icon-item" bindtap="onAuditEntry">
               <view class="my-icon-circle" style="position:relative">
                 <image class="my-icon-circle-img" src="/assets/icons/shenhe.png" mode="aspectFit"/>

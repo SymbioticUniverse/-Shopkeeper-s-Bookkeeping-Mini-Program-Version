@@ -626,6 +626,7 @@ page {
   flex-direction: column;
   align-items: center;
   gap: 8rpx;
+  flex: 1;
 }
 .my-icon-circle {
   width: 56rpx;
@@ -3639,6 +3640,7 @@ page {
   flex-direction: column;
   align-items: center;
   gap: 8rpx;
+  flex: 1;
 }
 .my-icon-circle {
   width: 56rpx;
@@ -7085,6 +7087,12 @@ page {
 }
 
 .settings-scroll {
+  flex: 1;
+  min-height: 0;
+  padding: 16rpx 28rpx;
+}
+
+.ledger-scroll {
   flex: 1;
   min-height: 0;
   padding: 16rpx 28rpx;

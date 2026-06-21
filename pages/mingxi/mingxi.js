@@ -266,6 +266,8 @@ Page({
     showContactPage: false, // 联系我们获好礼页
     contactFeedback: '', // 反馈内容
     showSettingsPage: false, // 设置页
+    showLedgerPage: false, // 账本页（个人/公司）
+    ledgerScope: 'personal', // 当前账本范围: personal/company
     showPrivacyPage: false, // 隐私设置页
     showPrivacyPolicyPage: false, // 隐私政策页
     showAboutPage: false, // 关于我们页
@@ -2528,24 +2530,38 @@ Page({
 
   // ---- 导出账单 ----
   // ---- 我的页图标入口 ----
-  onLinkCompany() {
-    this.setData({ showCompanyShare: true, companyShareStep: 1, companyRole: 'employee', employeeUid: '' })
+  onGotoPersonalLedger() {
+    this.setData({ showLedgerPage: true, ledgerScope: 'personal' })
   },
 
-  onInviteEmployee() {
-    const saved = api.getCompanyInfo()
-    if (saved && saved.companyRole === 'boss') {
-      this.setData({
-        showCompanyShare: true,
-        companyShareStep: 2,
-        companyRole: 'boss',
-        companyUid: saved.companyUid || '',
-        companyName: saved.companyName || '',
-        companyBossTitle: saved.companyBossTitle || '',
-      })
-    } else {
-      this.setData({ showCompanyShare: true, companyShareStep: 1, companyRole: 'boss', companyUid: '', companyName: '', companyBossTitle: '' })
+  onGotoCompanyLedger() {
+    if (!api.getCompanyInfo()) {
+      wx.showToast({ title: '请先注册公司', icon: 'none' })
+      return
     }
+    this.setData({ showLedgerPage: true, ledgerScope: 'company' })
+  },
+
+  onLedgerBack() {
+    this.setData({ showLedgerPage: false })
+  },
+
+  // 简览卡片点击：个人/公司账本卡 → 账本页；其余卡 → 明细页（保持原行为）
+  onOverviewCardTap(e) {
+    const { type } = e.currentTarget.dataset
+    if (type === 'overview_personal') {
+      this.setData({ showOverview: false, currentTab: 4, showLedgerPage: true, ledgerScope: 'personal' })
+      return
+    }
+    if (type === 'overview_company') {
+      if (!api.getCompanyInfo()) {
+        wx.showToast({ title: '请先注册公司', icon: 'none' })
+        return
+      }
+      this.setData({ showOverview: false, currentTab: 4, showLedgerPage: true, ledgerScope: 'company' })
+      return
+    }
+    this.switchTab({ currentTarget: { dataset: { index: 0 } } })
   },
 
   onAuditEntry() {
