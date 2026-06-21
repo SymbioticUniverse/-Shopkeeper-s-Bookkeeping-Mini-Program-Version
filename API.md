@@ -396,6 +396,8 @@
 | `privacy_allowAnalytics` | `boolean` | 允许数据分析 | `true` / `false` |
 | `privacy_allowCrashReport` | `boolean` | 允许崩溃报告 | `true` / `false` |
 | `auditCleaned` | `boolean` | 审核列表已清理（一次性标记） | `true` |
+| `budget_personal` | `number` | 个人账本月度预算（账本页设置；未设 / `0` 表示无预算） | ≥ 0 |
+| `budget_company` | `number` | 公司账本月度预算（账本页设置；未设 / `0` 表示无预算） | ≥ 0 |
 
 **返回值：** 对应值，不存在时返回 `undefined`（或 `''`，取决于存储实现）。
 
@@ -686,6 +688,8 @@
 | `privacy_allowAnalytics` | `boolean` | `true` | 允许数据分析 |
 | `privacy_allowCrashReport` | `boolean` | `true` | 允许崩溃报告 |
 | `auditCleaned` | `boolean` | — | 审核列表清理标记（一次性） |
+| `budget_personal` | `number` | — | 个人账本月度预算（账本页「月度预算」设置） |
+| `budget_company` | `number` | — | 公司账本月度预算（账本页「月度预算」设置） |
 
 ---
 
@@ -871,6 +875,12 @@ company_members: { id, company_id, user_id, role, status, joined_at }
 ```
 user_settings: { user_id, key, value, updated_at }
 ```
+
+**月度预算（`budget_personal` / `budget_company`）：**
+- 账本页「月度预算」走通用设置接口落库，**无需新增专用端点**，复用 `saveSetting` / `getSetting` 即可
+- `value` 为数值（月度预算金额，单位元），按 `user_id + key` 唯一存储；未设置时 `getSetting` 返回空，前端按「未设预算」处理
+- `company` 维度的预算归属公司 boss 本人（与其他个人设置一致，按 user_id 存），员工不读写
+- 后端如对 `value` 做类型规整，请保留数值精度（前端以 `parseFloat` 读取）
 
 ---
 

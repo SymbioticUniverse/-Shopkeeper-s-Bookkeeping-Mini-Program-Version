@@ -1268,7 +1268,91 @@
           <view class="custom-cat-right"><image class="custom-cat-icon" src="{{ledgerScope === 'company' ? '/assets/icons/gongsizhangben.png' : '/assets/icons/gerenzhangben.png'}}" mode="aspectFit"/><text class="custom-cat-title">{{ledgerScope === 'company' ? t.detail_company_ledger : t.detail_personal_ledger}}</text></view>
         </view>
         <view class="custom-cat-divider"></view>
-        <scroll-view class="ledger-scroll" scroll-y enhanced show-scrollbar="{{false}}"></scroll-view>
+        <scroll-view class="ledger-scroll" scroll-y enhanced show-scrollbar="{{false}}">
+          <!-- 本月概览 -->
+          <view class="ledger-sec">
+            <view class="ledger-sec-head">
+              <text class="ledger-sec-title">本月概览</text>
+              <text class="ledger-sec-sub">{{ledgerMonthLabel}}</text>
+            </view>
+            <view class="ledger-stat-row">
+              <view class="ledger-stat">
+                <text class="ledger-stat-val ledger-stat-val--in">{{ledgerMonthIncome}}</text>
+                <text class="ledger-stat-label">收入</text>
+              </view>
+              <view class="ledger-stat-sep"></view>
+              <view class="ledger-stat">
+                <text class="ledger-stat-val ledger-stat-val--out">{{ledgerMonthExpense}}</text>
+                <text class="ledger-stat-label">支出</text>
+              </view>
+              <view class="ledger-stat-sep"></view>
+              <view class="ledger-stat">
+                <text class="ledger-stat-val {{ledgerMonthBalancePos ? 'ledger-stat-val--in' : 'ledger-stat-val--out'}}">{{ledgerMonthBalance}}</text>
+                <text class="ledger-stat-label">结余</text>
+              </view>
+            </view>
+          </view>
+
+          <!-- 往来款（未结清 应收/应付） -->
+          <view class="ledger-sec">
+            <view class="ledger-sec-head">
+              <text class="ledger-sec-title">往来款</text>
+              <text class="ledger-sec-sub">未结清</text>
+            </view>
+            <block wx:if="{{ledgerReceivableCount > 0 || ledgerPayableCount > 0}}">
+              <view class="ledger-due-row" bindtap="onLedgerGotoSettle">
+                <view class="ledger-due-left">
+                  <text class="ledger-due-name">应收</text>
+                  <text class="ledger-due-desc">别人欠我 · {{ledgerReceivableCount}} 笔</text>
+                </view>
+                <view class="ledger-due-right">
+                  <text class="ledger-due-val ledger-due-val--in">+{{ledgerReceivable}}</text>
+                  <view class="ledger-due-arrow"></view>
+                </view>
+              </view>
+              <view class="ledger-due-row" bindtap="onLedgerGotoSettle">
+                <view class="ledger-due-left">
+                  <text class="ledger-due-name">应付</text>
+                  <text class="ledger-due-desc">我欠别人 · {{ledgerPayableCount}} 笔</text>
+                </view>
+                <view class="ledger-due-right">
+                  <text class="ledger-due-val ledger-due-val--out">-{{ledgerPayable}}</text>
+                  <view class="ledger-due-arrow"></view>
+                </view>
+              </view>
+              <view class="ledger-due-net">
+                <text class="ledger-due-net-label">净往来</text>
+                <text class="ledger-due-net-val {{ledgerNetPos ? 'ledger-due-val--in' : 'ledger-due-val--out'}}">{{ledgerNetPos ? '+' : ''}}{{ledgerNet}}</text>
+              </view>
+            </block>
+            <view wx:else class="ledger-due-empty">暂无未结清往来款</view>
+          </view>
+
+          <!-- 月度预算 -->
+          <view class="ledger-sec">
+            <view class="ledger-sec-head">
+              <text class="ledger-sec-title">月度预算</text>
+              <text class="ledger-budget-remain {{ledgerOverBudget ? 'ledger-budget-remain--over' : ''}}">{{ledgerBudgetRemainText}}</text>
+            </view>
+
+            <view wx:if="{{ledgerBudget > 0}}" class="ledger-budget-bar">
+              <view class="ledger-budget-fill {{ledgerOverBudget ? 'ledger-budget-fill--over' : ''}}" style="width: {{ledgerBudgetUsedPct}}%;"></view>
+            </view>
+            <view wx:if="{{ledgerBudget > 0}}" class="ledger-budget-meta">
+              <text class="ledger-budget-meta-txt">已用 ¥{{ledgerMonthExpense}}</text>
+              <text class="ledger-budget-meta-txt">{{ledgerBudgetUsedPct}}%</text>
+              <text class="ledger-budget-meta-txt">预算 ¥{{ledgerBudget}}</text>
+            </view>
+
+            <view class="ledger-budget-edit">
+              <view class="ledger-budget-input-wrap">
+                <text class="ledger-budget-cny">¥</text>
+                <input class="ledger-budget-input" type="digit" placeholder="设置本月预算" placeholder-class="ledger-budget-ph" value="{{ledgerBudgetInput}}" bindinput="onLedgerBudgetInput"/>
+              </view>
+              <view class="ledger-budget-save" bindtap="onLedgerBudgetSave">保存</view>
+            </view>
+          </view>
+        </scroll-view>
       </view>
       <!-- 正常我的页面 -->
       <view class="card grid-span-3 my-card" wx:else>

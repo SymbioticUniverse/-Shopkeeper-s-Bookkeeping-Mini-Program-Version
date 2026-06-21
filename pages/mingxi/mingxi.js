@@ -268,6 +268,24 @@ Page({
     showSettingsPage: false, // 设置页
     showLedgerPage: false, // 账本页（个人/公司）
     ledgerScope: 'personal', // 当前账本范围: personal/company
+    // 账本页：本月概览 + 月度预算
+    ledgerBudget: 0,
+    ledgerBudgetInput: '',
+    ledgerMonthLabel: '',
+    ledgerMonthIncome: '0.00',
+    ledgerMonthExpense: '0.00',
+    ledgerMonthBalance: '0.00',
+    ledgerMonthBalancePos: true,
+    ledgerBudgetUsedPct: 0,
+    ledgerOverBudget: false,
+    ledgerBudgetRemainText: '未设置预算',
+    // 账本页：往来款（未结清 应收/应付）
+    ledgerReceivable: '0.00',
+    ledgerPayable: '0.00',
+    ledgerNet: '0.00',
+    ledgerNetPos: true,
+    ledgerReceivableCount: 0,
+    ledgerPayableCount: 0,
     showPrivacyPage: false, // 隐私设置页
     showPrivacyPolicyPage: false, // 隐私政策页
     showAboutPage: false, // 关于我们页
@@ -2543,8 +2561,46 @@ Page({
 
   // ---- 导出账单 ----
   // ---- 我的页图标入口 ----
+  // ---- 账本页数据 ----
+  _ledgerData(scope) {
+    const items = api.getItems(scope).filter(it => !it._voided)
+    const now = new Date()
+    const mm = String(now.getMonth() + 1).padStart(2, '0')
+    const prefix = now.getFullYear() + '-' + mm
+    const monthItems = items.filter(it => (it.date || '').slice(0, 7) === prefix)
+    const sumType = (arr, t) => arr.filter(it => it.type === t).reduce((s, it) => s + parseFloat(it.amount || 0), 0)
+    const inc = sumType(monthItems, 'in')
+    const exp = sumType(monthItems, 'out')
+    const budget = parseFloat(api.getSetting('budget_' + scope) || 0) || 0
+    const remain = budget - exp
+    // 往来款：未结清的垫付(应收) / 应付
+    const recvArr = items.filter(it => it.typeLabel === '垫付' && it.settleStatus !== 'settled')
+    const payArr = items.filter(it => it.typeLabel === '应付' && it.settleStatus !== 'settled')
+    const recv = recvArr.reduce((s, it) => s + parseFloat(it.amount || 0), 0)
+    const pay = payArr.reduce((s, it) => s + parseFloat(it.amount || 0), 0)
+    const net = recv - pay
+    return {
+      ledgerBudget: budget,
+      ledgerBudgetInput: budget > 0 ? String(budget) : '',
+      ledgerMonthLabel: `${now.getFullYear()}年${mm}月`,
+      ledgerMonthIncome: inc.toFixed(2),
+      ledgerMonthExpense: exp.toFixed(2),
+      ledgerMonthBalance: (inc - exp).toFixed(2),
+      ledgerMonthBalancePos: (inc - exp) >= 0,
+      ledgerBudgetUsedPct: budget > 0 ? Math.min(100, Math.round(exp / budget * 100)) : 0,
+      ledgerOverBudget: budget > 0 && remain < 0,
+      ledgerBudgetRemainText: budget > 0 ? (remain >= 0 ? `剩余 ¥${remain.toFixed(2)}` : `超支 ¥${(-remain).toFixed(2)}`) : '未设置预算',
+      ledgerReceivable: recv.toFixed(2),
+      ledgerPayable: pay.toFixed(2),
+      ledgerNet: net.toFixed(2),
+      ledgerNetPos: net >= 0,
+      ledgerReceivableCount: recvArr.length,
+      ledgerPayableCount: payArr.length,
+    }
+  },
+
   onGotoPersonalLedger() {
-    this.setData({ showLedgerPage: true, ledgerScope: 'personal' })
+    this.setData({ showLedgerPage: true, ledgerScope: 'personal', ...this._ledgerData('personal') })
   },
 
   onGotoCompanyLedger() {
@@ -2552,18 +2608,41 @@ Page({
       wx.showToast({ title: '请先注册公司', icon: 'none' })
       return
     }
-    this.setData({ showLedgerPage: true, ledgerScope: 'company' })
+    this.setData({ showLedgerPage: true, ledgerScope: 'company', ...this._ledgerData('company') })
   },
 
   onLedgerBack() {
     this.setData({ showLedgerPage: false })
   },
 
+  // 往来款下钻 → 结清 Tab（对齐当前账本范围）
+  onLedgerGotoSettle() {
+    this.setData({ settleType: this.data.ledgerScope === 'company' ? 1 : 0 })
+    this.switchTab({ currentTarget: { dataset: { index: 3 } } })
+    this.initSettleItems()
+  },
+
+  onLedgerBudgetInput(e) {
+    this.setData({ ledgerBudgetInput: e.detail.value })
+  },
+
+  onLedgerBudgetSave() {
+    const scope = this.data.ledgerScope
+    const val = parseFloat(this.data.ledgerBudgetInput)
+    if (isNaN(val) || val < 0) {
+      wx.showToast({ title: '请输入有效金额', icon: 'none' })
+      return
+    }
+    api.saveSetting('budget_' + scope, val)
+    this.setData(this._ledgerData(scope))
+    wx.showToast({ title: '已保存', icon: 'success' })
+  },
+
   // 简览卡片点击：个人/公司账本卡 → 账本页；图表卡 → 报表页；其余卡 → 明细页
   onOverviewCardTap(e) {
     const { type } = e.currentTarget.dataset
     if (type === 'overview_personal') {
-      this.setData({ showOverview: false, currentTab: 4, showLedgerPage: true, ledgerScope: 'personal' })
+      this.setData({ showOverview: false, currentTab: 4, showLedgerPage: true, ledgerScope: 'personal', ...this._ledgerData('personal') })
       return
     }
     if (type === 'overview_company') {
@@ -2571,7 +2650,7 @@ Page({
         wx.showToast({ title: '请先注册公司', icon: 'none' })
         return
       }
-      this.setData({ showOverview: false, currentTab: 4, showLedgerPage: true, ledgerScope: 'company' })
+      this.setData({ showOverview: false, currentTab: 4, showLedgerPage: true, ledgerScope: 'company', ...this._ledgerData('company') })
       return
     }
     if (type && type.indexOf('report_') === 0) {
