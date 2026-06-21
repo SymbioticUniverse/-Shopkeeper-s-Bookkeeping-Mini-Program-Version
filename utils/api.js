@@ -234,28 +234,38 @@ function sendVerifyCode(phone) {
 
 /**
  * 手机号 + 验证码登录
- * 成功后存储 token + userInfo 到本地
- * @returns {Promise<{nickName: string, avatarUrl: string, token: string}>}
+ * 成功后存储 token + userInfo 到本地，返回含 isNew/hasCompany/companyRole 的完整登录结果
+ * @returns {Promise<{nickName: string, avatarUrl: string, token: string, isNew: boolean, hasCompany: boolean, companyRole: string|null}>}
  */
 async function loginByPhone(phone, code) {
   const result = await _request('POST', '/auth/login-by-phone', { phone, code })
   _setToken(result.token)
   const userInfo = { nickName: result.nickName, avatarUrl: result.avatarUrl }
   _save('userInfo', userInfo)
-  return userInfo
+  return {
+    ...userInfo,
+    isNew: result.isNew || false,
+    hasCompany: result.hasCompany || false,
+    companyRole: result.companyRole || null
+  }
 }
 
 /**
  * 微信授权登录
- * 成功后存储 token + userInfo 到本地
- * @returns {Promise<{nickName: string, avatarUrl: string, token: string}>}
+ * 成功后存储 token + userInfo 到本地，返回含 isNew/hasCompany/companyRole 的完整登录结果
+ * @returns {Promise<{nickName: string, avatarUrl: string, token: string, isNew: boolean, hasCompany: boolean, companyRole: string|null}>}
  */
 async function loginByWechat(wxUserInfo) {
   const result = await _request('POST', '/auth/login-by-wechat', wxUserInfo)
   _setToken(result.token)
   const userInfo = { nickName: result.nickName, avatarUrl: result.avatarUrl }
   _save('userInfo', userInfo)
-  return userInfo
+  return {
+    ...userInfo,
+    isNew: result.isNew || false,
+    hasCompany: result.hasCompany || false,
+    companyRole: result.companyRole || null
+  }
 }
 
 /**

@@ -7,6 +7,6 @@
       "from": "../../utils/api"
     }
   ],
-  "capability": "删除记录时自动级联删除镜像记录；退出登录时清除全部本地Storage防止换号数据残留",
-  "updatedAt": "2026-06-18T15:39:53.165Z"
+  "capability": "登录接口响应直接带回 hasCompany/companyRole，前端免去额外 GET /api/company 即可判定身份引导，老用户（尤其 boss）登录不再被重复询问身份，消除引导页闪现",
+  "updatedAt": "2026-06-21T12:51:15.362Z"
 }

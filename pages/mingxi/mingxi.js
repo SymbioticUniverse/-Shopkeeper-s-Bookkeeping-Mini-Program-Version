@@ -770,15 +770,36 @@ Page({
       success: async (res) => {
         const f = res.tempFiles && res.tempFiles[0]
         const local = f && f.tempFilePath
-        if (!local) return
+        if (!local) {
+          wx.showToast({ title: '未选到图片', icon: 'none' })
+          return
+        }
+        // 前端预校验：后端只收 jpg/png 且 ≤5MB（iPhone HEIC / 超大图会被拒）
+        if (f.size && f.size > 5 * 1024 * 1024) {
+          wx.showToast({ title: '图片需小于 5MB', icon: 'none' })
+          return
+        }
+        if (!/\.(jpe?g|png)$/i.test(local)) {
+          wx.showToast({ title: '仅支持 jpg/png 图片', icon: 'none' })
+          return
+        }
         this.setData({ profileAvatarLocal: local, profileUploading: true })
+        wx.showLoading({ title: '上传中…', mask: true })
         try {
           const url = await api.uploadVoucher(local)
           this.setData({ profileAvatarUrl: url, profileUploading: false })
+          wx.hideLoading()
+          wx.showToast({ title: '头像已上传', icon: 'success' })
         } catch (e) {
-          this.setData({ profileUploading: false })
-          wx.showToast({ title: '头像上传失败', icon: 'none' })
+          this.setData({ profileUploading: false, profileAvatarLocal: '' })
+          wx.hideLoading()
+          wx.showToast({ title: (e && e.error) || '头像上传失败', icon: 'none' })
         }
+      },
+      fail: (err) => {
+        // 用户主动取消不提示
+        if (err && /cancel/i.test(err.errMsg || '')) return
+        wx.showToast({ title: '选择图片失败', icon: 'none' })
       }
     })
   },
@@ -3810,11 +3831,17 @@ Page({
       wx.showToast({ title: '请输入6位验证码', icon: 'none' })
       return
     }
-    api.loginByPhone(loginPhone, loginCode).then(userInfo => {
+    api.loginByPhone(loginPhone, loginCode).then(result => {
+      const userInfo = { nickName: result.nickName, avatarUrl: result.avatarUrl }
       this.setData({ isLoggedIn: true, userInfo, showLoginPage: false, loginPhone: '', loginCode: '' })
-      this._maybeProfileSetup(userInfo)
+      // 用后端 isNew 替代前端脱敏手机号启发式判定
+      if (result.isNew) {
+        this.setData({ showProfileModal: true, profileName: '', profileAvatarLocal: '', profileAvatarUrl: '' })
+      } else {
+        this._refreshAvatarDisplay(userInfo)
+      }
       wx.showToast({ title: '登录成功', icon: 'success' })
-      // 登录后从云端同步数据
+      // 登录后从云端同步数据（异步，不阻塞后续操作）
       api.syncFromCloud().then(() => {
         this.initDetailItems()
       })
@@ -3825,10 +3852,16 @@ Page({
 
   onWxLogin(e) {
     if (e.detail.userInfo) {
-      api.loginByWechat(e.detail.userInfo).then(userInfo => {
+      api.loginByWechat(e.detail.userInfo).then(result => {
+        const userInfo = { nickName: result.nickName, avatarUrl: result.avatarUrl }
         this.setData({ isLoggedIn: true, userInfo, showLoginPage: false })
+        if (result.isNew) {
+          this.setData({ showProfileModal: true, profileName: '', profileAvatarLocal: '', profileAvatarUrl: '' })
+        } else {
+          this._refreshAvatarDisplay(userInfo)
+        }
         wx.showToast({ title: '登录成功', icon: 'success' })
-        // 登录后从云端同步数据
+        // 登录后从云端同步数据（异步，不阻塞后续操作）
         api.syncFromCloud().then(() => {
           this.initDetailItems()
         })
@@ -3904,11 +3937,27 @@ Page({
       wx.showToast({ title: '请输入6位验证码', icon: 'none' })
       return
     }
-    api.loginByPhone(loginPhone, loginCode).then(userInfo => {
-      this.setData({ isLoggedIn: true, userInfo, guideStep: 2, loginPhone: '', loginCode: '' })
-      this._maybeProfileSetup(userInfo)
+    api.loginByPhone(loginPhone, loginCode).then(async result => {
+      const userInfo = { nickName: result.nickName, avatarUrl: result.avatarUrl }
+      this.setData({ isLoggedIn: true, userInfo, loginPhone: '', loginCode: '' })
+      if (result.isNew) {
+        this.setData({ showProfileModal: true, profileName: '', profileAvatarLocal: '', profileAvatarUrl: '' })
+      } else {
+        this._refreshAvatarDisplay(userInfo)
+      }
       wx.showToast({ title: '登录成功', icon: 'success' })
-      api.syncFromCloud().then(() => { this.initDetailItems() })
+      // 异步同步云端数据（不阻塞身份判定）
+      api.syncFromCloud().then(() => {
+        const ci = api.getCompanyInfo()
+        if (ci && ci.companyUid) this.setData({ companyUid: ci.companyUid })
+        this.initDetailItems()
+      })
+      // 同一账号：后端已返回 hasCompany → 跳过身份引导，老用户不再被重复询问
+      if (result.hasCompany) {
+        this.onGuideComplete()
+      } else {
+        this.setData({ guideStep: 2 })
+      }
     }).catch(() => {
       wx.showToast({ title: '登录失败', icon: 'none' })
     })
@@ -3916,10 +3965,26 @@ Page({
 
   onGuideWxLogin(e) {
     if (e.detail.userInfo) {
-      api.loginByWechat(e.detail.userInfo).then(userInfo => {
-        this.setData({ isLoggedIn: true, userInfo, guideStep: 2 })
+      api.loginByWechat(e.detail.userInfo).then(async result => {
+        const userInfo = { nickName: result.nickName, avatarUrl: result.avatarUrl }
+        this.setData({ isLoggedIn: true, userInfo })
+        if (result.isNew) {
+          this.setData({ showProfileModal: true, profileName: '', profileAvatarLocal: '', profileAvatarUrl: '' })
+        } else {
+          this._refreshAvatarDisplay(userInfo)
+        }
         wx.showToast({ title: '登录成功', icon: 'success' })
-        api.syncFromCloud().then(() => { this.initDetailItems() })
+        // 异步同步云端数据（不阻塞身份判定）
+        api.syncFromCloud().then(() => {
+          const ci = api.getCompanyInfo()
+          if (ci && ci.companyUid) this.setData({ companyUid: ci.companyUid })
+          this.initDetailItems()
+        })
+        if (result.hasCompany) {
+          this.onGuideComplete()
+        } else {
+          this.setData({ guideStep: 2 })
+        }
       }).catch(() => {
         wx.showToast({ title: '登录失败', icon: 'none' })
       })

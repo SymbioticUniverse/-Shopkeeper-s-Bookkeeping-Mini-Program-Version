@@ -102,6 +102,14 @@ router.post('/login-by-phone', (req, res) => {
     db.prepare('UPDATE users SET updated_at = datetime(\'now\') WHERE id = ?').run(user.id)
   }
 
+  // 查询公司归属与角色
+  const member = db.prepare(`
+    SELECT cm.role FROM company_members cm
+    WHERE cm.user_id = ? AND cm.status = 'approved'
+  `).get(user.id)
+  const hasCompany = !!member
+  const companyRole = member ? member.role : null
+
   // 生成 token 并存入会话表
   const token = generateToken(user.id)
   db.prepare(
@@ -112,7 +120,9 @@ router.post('/login-by-phone', (req, res) => {
     nickName: user.nick_name,
     avatarUrl: user.avatar_url,
     token,
-    isNew
+    isNew,
+    hasCompany,
+    companyRole
   })
 })
 
@@ -200,6 +210,14 @@ router.post('/login-by-wechat', async (req, res) => {
     user.avatar_url = avatar
   }
 
+  // 查询公司归属与角色
+  const member = db.prepare(`
+    SELECT cm.role FROM company_members cm
+    WHERE cm.user_id = ? AND cm.status = 'approved'
+  `).get(user.id)
+  const hasCompany = !!member
+  const companyRole = member ? member.role : null
+
   const token = generateToken(user.id)
   db.prepare(
     'INSERT OR REPLACE INTO sessions (token, user_id, expires_at) VALUES (?, ?, ?)'
@@ -209,7 +227,9 @@ router.post('/login-by-wechat', async (req, res) => {
     nickName: user.nick_name,
     avatarUrl: user.avatar_url,
     token,
-    isNew
+    isNew,
+    hasCompany,
+    companyRole
   })
 })
 
