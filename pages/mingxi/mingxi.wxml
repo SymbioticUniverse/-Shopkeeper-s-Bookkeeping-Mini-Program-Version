@@ -1390,7 +1390,8 @@
         <view class="my-profile">
           <text class="my-login-text" bindtap="onLoginEntry" wx:if="{{isLoggedIn === false}}">{{t.my_login_register}}</text>
           <text class="my-nickname" bindtap="onLogout" wx:else>{{userInfo.nickName}}</text>
-          <image class="my-avatar" src="{{userInfo.avatarUrl}}" wx:if="{{isLoggedIn && userInfo.avatarUrl}}" mode="aspectFill"></image>
+          <image class="my-avatar" src="{{avatarDisplay}}" wx:if="{{isLoggedIn && avatarDisplay}}" mode="aspectFill" bindtap="onMyAvatarTap"></image>
+          <view class="my-avatar my-avatar--empty" wx:elif="{{isLoggedIn}}" bindtap="onMyAvatarTap"><text class="my-avatar-plus">＋</text></view>
           <view class="my-avatar" wx:else></view>
         </view>
         <view class="my-group">
@@ -1873,6 +1874,23 @@
         <view class="guide-dot"></view>
         <view class="guide-dot"></view>
         <view class="guide-dot guide-dot--active"></view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 资料设置弹窗（新用户引导 + 我的页编辑共用） -->
+  <view class="profile-modal-mask" wx:if="{{showProfileModal}}" catchtap="onProfileSkip">
+    <view class="profile-modal" catchtap="">
+      <text class="profile-modal-title">完善资料</text>
+      <view class="profile-avatar-pick" catchtap="onChooseAvatar">
+        <image wx:if="{{profileAvatarLocal}}" class="profile-avatar-img" src="{{profileAvatarLocal}}" mode="aspectFill"></image>
+        <view wx:else class="profile-avatar-ph"><text class="my-avatar-plus">＋</text></view>
+      </view>
+      <text class="profile-avatar-tip">{{profileUploading ? '上传中…' : '点击设置头像'}}</text>
+      <input class="profile-name-input" value="{{profileName}}" placeholder="设置昵称" maxlength="20" bindinput="onProfileNameInput"/>
+      <view class="profile-modal-btns">
+        <view class="profile-btn profile-btn--skip" catchtap="onProfileSkip">跳过</view>
+        <view class="profile-btn profile-btn--save {{profileUploading ? 'is-disabled' : ''}}" catchtap="onProfileSave">完成</view>
       </view>
     </view>
   </view>

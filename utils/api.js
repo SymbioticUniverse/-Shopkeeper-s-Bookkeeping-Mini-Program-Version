@@ -124,6 +124,31 @@ function addLinkedItems(scope, item, mirrorScope, mirrorItem) {
   _pushBackend('POST', '/items/linked', { scope, item, mirrorScope, mirrorItem })
 }
 
+// ==================== 结清（服务端权威） ====================
+// 结清涉及服务端副作用（建自动记录、改镜像、发通知、boss/员工分支），
+// 故走专用端点 + await + 重拉，前端不重建逻辑。
+
+/** 结清应付项：PUT /items/:id/settle */
+function settleItem(id, settleInfo) {
+  return _request('PUT', '/items/' + id + '/settle', settleInfo ? { settleInfo } : {})
+}
+
+/** 个人确认垫付到账：POST /items/:id/settle-confirm */
+function settleConfirm(id, settleInfo) {
+  return _request('POST', '/items/' + id + '/settle-confirm', settleInfo ? { settleInfo } : {})
+}
+
+/** 结清后轻量重拉：只覆盖两个 scope 的账单本地缓存（比整包 syncFromCloud 省） */
+async function refreshItems() {
+  if (!_getToken()) return
+  const [p, c] = await Promise.all([
+    _request('GET', '/items?scope=personal'),
+    _request('GET', '/items?scope=company'),
+  ])
+  _save('personalItems', p || [])
+  _save('companyItems', c || [])
+}
+
 // ==================== 分类 ====================
 
 function getCategories(scope) {
@@ -442,6 +467,36 @@ function uploadVoucher(filePath) {
   })
 }
 
+/**
+ * 带鉴权头下载图片，返回本地临时路径
+ * 用于显示 /voucher/* 这类需 Bearer token 的私有图片：
+ * 小程序 <image src> 无法带 Authorization 头，直接引用会 401，
+ * 故先用 wx.downloadFile 带头下成本地路径再喂给 <image>。
+ * @param {string} url
+ * @returns {Promise<string>} 本地临时文件路径
+ */
+function downloadAuthedImage(url) {
+  const token = _getToken()
+  return new Promise((resolve, reject) => {
+    wx.downloadFile({
+      url,
+      header: token ? { 'Authorization': 'Bearer ' + token } : {},
+      success(res) {
+        if (res.statusCode === 200 && res.tempFilePath) {
+          resolve(res.tempFilePath)
+        } else {
+          console.warn('[API] downloadAuthedImage', res.statusCode)
+          reject(res)
+        }
+      },
+      fail(err) {
+        console.error('[API] downloadAuthedImage 失败', err)
+        reject(err)
+      }
+    })
+  })
+}
+
 // ==================== 导出 ====================
 
 module.exports = {
@@ -450,6 +505,9 @@ module.exports = {
   updateItem,
   removeItem,
   addLinkedItems,
+  settleItem,
+  settleConfirm,
+  refreshItems,
 
   getCategories,
   saveCategories,
@@ -489,6 +547,7 @@ module.exports = {
 
   // 凭证上传
   uploadVoucher,
+  downloadAuthedImage,
 
   // 新增：云端同步
   syncFromCloud,

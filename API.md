@@ -973,3 +973,29 @@ user_settings: { user_id, key, value, updated_at }
 | `utils/api.js` | 前端接口层 — 后端替换此文件中的实现 |
 | `pages/mingxi/mingxi.js` | 前端页面层 — 仅调用 `api.*`，不直接操作数据 |
 | `API.md` | 本文档 — 接口契约 |
+
+---
+
+## 七、后端待办需求（前端依赖）
+
+> 以下能力前端已落地，但当前靠「前端绕过方案」临时支撑。后端补齐后可去掉绕过，体验更干净、判定更可靠。
+
+### 7.1 登录返回 `isNew`（新用户注册引导）
+
+**现状**：`POST /api/auth/login-by-phone`「登录即注册」——手机号未注册则自动建号，默认昵称 = 脱敏手机号（如 `138****8000`）、`avatarUrl` 为空，响应**不区分新老用户**。
+
+**前端临时方案**：登录后用启发式判定新用户（`avatarUrl` 为空 且 `nickName` 匹配 `^\d{3}\*{4}\d{4}$`）→ 弹出「完善资料」设置昵称 + 头像。
+
+**期望后端改动**：`login-by-phone`（及 `login-by-wechat`）在响应里返回 `isNew`，前端据此精确判定，去掉脆弱的脱敏手机号正则。
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| `isNew` | `boolean` | 该手机号/openid 是否首次注册（本次登录新建用户） |
+
+### 7.2 头像公开访问路由（免鉴权）
+
+**现状**：头像复用凭证上传 `POST /api/upload`，返回 URL 走 `GET /voucher/*`，该路由**要求 Bearer token + 归属校验**。小程序 `<image src>` 无法携带 `Authorization` 头 → 头像 **401 加载失败**。
+
+**前端临时方案**：`api.downloadAuthedImage(url)` 用 `wx.downloadFile` 带 token 头把头像下成本地临时路径再喂给 `<image>`（多一次请求）。
+
+**期望后端改动**：头像单独走一条**公开（免鉴权）只读路由**（头像本身不敏感），或上传时按 `type=avatar` 存公开目录并返回可被 `<image>` 直接加载的 URL。届时前端去掉 `downloadAuthedImage` 绕过，直接 `<image src="{{avatarUrl}}">`。

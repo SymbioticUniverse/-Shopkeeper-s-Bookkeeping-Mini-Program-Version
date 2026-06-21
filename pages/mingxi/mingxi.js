@@ -231,6 +231,12 @@ Page({
     // 登录状态
     isLoggedIn: false,
     userInfo: null,
+    avatarDisplay: '',          // 头像实际显示路径（本地临时/带头下载到本地），优先于 userInfo.avatarUrl
+    showProfileModal: false,    // 资料设置弹窗（新用户引导 + 我的页编辑共用）
+    profileName: '',
+    profileAvatarLocal: '',     // 弹窗内已选/已传头像的本地预览路径
+    profileAvatarUrl: '',       // 弹窗内已上传到服务端的头像 URL
+    profileUploading: false,
     showLoginPage: false,
     showCompanyShare: false,
     companyShareStep: 0,
@@ -670,6 +676,7 @@ Page({
     const savedUser = api.getUserInfo()
     if (savedUser) {
       this.setData({ isLoggedIn: true, userInfo: savedUser })
+      this._refreshAvatarDisplay(savedUser)
     }
     api.migrate()
     const savedPCats = api.getCategories('personal')
@@ -686,6 +693,129 @@ Page({
       api.saveSetting('auditCleaned', true)
     }
     this.updateAuditBadge()
+    this._throttledSync()
+  },
+
+  onShow() {
+    this._throttledSync()
+  },
+
+  // 进页面节流同步：以后端为准刷新本地缓存（30s 内最多一次）
+  async _throttledSync() {
+    if (Date.now() - (this._lastSyncAt || 0) < 30000) return
+    this._lastSyncAt = Date.now()
+    try {
+      await api.syncFromCloud()
+    } catch (e) {}
+    this.initDetailItems()
+    this.initSettleItems()
+    const su = api.getUserInfo()
+    if (su) this.setData({ userInfo: su })
+    this._refreshAvatarDisplay(su)
+    // 公司可见性可能因云端同步到的 companyInfo 改变 → 仅变化时重建简览卡（避免每次重绘图表）
+    const ci = api.getCompanyInfo()
+    const canSeeCompany = !!(ci && ci.companyRole === 'boss' && ci.companyUid)
+    if (canSeeCompany !== this.data.canSeeCompanyLedger) {
+      this._syncOverviewCards()
+    } else {
+      this._calcOverviewData()
+    }
+    if (this.data.showLedgerPage) {
+      this.setData(this._ledgerData(this.data.ledgerScope))
+    }
+  },
+
+  // ---- 资料设置（昵称/头像）+ 头像显示 ----
+  _isFreshUser(u) {
+    return !!u && !u.avatarUrl && /^\d{3}\*{4}\d{4}$/.test(u.nickName || '')
+  },
+
+  _maybeProfileSetup(userInfo) {
+    if (this._isFreshUser(userInfo)) {
+      this.setData({ showProfileModal: true, profileName: '', profileAvatarLocal: '', profileAvatarUrl: '' })
+    } else {
+      this._refreshAvatarDisplay(userInfo)
+    }
+  },
+
+  // /voucher 私有头像需带 token 下成本地路径，<image> 才能渲染（裸 URL 会 401）
+  async _refreshAvatarDisplay(userInfo) {
+    const u = userInfo || this.data.userInfo
+    if (!u || !u.avatarUrl) {
+      this.setData({ avatarDisplay: '' })
+      return
+    }
+    if (/^https?:\/\//.test(u.avatarUrl)) {
+      try {
+        const p = await api.downloadAuthedImage(u.avatarUrl)
+        this.setData({ avatarDisplay: p })
+      } catch (e) {
+        this.setData({ avatarDisplay: '' })
+      }
+    } else {
+      this.setData({ avatarDisplay: u.avatarUrl })
+    }
+  },
+
+  onProfileNameInput(e) {
+    this.setData({ profileName: e.detail.value })
+  },
+
+  onChooseAvatar() {
+    wx.chooseMedia({
+      count: 1,
+      mediaType: ['image'],
+      sizeType: ['compressed'],
+      sourceType: ['album', 'camera'],
+      success: async (res) => {
+        const f = res.tempFiles && res.tempFiles[0]
+        const local = f && f.tempFilePath
+        if (!local) return
+        this.setData({ profileAvatarLocal: local, profileUploading: true })
+        try {
+          const url = await api.uploadVoucher(local)
+          this.setData({ profileAvatarUrl: url, profileUploading: false })
+        } catch (e) {
+          this.setData({ profileUploading: false })
+          wx.showToast({ title: '头像上传失败', icon: 'none' })
+        }
+      }
+    })
+  },
+
+  onMyAvatarTap() {
+    const cur = this.data.userInfo || {}
+    this.setData({
+      showProfileModal: true,
+      profileName: cur.nickName || '',
+      profileAvatarLocal: this.data.avatarDisplay || '',
+      profileAvatarUrl: ''
+    })
+  },
+
+  onProfileSave() {
+    if (this.data.profileUploading) {
+      wx.showToast({ title: '头像上传中…', icon: 'none' })
+      return
+    }
+    const cur = this.data.userInfo || {}
+    const name = (this.data.profileName || '').trim()
+    const next = {
+      nickName: name || cur.nickName,
+      avatarUrl: this.data.profileAvatarUrl || cur.avatarUrl || ''
+    }
+    api.saveUserInfo(next)
+    this.setData({
+      userInfo: { ...cur, ...next },
+      showProfileModal: false,
+      avatarDisplay: this.data.profileAvatarLocal || this.data.avatarDisplay
+    })
+    this._syncOverviewCards()
+    wx.showToast({ title: '已保存', icon: 'success' })
+  },
+
+  onProfileSkip() {
+    this.setData({ showProfileModal: false })
   },
 
   _applyLanguage(lang) {
@@ -749,7 +879,12 @@ Page({
       return card
     }
     if (saved && saved.length > 0) {
-      const enriched = visible(saved).map(card => {
+      const list = visible(saved)
+      // boss 已注册公司但自定义卡里没有公司账本 → 补一张，确保公司账本可见
+      if (canSeeCompany && !list.some(c => c.type === 'overview_company')) {
+        list.push({ id: 'd_company', name: '公司账本', subtitle: '经营收支', span: 2, type: 'overview_company' })
+      }
+      const enriched = list.map(card => {
         const tpl = this.data.customTemplates.find(t => t.type === card.type)
         return personalize({ ...card, rows: tpl ? tpl.rows : [], hasAvatar: tpl ? tpl.hasAvatar : false, previewStyle: tpl ? tpl.previewStyle : 'overview' })
       })
@@ -1869,37 +2004,28 @@ Page({
     wx.showModal({
       title: '确认结清',
       content: `将结清 ${settleable.length} 笔账单并自动生成对账记录，确定吗？`,
-      success: (res) => {
+      success: async (res) => {
         if (!res.confirm) return
-        const settleTime = this._formatSettleTime()
-        const today = this._todayDate()
-
+        let failed = 0
         for (const item of settleable) {
-          if (item.typeLabel === '应付') {
-            this._doSettle(item, 'settle', true)
-          } else if (item.typeLabel === '垫付' && item.settleStatus === 'company_settled') {
-            const settleInfo = settleTime + ' 由[垫付]结清'
-            api.updateItem(item.id, { settleStatus: 'settled', settleInfo, typeLabel: '支出' })
-            api.addItem('personal', {
-              id: Date.now() + Math.random() * 100 | 0,
-              category: item.category,
-              type: 'in',
-              typeLabel: '收入',
-              scope: 'personal',
-              amount: item.amount,
-              date: today,
-              note: '',
-              target: item.target,
-              targetType: item.targetType || 'internal',
-              settleInfo,
-              _autoSettle: true,
-            })
+          try {
+            if (item.typeLabel === '应付') {
+              await api.settleItem(item.id)
+            } else {
+              await api.settleConfirm(item.id)
+            }
+          } catch (e) {
+            failed++
           }
         }
+        await api.refreshItems()
         this.initSettleItems()
         this.initDetailItems()
         this._calcOverviewData()
-        wx.showToast({ title: '已全部结清', icon: 'success' })
+        wx.showToast({
+          title: failed ? `完成，${failed} 笔失败` : '已全部结清',
+          icon: failed ? 'none' : 'success',
+        })
       },
     })
   },
@@ -2249,113 +2375,31 @@ Page({
     wx.showModal({
       title: '确认结清',
       content: '结清后将自动生成对账记录，确定吗？',
-      success: (res) => {
+      success: async (res) => {
         if (!res.confirm) return
-        this._doSettle(found, from)
+        await this._doSettle(found, from)
       },
     })
   },
 
-  _doSettle(found, from, skipRefresh) {
-    const settleTime = this._formatSettleTime()
-    const today = this._todayDate()
-    const settleScope = from === 'settle'
-      ? (this.data.settleType === 1 ? 'company' : 'personal')
-      : (found.scope || 'personal')
-    const mirrorScope = settleScope === 'company' ? 'personal' : 'company'
-    const mirrorItems = api.getItems(mirrorScope)
-    const mirrorItem = found.linkedId ? mirrorItems.find(it => it.id === found.linkedId) : null
-
-    if (settleScope === 'company' && found.typeLabel === '应付') {
-      // Case A/B: 公司结清应付（镜像为个人垫付）
-      const settleInfo = settleTime + ' 由[应付]结清'
-      api.updateItem(found.id, { settleStatus: 'settled', settleInfo })
-      api.addItem('company', {
-        id: Date.now() + 10,
-        category: found.category,
-        type: 'out',
-        typeLabel: '支出',
-        scope: 'company',
-        amount: found.amount,
-        date: today,
-        note: '',
-        target: found.target,
-        targetType: found.targetType || 'internal',
-        settleInfo,
-        _autoSettle: true,
-      })
-
-      const companyInfo = api.getCompanyInfo()
-      const isBoss = companyInfo && (companyInfo.companyRole === 'boss' || !companyInfo.companyRole)
-
-      if (mirrorItem) {
-        if (isBoss) {
-          const personalSettleInfo = settleTime + ' 由[垫付]结清'
-          api.updateItem(mirrorItem.id, { settleStatus: 'settled', settleInfo: personalSettleInfo, typeLabel: '支出' })
-          api.addItem('personal', {
-            id: Date.now() + 11,
-            category: mirrorItem.category,
-            type: 'in',
-            typeLabel: '收入',
-            scope: 'personal',
-            amount: mirrorItem.amount,
-            date: today,
-            note: '',
-            target: mirrorItem.target,
-            targetType: mirrorItem.targetType || 'internal',
-            settleInfo: personalSettleInfo,
-            _autoSettle: true,
-          })
-        } else {
-          api.updateItem(mirrorItem.id, { settleStatus: 'company_settled' })
-        }
-      }
-    } else if (settleScope === 'personal' && found.typeLabel === '应付') {
-      // Case C: 个人结清应付（镜像为公司垫付）
-      const settleInfo = settleTime + ' 由[应付]结清'
-      api.updateItem(found.id, { settleStatus: 'settled', settleInfo })
-      api.addItem('personal', {
-        id: Date.now() + 10,
-        category: found.category,
-        type: 'out',
-        typeLabel: '支出',
-        scope: 'personal',
-        amount: found.amount,
-        date: today,
-        note: '',
-        target: found.target,
-        targetType: found.targetType || 'internal',
-        settleInfo,
-        _autoSettle: true,
-      })
-
-      if (mirrorItem) {
-        const companySettleInfo = settleTime + ' 由[垫付]结清'
-        api.updateItem(mirrorItem.id, { settleStatus: 'settled', settleInfo: companySettleInfo, typeLabel: '收入' })
-        api.addItem('company', {
-          id: Date.now() + 11,
-          category: mirrorItem.category,
-          type: 'in',
-          typeLabel: '收入',
-          scope: 'company',
-          amount: mirrorItem.amount,
-          date: today,
-          note: '',
-          target: mirrorItem.target,
-          targetType: mirrorItem.targetType || 'internal',
-          settleInfo: companySettleInfo,
-          _autoSettle: true,
-        })
-      }
+  async _doSettle(found, from, skipRefresh) {
+    // 服务端权威：只把应付 id 交给后端，boss/员工分支、镜像、自动记录、通知全在服务端处理
+    try {
+      await api.settleItem(found.id)
+    } catch (e) {
+      wx.showToast({ title: '结清失败，请重试', icon: 'none' })
+      return false
     }
 
     if (!skipRefresh) {
+      await api.refreshItems()
       this.initSettleItems()
       this.initDetailItems()
       this.setData({ modalItem: null })
       this._calcOverviewData()
       wx.showToast({ title: '已结清', icon: 'success' })
     }
+    return true
   },
 
   onBillConfirmSettle(e) {
@@ -2368,28 +2412,15 @@ Page({
     wx.showModal({
       title: '确认到账',
       content: '确认资金已到账？一旦确认将视为结清。',
-      success: (res) => {
+      success: async (res) => {
         if (!res.confirm) return
-        const settleTime = this._formatSettleTime()
-        const today = this._todayDate()
-        const settleInfo = settleTime + ' 由[垫付]结清'
-
-        api.updateItem(found.id, { settleStatus: 'settled', settleInfo, typeLabel: '支出' })
-        api.addItem('personal', {
-          id: Date.now() + 10,
-          category: found.category,
-          type: 'in',
-          typeLabel: '收入',
-          scope: 'personal',
-          amount: found.amount,
-          date: today,
-          note: '',
-          target: found.target,
-          targetType: found.targetType || 'internal',
-          settleInfo,
-          _autoSettle: true,
-        })
-
+        try {
+          await api.settleConfirm(found.id)
+        } catch (e) {
+          wx.showToast({ title: '确认失败，请重试', icon: 'none' })
+          return
+        }
+        await api.refreshItems()
         this.initSettleItems()
         this.initDetailItems()
         this.setData({ modalItem: null })
@@ -3140,6 +3171,7 @@ Page({
     }
     const info = { companyUid, companyName: companyName.trim(), companyBossTitle: companyBossTitle.trim() || 'BOSS', companyRole: 'boss' }
     api.saveCompanyInfo(info)
+    this._syncOverviewCards()
     wx.showToast({ title: '创建成功', icon: 'success' })
     this.setData({ companyShareStep: 2, companyName: info.companyName, companyBossTitle: info.companyBossTitle, companyUid: info.companyUid })
   },
@@ -3780,6 +3812,7 @@ Page({
     }
     api.loginByPhone(loginPhone, loginCode).then(userInfo => {
       this.setData({ isLoggedIn: true, userInfo, showLoginPage: false, loginPhone: '', loginCode: '' })
+      this._maybeProfileSetup(userInfo)
       wx.showToast({ title: '登录成功', icon: 'success' })
       // 登录后从云端同步数据
       api.syncFromCloud().then(() => {
@@ -3873,6 +3906,7 @@ Page({
     }
     api.loginByPhone(loginPhone, loginCode).then(userInfo => {
       this.setData({ isLoggedIn: true, userInfo, guideStep: 2, loginPhone: '', loginCode: '' })
+      this._maybeProfileSetup(userInfo)
       wx.showToast({ title: '登录成功', icon: 'success' })
       api.syncFromCloud().then(() => { this.initDetailItems() })
     }).catch(() => {
@@ -3929,7 +3963,7 @@ Page({
     wx.setStorageSync('guideCompleted', true)
     this.setData({ showGuide: false })
     this.initDetailItems()
-    this._calcOverviewData()
+    this._syncOverviewCards()
   },
 
   // ---- 拓展菜单 ----
