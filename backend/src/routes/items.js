@@ -19,6 +19,17 @@ const VOUCHER_DIR = path.join(__dirname, '..', 'data', 'voucher')
 
 // ==================== 工具函数 ====================
 
+/** 校验 date 格式：YYYY-MM-DD */
+function isValidDate(s) {
+  if (typeof s !== 'string') return false
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(s)) return false
+  const d = new Date(s + 'T00:00:00')
+  if (isNaN(d.getTime())) return false
+  // 避免 new Date 自动修正（如 '2026-02-30' → '2026-03-02'）
+  const parts = s.split('-')
+  return d.getFullYear() === +parts[0] && d.getMonth() + 1 === +parts[1] && d.getDate() === +parts[2]
+}
+
 /** DB 行 (snake_case) → API 对象 (camelCase) */
 function rowToItem(row) {
   if (!row) return null
@@ -154,6 +165,11 @@ router.post('/', requireAuth, (req, res) => {
     return res.status(400).json({ error: 'note 不能超过 2000 字符' })
   }
 
+  // 校验 date 格式
+  if (!isValidDate(item.date)) {
+    return res.status(400).json({ error: 'date 格式无效，须为 YYYY-MM-DD' })
+  }
+
   // 校验 linkedId 归属
   if (item.linkedId && !validateLinkedId(req.userId, item.linkedId)) {
     return res.status(400).json({ error: 'linkedId 指向的账单不存在或不属于当前用户' })
@@ -236,11 +252,14 @@ router.put('/:id', requireAuth, (req, res) => {
       const row = db.prepare('SELECT type FROM items WHERE id = ?').get(id)
       effectiveType = row ? row.type : null
     }
-    if (effectiveType === 'in' && !data.typeLabel.includes('收入')) {
-      return res.status(400).json({ error: 'typeLabel 与 type 不匹配：收入类账单 typeLabel 应包含"收入"' })
+    // 合法映射：type='in' → 收入/垫付；type='out' → 支出/应付
+    const validInLabels = ['收入', '垫付']
+    const validOutLabels = ['支出', '应付']
+    if (effectiveType === 'in' && !validInLabels.includes(data.typeLabel)) {
+      return res.status(400).json({ error: `typeLabel 与 type 不匹配：type='in' 时 typeLabel 须为 ${validInLabels.join(' 或 ')}` })
     }
-    if (effectiveType === 'out' && !data.typeLabel.includes('支出')) {
-      return res.status(400).json({ error: 'typeLabel 与 type 不匹配：支出类账单 typeLabel 应包含"支出"' })
+    if (effectiveType === 'out' && !validOutLabels.includes(data.typeLabel)) {
+      return res.status(400).json({ error: `typeLabel 与 type 不匹配：type='out' 时 typeLabel 须为 ${validOutLabels.join(' 或 ')}` })
     }
     setClauses.push('type_label = ?')
     params.push(data.typeLabel)
@@ -254,6 +273,9 @@ router.put('/:id', requireAuth, (req, res) => {
     params.push(amt)
   }
   if (data.date !== undefined) {
+    if (!isValidDate(data.date)) {
+      return res.status(400).json({ error: 'date 格式无效，须为 YYYY-MM-DD' })
+    }
     setClauses.push('date = ?')
     params.push(data.date)
   }
@@ -476,6 +498,14 @@ router.post('/linked', requireAuth, (req, res) => {
   }
   if (mirrorItem.note && mirrorItem.note.length > 2000) {
     return res.status(400).json({ error: 'mirrorItem.note 不能超过 2000 字符' })
+  }
+
+  // 校验 date 格式
+  if (!isValidDate(item.date)) {
+    return res.status(400).json({ error: 'item.date 格式无效，须为 YYYY-MM-DD' })
+  }
+  if (!isValidDate(mirrorItem.date)) {
+    return res.status(400).json({ error: 'mirrorItem.date 格式无效，须为 YYYY-MM-DD' })
   }
 
   // 校验 linkedId 归属

@@ -29,6 +29,6 @@
       "from": "../middleware/auth"
     }
   ],
-  "capability": "用户可通过 API 预览结清差额（GET /items/settle/preview）并执行结清操作（POST /items/settle/execute），系统自动生成双向平账流水记录（settleType: 'single'/'all'），通知模块支持结清相关字段；所有 CRUD 接口均已升级支持 settleStatus/settleTargetId/settleAmount/settleCurrency/settleNote/settleType/settleExecutedAt 字段的读写与防删保护。",
-  "updatedAt": "2026-06-20T14:49:55.774Z"
+  "capability": "date 字段写入时强制校验 YYYY-MM-DD 格式（含无效日期如 2月30日拒绝）；updateItem 的 typeLabel 校验改为精确白名单（收入/垫付 for in，支出/应付 for out），API.md 4.4 节结清流程通过 updateItem 改 typeLabel 不再被误拒",
+  "updatedAt": "2026-06-21T10:56:54.936Z"
 }

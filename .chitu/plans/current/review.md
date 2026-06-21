@@ -1,33 +1,27 @@
-# Review — Backend Settlement API Runtime Verification
+# Self-Review — 修复 typeLabel 校验 + date 格式校验
 
-## Summary
-22/22 tests passed. All settle endpoints work correctly across all scenarios.
+## 改动文件
+- `backend/src/routes/items.js`
 
-## Test Coverage
+## 改动内容
 
-### Core Settle Endpoints
-- ✅ `PUT /api/items/:id/settle` — personal scope (Case C)
-  - 应付 → settled, 垫付镜像 → settled + typeLabel→收入
-  - Auto expense + auto income records created with _autoSettle=true
-- ✅ `PUT /api/items/:id/settle` — company scope, boss role (Case A/B)
-  - 应付 → settled, 垫付镜像 → settled + typeLabel→支出
-  - Auto expense + auto income records created
-- ✅ Idempotent settle — already-settled item returns `{ok:true, idempotent:true}`
-- ✅ `POST /api/items/:id/settle-confirm` — status guard rejects non-company_settled
+### Fix 1: typeLabel 校验从 includes 改为精确白名单
+- **前**: `!data.typeLabel.includes('收入')` 会错误拒绝 `'垫付'`
+- **后**: `['收入', '垫付']` 白名单精确匹配，type='in' 接受 收入/垫付，type='out' 接受 支出/应付
+- **影响**: API.md 4.4 节规定的 settle 流程（通过 updateItem 改 typeLabel）现在可以正常工作
 
-### Error Cases
-- ✅ Non-应付 item settle rejected: "仅结清应付项可通过此接口操作"
-- ✅ Non-existent item settle: 404 "账单不存在"
-- ✅ _autoSettle item DELETE rejected: 403 "系统自动结清记录不可手动删除"
+### Fix 2: date 格式校验
+- 新增 `isValidDate()` 工具函数，双重校验：正则 `/^\d{4}-\d{2}-\d{2}$/` + `new Date` 避免自动修正
+- 在 3 个端点加入校验：`POST /`、`PUT /:id`、`POST /linked`（item + mirrorItem）
 
-### Notifications
-- ✅ Employee settle company item → notification created with type="settle_pending"
-- ✅ Notification includes targetUserId, itemId, text fields
-- ✅ Notification schema migration verified (type, target_user_id, item_id columns exist)
+## 边界情况验证
+- 空字符串 → 拒绝 ✅
+- `/` 分隔符 → 拒绝 ✅
+- `2026-02-30` 无效日期 → 拒绝 ✅
+- `2026-06-21` 合法 → 通过 ✅
+- typeLabel 白名单全覆盖：收入/垫付/支出/应付 ✅
+- settle 22/22 回归通过 ✅
 
-### Known Design Notes
-- `/linked` endpoint validates linkedId before insert → cross-linked items must set linked_id via PUT after creation
-- Settle endpoint's ownership check (checkOwnership) prevents boss from settling employee items directly
-
-## No Code Changes Required
-All backend logic verified correct. Test script is retained at `backend/test_settle.sh` for future regression testing.
+## 未修复项
+- `getSetting` 返回 `null` 而非 `undefined`：JSON 规范无法表达 undefined，`null` 函数等价，不修
+- Settle preview/execute 端点：近期事件提及但 API.md 无此接口，当前 `/settle` + `/settle-confirm` 已满足需求
