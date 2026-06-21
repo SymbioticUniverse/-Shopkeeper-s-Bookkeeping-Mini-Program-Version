@@ -709,6 +709,9 @@ Page({
     const saved = api.getOverviewCards()
     const userInfo = this.data.userInfo
     const companyInfo = api.getCompanyInfo()
+    // 仅 boss 且已注册公司可见公司账本卡；无公司 / 员工 → 隐藏
+    const canSeeCompany = !!(companyInfo && companyInfo.companyRole === 'boss' && companyInfo.companyUid)
+    const visible = (cards) => cards.filter(c => c.type !== 'overview_company' || canSeeCompany)
     const personalize = (card) => {
       if (card.type === 'overview_personal' && userInfo && userInfo.nickName) {
         card.name = userInfo.nickName + '本人账本'
@@ -718,13 +721,20 @@ Page({
       return card
     }
     if (saved && saved.length > 0) {
-      const enriched = saved.map(card => {
+      const enriched = visible(saved).map(card => {
         const tpl = this.data.customTemplates.find(t => t.type === card.type)
         return personalize({ ...card, rows: tpl ? tpl.rows : [], hasAvatar: tpl ? tpl.hasAvatar : false, previewStyle: tpl ? tpl.previewStyle : 'overview' })
       })
       this.setData({ overviewCards: enriched, customCards: saved })
     } else {
-      const enriched = this.data.defaultOverviewCards.map(card => {
+      // 默认简览：boss 见 个人(1)+公司(2)；无公司/员工 见 个人(1)+个人折线图(2)
+      const baseCards = canSeeCompany
+        ? this.data.defaultOverviewCards
+        : [
+            { id: 'd_personal', name: '个人账本', subtitle: '日常收支', span: 1, type: 'overview_personal' },
+            { id: 'd_report_personal', name: '个人折线图', subtitle: '净值趋势 · 个人', span: 2, type: 'report_line_personal' },
+          ]
+      const enriched = baseCards.map(card => {
         const tpl = this.data.customTemplates.find(t => t.type === card.type)
         return personalize({ ...card, rows: tpl ? tpl.rows : [], hasAvatar: tpl ? tpl.hasAvatar : false, previewStyle: tpl ? tpl.previewStyle : 'overview' })
       })
@@ -2546,7 +2556,7 @@ Page({
     this.setData({ showLedgerPage: false })
   },
 
-  // 简览卡片点击：个人/公司账本卡 → 账本页；其余卡 → 明细页（保持原行为）
+  // 简览卡片点击：个人/公司账本卡 → 账本页；图表卡 → 报表页；其余卡 → 明细页
   onOverviewCardTap(e) {
     const { type } = e.currentTarget.dataset
     if (type === 'overview_personal') {
@@ -2559,6 +2569,10 @@ Page({
         return
       }
       this.setData({ showOverview: false, currentTab: 4, showLedgerPage: true, ledgerScope: 'company' })
+      return
+    }
+    if (type && type.indexOf('report_') === 0) {
+      this.switchTab({ currentTarget: { dataset: { index: 1 } } })
       return
     }
     this.switchTab({ currentTarget: { dataset: { index: 0 } } })
