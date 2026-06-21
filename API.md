@@ -24,6 +24,8 @@
 | `targetType` | `string` | 否 | 目标对象类型：`'internal'`（内部，触发联动）/ `'external'`（外部） |
 | `linkedId` | `number` | 否 | 联动账单的 id（垫付/应付 内部对象时产生） |
 | `voucher` | `string` | 否 | 凭证图片 URL（扫描凭证记账时产生），默认 `''`。须为后端返回的可跨端访问 URL，**不可存本地路径** |
+| `settleStatus` | `string` | 否 | 结清状态：未设（未结清）/ `'company_settled'`（一方已确认、待对方确认的中间态，仍视为未结清）/ `'settled'`（已结清，`typeLabel` 已转为收入/支出） |
+| `settleInfo` | `object` | 否 | 结清快照（结清时间、对方、金额等），结清完成时写入 |
 | `_voided` | `boolean` | 否 | 是否已作废，默认 `false` |
 
 **type 与 typeLabel 映射关系：**
@@ -619,14 +621,44 @@
 
 ### 4.4 结清
 
-将垫付/应付账单的 `typeLabel` 改为普通的收入/支出，表示双方已结算完毕。
+垫付/应付账单结清后，将 `typeLabel` 转为普通收入/支出，并通过 `settleStatus` 记录结清进度。
 
-- 垫付（`type: 'in'`） → 结清后 `typeLabel` 改为 `'收入'`
-- 应付（`type: 'out'`） → 结清后 `typeLabel` 改为 `'支出'`
+**typeLabel 转换：**
 
-调用 `updateItem(id, { typeLabel: '收入' })` 或 `updateItem(id, { typeLabel: '支出' })`。
+- 垫付（`type: 'in'`） → 结清完成后 `typeLabel` 改为 `'收入'`
+- 应付（`type: 'out'`） → 结清完成后 `typeLabel` 改为 `'支出'`
 
-> 注意：结清只改当前这一条，不联动对面镜像账单。
+**settleStatus 流转：**
+
+| settleStatus | 含义 |
+|--------------|------|
+| 未设（undefined） | 未结清，计入未结清往来款（应收/应付） |
+| `'company_settled'` | 一方（公司侧）已确认、等待对方（个人）确认的中间态，仍视为未结清 |
+| `'settled'` | 已结清完成，`typeLabel` 已转为收入/支出，`settleInfo` 写入结清快照 |
+
+- 聚合「未结清应收/应付」时以 `settleStatus !== 'settled'` 判定。
+- 内部对象（`targetType: 'internal'`）结清时会**联动更新对面镜像账单**的 `settleStatus` 与 `typeLabel`（见 4.3）；外部对象只更新自身。
+- 相关调用：`updateItem(id, { settleStatus, settleInfo, typeLabel })`。
+
+**收支与资产聚合口径（前端计算，不改变存储）：**
+
+聚合统一按 `typeLabel` 计算（不依赖 `type`）：
+
+- 收入 = `typeLabel === '收入'`
+- 个人支出 = `typeLabel === '支出'` 或 `'垫付'`（垫付已实际出账，计入支出；结清回账后转为收入）
+- 未结清应付 = `typeLabel === '应付' && settleStatus !== 'settled'`，**不计入收入/支出**，但计入月度预算占用（视为已承诺花掉）
+- 公司「真实支出」 = `typeLabel === '支出'`（不含垫付/应付）
+
+公司账本四项资产：
+
+| 项目 | 公式 |
+|------|------|
+| 总资金 | 收入 − 真实支出 |
+| 总负债 | 未结清应付 |
+| 净资产 | 总资金 − 应付 |
+| 可支配资产 | 总资金 − 未结清垫付 − 未结清应付 |
+
+> 公司账本不设月度预算；月度预算仅个人账本。
 
 ---
 
