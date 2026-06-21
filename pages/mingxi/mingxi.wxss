@@ -7229,6 +7229,11 @@ page {
   height: 48rpx;
   background: rgba(0, 0, 0, 0.06);
 }
+.ledger-asset-divider {
+  height: 1rpx;
+  background: rgba(0, 0, 0, 0.06);
+  margin: 18rpx 0;
+}
 .ledger-stat-val {
   font-size: 36rpx;
   font-weight: 700;
@@ -7322,6 +7327,7 @@ page {
 .page--dark .ledger-stat-val { color: #f0f0f0; }
 .page--dark .ledger-stat-label { color: #888; }
 .page--dark .ledger-stat-sep { background: rgba(255, 255, 255, 0.08); }
+.page--dark .ledger-asset-divider { background: rgba(255, 255, 255, 0.08); }
 .page--dark .ledger-budget-bar { background: rgba(255, 255, 255, 0.08); }
 .page--dark .ledger-budget-input-wrap { background: rgba(255, 255, 255, 0.06); }
 .page--dark .ledger-budget-input { color: #f0f0f0; }

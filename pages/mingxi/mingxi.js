@@ -268,6 +268,7 @@ Page({
     showSettingsPage: false, // 设置页
     showLedgerPage: false, // 账本页（个人/公司）
     ledgerScope: 'personal', // 当前账本范围: personal/company
+    canSeeCompanyLedger: false, // 公司账本入口仅 boss 可见（与简览卡片同逻辑）
     // 账本页：本月概览 + 月度预算
     ledgerBudget: 0,
     ledgerBudgetInput: '',
@@ -276,6 +277,7 @@ Page({
     ledgerMonthExpense: '0.00',
     ledgerMonthBalance: '0.00',
     ledgerMonthBalancePos: true,
+    ledgerBudgetUsed: '0.00',
     ledgerBudgetUsedPct: 0,
     ledgerOverBudget: false,
     ledgerBudgetRemainText: '未设置预算',
@@ -286,6 +288,13 @@ Page({
     ledgerNetPos: true,
     ledgerReceivableCount: 0,
     ledgerPayableCount: 0,
+    // 账本页：公司资产概览（总资金/总负债/净资产/可支配）
+    ledgerFunds: '0.00',
+    ledgerLiability: '0.00',
+    ledgerNetAssets: '0.00',
+    ledgerNetAssetsPos: true,
+    ledgerDisposable: '0.00',
+    ledgerDisposablePos: true,
     showPrivacyPage: false, // 隐私设置页
     showPrivacyPolicyPage: false, // 隐私政策页
     showAboutPage: false, // 关于我们页
@@ -366,9 +375,9 @@ Page({
         id: 't_company', span: 2, name: '公司账本', subtitle: '经营收支', source: '简览页',
         type: 'overview_company', previewStyle: 'overview',
         rows: [
-          { label: '公司总资产', value: '0.00', color: 'green' },
-          { label: '公司总负债', value: '0.00', color: 'red' },
-          { label: '公司净资产', value: '0.00', color: 'green' },
+          { label: '总资金', value: '0.00', color: 'green' },
+          { label: '总负债', value: '0.00', color: 'red' },
+          { label: '净资产', value: '0.00', color: 'green' },
           { label: '可支配资产', value: '0.00', color: 'green' },
           { labels: ['应收', '应付'], values: ['0.00', '0.00'], colors: ['green', 'red'], threeCol: true },
         ],
@@ -729,6 +738,7 @@ Page({
     const companyInfo = api.getCompanyInfo()
     // 仅 boss 且已注册公司可见公司账本卡；无公司 / 员工 → 隐藏
     const canSeeCompany = !!(companyInfo && companyInfo.companyRole === 'boss' && companyInfo.companyUid)
+    this.setData({ canSeeCompanyLedger: canSeeCompany })
     const visible = (cards) => cards.filter(c => c.type !== 'overview_company' || canSeeCompany)
     const personalize = (card) => {
       if (card.type === 'overview_personal' && userInfo && userInfo.nickName) {
@@ -768,16 +778,23 @@ Page({
     const sum = (items, fn) => items.filter(fn).reduce((s, it) => s + parseFloat(it.amount || 0), 0)
     const fmt = (n) => n.toFixed(2)
 
-    const pIncome = sum(personalItems, it => it.type === 'in')
-    const pExpense = sum(personalItems, it => it.type === 'out')
+    const incomeOf = (arr) => sum(arr, it => it.typeLabel === '收入')
+    const expenseOf = (arr) => sum(arr, it => it.typeLabel === '支出' || it.typeLabel === '垫付')   // 个人口径：垫付算支出
+    const realExpenseOf = (arr) => sum(arr, it => it.typeLabel === '支出')                            // 公司总资金口径：只算真实支出
+    const receivableOf = (arr) => sum(arr, it => it.typeLabel === '垫付' && it.settleStatus !== 'settled')
+    const payableOf = (arr) => sum(arr, it => it.typeLabel === '应付' && it.settleStatus !== 'settled')
+
+    // 个人：收入 / 支出(含垫付) / 结余
+    const pIncome = incomeOf(personalItems)
+    const pExpense = expenseOf(personalItems)
     const pBalance = pIncome - pExpense
 
-    const cIncome = sum(companyItems, it => it.type === 'in')
-    const cExpense = sum(companyItems, it => it.type === 'out')
-    const cNet = cIncome - cExpense
-    const cReceivable = sum(companyItems, it => it.typeLabel === '垫付' && it.settleStatus !== 'settled')
-    const cPayable = sum(companyItems, it => it.typeLabel === '应付' && it.settleStatus !== 'settled')
-    const cDisposable = cNet
+    // 公司四项：总资金=收入−支出(只真实支出)；总负债=应付；净资产=总资金−应付；可支配=总资金−垫付−应付
+    const cFunds = incomeOf(companyItems) - realExpenseOf(companyItems)   // 总资金（垫付/应付都不减）
+    const cReceivable = receivableOf(companyItems)   // 未结清垫付 = 应收
+    const cPayable = payableOf(companyItems)          // 未结清应付 = 总负债
+    const cNet = cFunds - cPayable                    // 净资产 = 总资金 − 应付
+    const cDisposable = cFunds - cReceivable - cPayable   // 可支配 = 总资金 − 垫付 − 应付
 
     const pSettle = personalItems.filter(it => (it.typeLabel === '垫付' || it.typeLabel === '应付') && it.settleStatus !== 'settled')
     const cSettle = companyItems.filter(it => (it.typeLabel === '垫付' || it.typeLabel === '应付') && it.settleStatus !== 'settled')
@@ -791,9 +808,9 @@ Page({
       }
       if (card.type === 'overview_company') {
         return { ...card, rows: [
-          { label: '公司总资产', value: fmt(cIncome), color: 'green' },
-          { label: '公司总负债', value: fmt(cExpense), color: 'red' },
-          { label: '公司净资产', value: fmt(cNet), color: cNet >= 0 ? 'green' : 'red' },
+          { label: '总资金', value: fmt(cFunds), color: 'green' },
+          { label: '总负债', value: fmt(cPayable), color: 'red' },
+          { label: '净资产', value: fmt(cNet), color: cNet >= 0 ? 'green' : 'red' },
           { label: '可支配资产', value: fmt(cDisposable), color: cDisposable >= 0 ? 'green' : 'red' },
           { labels: ['应收', '应付'], values: [fmt(cReceivable), fmt(cPayable)], colors: ['green', 'red'], threeCol: true },
         ]}
@@ -2167,7 +2184,7 @@ Page({
     if (targetType === 'internal' && (type === 'payForward' || type === 'payable')) {
       const mirrorScope = scope === 'personal' ? 'company' : 'personal'
       const mirrorTypeLabel = type === 'payForward' ? '应付' : '垫付'
-      const mirrorType = 'in'
+      const mirrorType = mirrorTypeLabel === '应付' ? 'out' : 'in'
       const mirrorItem = {
         id: Date.now() + 1,
         category: category,
@@ -2568,17 +2585,24 @@ Page({
     const mm = String(now.getMonth() + 1).padStart(2, '0')
     const prefix = now.getFullYear() + '-' + mm
     const monthItems = items.filter(it => (it.date || '').slice(0, 7) === prefix)
-    const sumType = (arr, t) => arr.filter(it => it.type === t).reduce((s, it) => s + parseFloat(it.amount || 0), 0)
-    const inc = sumType(monthItems, 'in')
-    const exp = sumType(monthItems, 'out')
+    const sumBy = (arr, fn) => arr.filter(fn).reduce((s, it) => s + parseFloat(it.amount || 0), 0)
+    // 本月：收入=收入；支出=支出+垫付（已出账）；应付不计入显示支出，但计入预算占用
+    const inc = sumBy(monthItems, it => it.typeLabel === '收入')
+    const exp = sumBy(monthItems, it => it.typeLabel === '支出' || it.typeLabel === '垫付')
+    const monthPayable = sumBy(monthItems, it => it.typeLabel === '应付' && it.settleStatus !== 'settled')
     const budget = parseFloat(api.getSetting('budget_' + scope) || 0) || 0
-    const remain = budget - exp
+    const budgetUsed = exp + monthPayable   // 预算占用 = 已出账支出 + 应付（已承诺）
+    const remain = budget - budgetUsed
     // 往来款：未结清的垫付(应收) / 应付
     const recvArr = items.filter(it => it.typeLabel === '垫付' && it.settleStatus !== 'settled')
     const payArr = items.filter(it => it.typeLabel === '应付' && it.settleStatus !== 'settled')
     const recv = recvArr.reduce((s, it) => s + parseFloat(it.amount || 0), 0)
     const pay = payArr.reduce((s, it) => s + parseFloat(it.amount || 0), 0)
     const net = recv - pay
+    // 公司四项资产口径：总资金=收入−真实支出(不含垫付/应付)；总负债=应付；净资产=总资金−应付；可支配=总资金−垫付−应付
+    const funds = sumBy(items, it => it.typeLabel === '收入') - sumBy(items, it => it.typeLabel === '支出')
+    const netAssets = funds - pay
+    const disposable = funds - recv - pay
     return {
       ledgerBudget: budget,
       ledgerBudgetInput: budget > 0 ? String(budget) : '',
@@ -2587,7 +2611,8 @@ Page({
       ledgerMonthExpense: exp.toFixed(2),
       ledgerMonthBalance: (inc - exp).toFixed(2),
       ledgerMonthBalancePos: (inc - exp) >= 0,
-      ledgerBudgetUsedPct: budget > 0 ? Math.min(100, Math.round(exp / budget * 100)) : 0,
+      ledgerBudgetUsed: budgetUsed.toFixed(2),
+      ledgerBudgetUsedPct: budget > 0 ? Math.min(100, Math.round(budgetUsed / budget * 100)) : 0,
       ledgerOverBudget: budget > 0 && remain < 0,
       ledgerBudgetRemainText: budget > 0 ? (remain >= 0 ? `剩余 ¥${remain.toFixed(2)}` : `超支 ¥${(-remain).toFixed(2)}`) : '未设置预算',
       ledgerReceivable: recv.toFixed(2),
@@ -2596,6 +2621,12 @@ Page({
       ledgerNetPos: net >= 0,
       ledgerReceivableCount: recvArr.length,
       ledgerPayableCount: payArr.length,
+      ledgerFunds: funds.toFixed(2),
+      ledgerLiability: pay.toFixed(2),
+      ledgerNetAssets: netAssets.toFixed(2),
+      ledgerNetAssetsPos: netAssets >= 0,
+      ledgerDisposable: disposable.toFixed(2),
+      ledgerDisposablePos: disposable >= 0,
     }
   },
 
@@ -2604,8 +2635,9 @@ Page({
   },
 
   onGotoCompanyLedger() {
-    if (!api.getCompanyInfo()) {
-      wx.showToast({ title: '请先注册公司', icon: 'none' })
+    const ci = api.getCompanyInfo()
+    if (!(ci && ci.companyRole === 'boss' && ci.companyUid)) {
+      wx.showToast({ title: '公司账本仅企业管理员可见', icon: 'none' })
       return
     }
     this.setData({ showLedgerPage: true, ledgerScope: 'company', ...this._ledgerData('company') })
@@ -2646,8 +2678,9 @@ Page({
       return
     }
     if (type === 'overview_company') {
-      if (!api.getCompanyInfo()) {
-        wx.showToast({ title: '请先注册公司', icon: 'none' })
+      const ci = api.getCompanyInfo()
+      if (!(ci && ci.companyRole === 'boss' && ci.companyUid)) {
+        wx.showToast({ title: '公司账本仅企业管理员可见', icon: 'none' })
         return
       }
       this.setData({ showOverview: false, currentTab: 4, showLedgerPage: true, ledgerScope: 'company', ...this._ledgerData('company') })

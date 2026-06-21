@@ -1269,8 +1269,8 @@
         </view>
         <view class="custom-cat-divider"></view>
         <scroll-view class="ledger-scroll" scroll-y enhanced show-scrollbar="{{false}}">
-          <!-- 本月概览 -->
-          <view class="ledger-sec">
+          <!-- 本月概览（个人账本） -->
+          <view wx:if="{{ledgerScope === 'personal'}}" class="ledger-sec">
             <view class="ledger-sec-head">
               <text class="ledger-sec-title">本月概览</text>
               <text class="ledger-sec-sub">{{ledgerMonthLabel}}</text>
@@ -1289,6 +1289,37 @@
               <view class="ledger-stat">
                 <text class="ledger-stat-val {{ledgerMonthBalancePos ? 'ledger-stat-val--in' : 'ledger-stat-val--out'}}">{{ledgerMonthBalance}}</text>
                 <text class="ledger-stat-label">结余</text>
+              </view>
+            </view>
+          </view>
+
+          <!-- 资产概览（公司账本） -->
+          <view wx:if="{{ledgerScope === 'company'}}" class="ledger-sec">
+            <view class="ledger-sec-head">
+              <text class="ledger-sec-title">资产概览</text>
+              <text class="ledger-sec-sub">{{ledgerMonthLabel}}</text>
+            </view>
+            <view class="ledger-stat-row">
+              <view class="ledger-stat">
+                <text class="ledger-stat-val">{{ledgerFunds}}</text>
+                <text class="ledger-stat-label">总资金</text>
+              </view>
+              <view class="ledger-stat-sep"></view>
+              <view class="ledger-stat">
+                <text class="ledger-stat-val ledger-stat-val--out">{{ledgerLiability}}</text>
+                <text class="ledger-stat-label">总负债</text>
+              </view>
+            </view>
+            <view class="ledger-asset-divider"></view>
+            <view class="ledger-stat-row">
+              <view class="ledger-stat">
+                <text class="ledger-stat-val {{ledgerNetAssetsPos ? 'ledger-stat-val--in' : 'ledger-stat-val--out'}}">{{ledgerNetAssets}}</text>
+                <text class="ledger-stat-label">净资产</text>
+              </view>
+              <view class="ledger-stat-sep"></view>
+              <view class="ledger-stat">
+                <text class="ledger-stat-val {{ledgerDisposablePos ? 'ledger-stat-val--in' : 'ledger-stat-val--out'}}">{{ledgerDisposable}}</text>
+                <text class="ledger-stat-label">可支配资产</text>
               </view>
             </view>
           </view>
@@ -1328,8 +1359,8 @@
             <view wx:else class="ledger-due-empty">暂无未结清往来款</view>
           </view>
 
-          <!-- 月度预算 -->
-          <view class="ledger-sec">
+          <!-- 月度预算（仅个人账本） -->
+          <view wx:if="{{ledgerScope === 'personal'}}" class="ledger-sec">
             <view class="ledger-sec-head">
               <text class="ledger-sec-title">月度预算</text>
               <text class="ledger-budget-remain {{ledgerOverBudget ? 'ledger-budget-remain--over' : ''}}">{{ledgerBudgetRemainText}}</text>
@@ -1339,7 +1370,7 @@
               <view class="ledger-budget-fill {{ledgerOverBudget ? 'ledger-budget-fill--over' : ''}}" style="width: {{ledgerBudgetUsedPct}}%;"></view>
             </view>
             <view wx:if="{{ledgerBudget > 0}}" class="ledger-budget-meta">
-              <text class="ledger-budget-meta-txt">已用 ¥{{ledgerMonthExpense}}</text>
+              <text class="ledger-budget-meta-txt">已用 ¥{{ledgerBudgetUsed}}</text>
               <text class="ledger-budget-meta-txt">{{ledgerBudgetUsedPct}}%</text>
               <text class="ledger-budget-meta-txt">预算 ¥{{ledgerBudget}}</text>
             </view>
@@ -1373,7 +1404,7 @@
           </view>
           <view class="my-icon-row">
             <view class="my-icon-item" bindtap="onGotoPersonalLedger"><image class="my-icon-circle" src="/assets/icons/gerenzhangben.png" mode="aspectFit"/><text class="my-icon-label">{{t.detail_personal_ledger}}</text></view>
-            <view class="my-icon-item" bindtap="onGotoCompanyLedger"><image class="my-icon-circle" src="/assets/icons/gongsizhangben.png" mode="aspectFit"/><text class="my-icon-label">{{t.detail_company_ledger}}</text></view>
+            <view class="my-icon-item" wx:if="{{canSeeCompanyLedger}}" bindtap="onGotoCompanyLedger"><image class="my-icon-circle" src="/assets/icons/gongsizhangben.png" mode="aspectFit"/><text class="my-icon-label">{{t.detail_company_ledger}}</text></view>
             <view class="my-icon-item" bindtap="onAuditEntry">
               <view class="my-icon-circle" style="position:relative">
                 <image class="my-icon-circle-img" src="/assets/icons/shenhe.png" mode="aspectFit"/>
