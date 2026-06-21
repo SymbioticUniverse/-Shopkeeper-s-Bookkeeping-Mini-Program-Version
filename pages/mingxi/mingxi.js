@@ -727,12 +727,12 @@ Page({
       })
       this.setData({ overviewCards: enriched, customCards: saved })
     } else {
-      // 默认简览：boss 见 个人(1)+公司(2)；无公司/员工 见 个人(1)+个人折线图(2)
+      // 默认简览：boss 见 个人(1)+公司(2)；无公司/员工 见 个人(1)+个人明细(2)
       const baseCards = canSeeCompany
         ? this.data.defaultOverviewCards
         : [
             { id: 'd_personal', name: '个人账本', subtitle: '日常收支', span: 1, type: 'overview_personal' },
-            { id: 'd_report_personal', name: '个人折线图', subtitle: '净值趋势 · 个人', span: 2, type: 'report_line_personal' },
+            { id: 'd_detail_personal', name: '个人流水明细', subtitle: '月度 · 季度 · 年度 · 日度', span: 2, type: 'detail_personal' },
           ]
       const enriched = baseCards.map(card => {
         const tpl = this.data.customTemplates.find(t => t.type === card.type)
@@ -886,7 +886,16 @@ Page({
     } else if (index !== prevTab) {
       dir = index > prevTab ? 'slide-right' : 'slide-left'
     }
-    this.setData({ currentTab: index, showOverview: false, tabSlideDir: dir })
+    this.setData({
+      currentTab: index, showOverview: false, tabSlideDir: dir,
+      // 切 tab 时复位"我的"区域全部子页 + 自定义简览状态，避免再次进入"我的"停留在旧子页
+      showVipPage: false, vipDetailId: -1, vipSelected: -1,
+      showCustomCategory: false, showCompanyShare: false, showExportBill: false,
+      showAuditPage: false, showContactPage: false, showSettingsPage: false,
+      showNotifyPage: false, notifySwipeId: '', showLedgerPage: false,
+      showPrivacyPage: false, showPrivacyPolicyPage: false, showAboutPage: false,
+      showLoginPage: false, showCustomOverview: false,
+    })
     if (dir) setTimeout(() => this.setData({ tabSlideDir: '' }), 400)
     if (index === 1) {
       setTimeout(() => {
