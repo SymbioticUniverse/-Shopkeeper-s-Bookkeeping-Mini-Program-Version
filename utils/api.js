@@ -14,6 +14,9 @@ const BASE_URL = 'http://192.168.1.112:3000/api'
 
 // ==================== Token 管理 ====================
 
+// 401「登录过期」是否已处理（并发请求只触发一次清登录+跳转，登录成功后复位）
+let _authExpiredHandling = false
+
 function _getToken() {
   return wx.getStorageSync('authToken') || ''
 }
@@ -21,9 +24,30 @@ function _getToken() {
 function _setToken(token) {
   if (token) {
     wx.setStorageSync('authToken', token)
+    _authExpiredHandling = false // 新会话开始，允许下次过期再次触发
   } else {
     wx.removeStorageSync('authToken')
   }
+}
+
+/**
+ * 登录过期统一处理：清登录态 + 本地业务数据，提示并回主页重新登录。
+ * 防抖：syncFromCloud 会并发多个请求同时 401，只执行一次。
+ * 保留设置项（语言/深色模式等设备偏好），不一并清除。
+ */
+function _handleAuthExpired() {
+  if (_authExpiredHandling) return
+  _authExpiredHandling = true
+  _setToken('')
+  const keys = ['userInfo', 'personalItems', 'companyItems',
+    'personalCategories', 'companyCategories', 'companyInfo',
+    'auditList', 'notifyList', 'feedbackList', 'customOverviewCards',
+    'guideCompleted'] // 清掉引导完成标志 → reLaunch 后 onLoad 重新走引导页
+  for (const k of keys) wx.removeStorageSync(k)
+  wx.showToast({ title: '登录已过期，请重新登录', icon: 'none' })
+  setTimeout(() => {
+    wx.reLaunch({ url: '/pages/mingxi/mingxi' })
+  }, 800)
 }
 
 // ==================== 网络请求 ====================
@@ -50,6 +74,9 @@ function _request(method, path, data) {
           resolve(res.data)
         } else {
           console.warn('[API]', method, path, res.statusCode, res.data)
+          if (res.statusCode === 401 && token && path !== '/auth/logout') {
+            _handleAuthExpired()
+          }
           reject(res.data)
         }
       },

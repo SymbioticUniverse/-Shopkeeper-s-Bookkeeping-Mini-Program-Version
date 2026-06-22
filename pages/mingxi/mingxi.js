@@ -208,6 +208,7 @@ Page({
     detailType: 0, // 0=个人, 1=公司
     detailPeriod: 0,
     detailPickerDate: '2026-06',
+    maxDate: (function () { var d = new Date(); return d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2) })(), // 图表/明细日期选择器上限：今天，禁止选未来
     detailDateText: '2026年06月',
     detailItems: [],
     // 弹窗 & 滑动
@@ -347,6 +348,10 @@ Page({
     catEmojiList: ['🍽','🚗','🛍','🎮','💰','💼','📈','🏠','📱','🏥','🛵','🚕','🍿','📦','💡','🎁','✍','💎','👗','💄','🐱','⚽','🧳','🎲','📖','📷','🎵','🎨','🍰','🌷','🧧','↩','🎯','🎀','🧾','🪙','💹','🏘','🅿','🧽','📋','💵','✈','🏢','🍷','💳','🏗','💸','🚚','📊','🗣','🔧','💻','🛡','📢','🏦','📚'],
     customCards: [], // 自定义简览页已添加的卡片列表
     overviewCards: [], // 简览页实际渲染的卡片（从存储同步或默认）
+    overviewMonth: (function () { var d = new Date(); return d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) })(), // 简览页所选月份 'YYYY-MM'，默认本月
+    overviewYear: (function () { return String(new Date().getFullYear()) })(), // 标题栏「YYYY年」显示
+    overviewMonthNum: (function () { return ('0' + (new Date().getMonth() + 1)).slice(-2) })(), // 标题栏「MM」显示
+    overviewMonthMax: (function () { var d = new Date(); return d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2) })(), // picker 上限：本月，禁止选未来
     defaultOverviewCards: [
       { id: 'd_personal', name: '个人账本', subtitle: '日常收支', span: 1, type: 'overview_personal' },
       { id: 'd_company', name: '公司账本', subtitle: '经营收支', span: 2, type: 'overview_company' },
@@ -653,7 +658,7 @@ Page({
     const m = now.getMonth() + 1
     const mm = m < 10 ? '0' + m : String(m)
     const years = []
-    for (let i = 2020; i <= 2030; i++) years.push(String(i))
+    for (let i = 2020; i <= y; i++) years.push(String(i)) // 只到当前年，季度选择器不出现未来年份
     const yearIdx = years.indexOf(String(y))
     this.setData({
       reportPickerDate: `${y}-${mm}`,
@@ -942,8 +947,10 @@ Page({
   },
 
   _calcOverviewData() {
-    const personalItems = api.getItems('personal').filter(it => !it._voided)
-    const companyItems = api.getItems('company').filter(it => !it._voided)
+    const ym = this.data.overviewMonth || '' // 'YYYY-MM'，按所选月份过滤
+    const inMonth = (it) => !ym || (typeof it.date === 'string' && it.date.slice(0, 7) === ym)
+    const personalItems = api.getItems('personal').filter(it => !it._voided && inMonth(it))
+    const companyItems = api.getItems('company').filter(it => !it._voided && inMonth(it))
     const sum = (items, fn) => items.filter(fn).reduce((s, it) => s + parseFloat(it.amount || 0), 0)
     const fmt = (n) => n.toFixed(2)
 
@@ -1005,6 +1012,12 @@ Page({
       return card
     })
     this.setData({ overviewCards: cards })
+  },
+
+  onOverviewMonthChange(e) {
+    const ym = e.detail.value // 'YYYY-MM'
+    this.setData({ overviewMonth: ym, overviewYear: ym.slice(0, 4), overviewMonthNum: ym.slice(5, 7) })
+    this._calcOverviewData() // 只重算卡片数字，不重绘简览 canvas（避免真机崩溃重启）
   },
   // 明细简览卡截断预览：取该账本前 4 条真实流水，复用明细页同源数据
   _buildDetailPreview(scope) {
@@ -1946,8 +1959,13 @@ Page({
 
   // 季度多列选择器确认
   onReportQuarterChange(e) {
-    const [yearIdx, quarterIdx] = e.detail.value
+    let [yearIdx, quarterIdx] = e.detail.value
     const year = this.data.reportQuarterRange[0][yearIdx]
+    const now = new Date()
+    if (parseInt(year) === now.getFullYear()) {
+      const curQ = Math.floor(now.getMonth() / 3)
+      if (quarterIdx > curQ) { quarterIdx = curQ; wx.showToast({ title: '不能选择未来季度', icon: 'none' }) }
+    }
     const quarter = this.data.quarterOptions[quarterIdx]
     this.setData({
       reportQuarterMultiIndex: [yearIdx, quarterIdx],
@@ -2587,8 +2605,13 @@ Page({
   },
 
   onDetailQuarterChange(e) {
-    const [yearIdx, quarterIdx] = e.detail.value
+    let [yearIdx, quarterIdx] = e.detail.value
     const year = this.data.reportQuarterRange[0][yearIdx]
+    const now = new Date()
+    if (parseInt(year) === now.getFullYear()) {
+      const curQ = Math.floor(now.getMonth() / 3)
+      if (quarterIdx > curQ) { quarterIdx = curQ; wx.showToast({ title: '不能选择未来季度', icon: 'none' }) }
+    }
     const quarter = this.data.quarterOptions[quarterIdx]
     this.setData({
       reportQuarterMultiIndex: [yearIdx, quarterIdx],
@@ -3211,8 +3234,17 @@ Page({
   },
 
   onShareCompany() {
-    // TODO: 分享功能
-    wx.showToast({ title: '分享功能开发中', icon: 'none' })
+    // 占位实现：先做「一键复制 UID」，完整分享功能后续再做
+    const uid = this.data.companyUid || ((api.getCompanyInfo() || {}).companyUid) || ''
+    if (!uid) {
+      wx.showToast({ title: '暂无公司 UID', icon: 'none' })
+      return
+    }
+    wx.setClipboardData({
+      data: uid,
+      success: () => wx.showToast({ title: 'UID 已复制，发给同事即可加入', icon: 'none' }),
+      fail: () => wx.showToast({ title: '复制失败', icon: 'none' })
+    })
   },
 
   onCatTabChange(e) {

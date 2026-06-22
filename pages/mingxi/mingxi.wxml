@@ -3,12 +3,14 @@
   <view class="header">
     <view class="header-left-group">
       <view class="header-left" wx:if="{{showOverview && !showCustomOverview && !showCustomCategory}}">
-        <text class="year-text">2026年</text>
-        <view class="date-badge">
-          <text class="date-month-num">06</text>
-          <text class="date-month-label">月</text>
-          <view class="date-arrow"></view>
-        </view>
+        <picker mode="date" fields="month" value="{{overviewMonth}}" end="{{overviewMonthMax}}" bindchange="onOverviewMonthChange">
+          <text class="year-text">{{overviewYear}}年</text>
+          <view class="date-badge">
+            <text class="date-month-num">{{overviewMonthNum}}</text>
+            <text class="date-month-label">月</text>
+            <view class="date-arrow"></view>
+          </view>
+        </picker>
       </view>
       <view class="header-back-btn" wx:if="{{!showOverview || showCustomOverview}}" bindtap="goOverview">
         <view class="back-arrow"></view>
@@ -406,7 +408,7 @@
         </view>
         <view class="detail-list-area">
           <view class="detail-date-row">
-            <picker wx:if="{{detailPeriod === 0}}" mode="date" fields="month" value="{{detailPickerDate}}" bindchange="onDetailPickerChange">
+            <picker wx:if="{{detailPeriod === 0}}" mode="date" fields="month" value="{{detailPickerDate}}" end="{{maxDate}}" bindchange="onDetailPickerChange">
               <view class="detail-date-box">
                 <text class="report-date-text">{{detailDateText}}</text>
                 <view class="report-date-arrow"></view>
@@ -418,13 +420,13 @@
                 <view class="report-date-arrow"></view>
               </view>
             </picker>
-            <picker wx:elif="{{detailPeriod === 2}}" mode="date" fields="year" value="{{detailPickerDate}}" bindchange="onDetailPickerChange">
+            <picker wx:elif="{{detailPeriod === 2}}" mode="date" fields="year" value="{{detailPickerDate}}" end="{{maxDate}}" bindchange="onDetailPickerChange">
               <view class="detail-date-box">
                 <text class="report-date-text">{{detailDateText}}</text>
                 <view class="report-date-arrow"></view>
               </view>
             </picker>
-            <picker wx:elif="{{detailPeriod === 3}}" mode="date" value="{{detailPickerDate}}" bindchange="onDetailPickerChange">
+            <picker wx:elif="{{detailPeriod === 3}}" mode="date" value="{{detailPickerDate}}" end="{{maxDate}}" bindchange="onDetailPickerChange">
               <view class="detail-date-box">
                 <text class="report-date-text">{{detailDateText}}</text>
                 <view class="report-date-arrow"></view>
@@ -500,7 +502,7 @@
         </view>
         <view class="report-chart-area">
           <view class="report-info-row">
-            <picker wx:if="{{reportPeriod === 0}}" mode="date" fields="month" value="{{reportPickerDate}}" bindchange="onReportPickerChange">
+            <picker wx:if="{{reportPeriod === 0}}" mode="date" fields="month" value="{{reportPickerDate}}" end="{{maxDate}}" bindchange="onReportPickerChange">
               <view class="report-date-box">
                 <text class="report-date-text">{{reportDateText}}</text>
                 <view class="report-date-arrow"></view>
@@ -512,13 +514,13 @@
                 <view class="report-date-arrow"></view>
               </view>
             </picker>
-            <picker wx:elif="{{reportPeriod === 2}}" mode="date" fields="year" value="{{reportPickerDate}}" bindchange="onReportPickerChange">
+            <picker wx:elif="{{reportPeriod === 2}}" mode="date" fields="year" value="{{reportPickerDate}}" end="{{maxDate}}" bindchange="onReportPickerChange">
               <view class="report-date-box">
                 <text class="report-date-text">{{reportDateText}}</text>
                 <view class="report-date-arrow"></view>
               </view>
             </picker>
-            <picker wx:elif="{{reportPeriod === 3}}" mode="date" value="{{reportPickerDate}}" bindchange="onReportPickerChange">
+            <picker wx:elif="{{reportPeriod === 3}}" mode="date" value="{{reportPickerDate}}" end="{{maxDate}}" bindchange="onReportPickerChange">
               <view class="report-date-box">
                 <text class="report-date-text">{{reportDateText}}</text>
                 <view class="report-date-arrow"></view>
@@ -956,14 +958,14 @@
           <view class="export-bill-top">
             <view class="export-bill-range">
               <text class="export-bill-range-label">从</text>
-              <picker mode="date" value="{{exportDateFrom}}" bindchange="onExportDateFromChange">
+              <picker mode="date" value="{{exportDateFrom}}" end="{{maxDate}}" bindchange="onExportDateFromChange">
                 <view class="detail-date-box">
                   <text class="report-date-text">{{exportDateFrom || '开始日期'}}</text>
                   <view class="report-date-arrow"></view>
                 </view>
               </picker>
               <text class="export-bill-range-label">到</text>
-              <picker mode="date" value="{{exportDateTo}}" bindchange="onExportDateToChange">
+              <picker mode="date" value="{{exportDateTo}}" end="{{maxDate}}" bindchange="onExportDateToChange">
                 <view class="detail-date-box">
                   <text class="report-date-text">{{exportDateTo || '结束日期'}}</text>
                   <view class="report-date-arrow"></view>
@@ -1618,7 +1620,7 @@
         <view class="book-photo-remove" catchtap="onBookPhotoRemove"><text>✕</text></view>
       </view>
       <view class="book-date-row">
-        <picker mode="date" value="{{bookForm.date}}" bindchange="onBookDateChange">
+        <picker mode="date" value="{{bookForm.date}}" end="{{maxDate}}" bindchange="onBookDateChange">
           <view class="book-date-picker">
             <text class="book-date-label">日期</text>
             <text class="book-date-value">{{bookForm.date}}</text>
