@@ -2,6 +2,6 @@
   "file": ".chitu/interfaces/utils-api.js.json",
   "exports": [],
   "imports": [],
-  "capability": "接口文档 utils/api.js 的导出项 uploadVoucher 和 syncFromCloud 格式已修正（去除误捕获的注释前缀），导出列表与源码 module.exports 完全一致",
-  "updatedAt": "2026-06-20T14:20:38.602Z"
+  "capability": "utils/api.js 接口文档的 37 个导出项均已净化：uploadVoucher 和 syncFromCloud 的注释前缀泄露已修复，导出列表与源码 module.exports 完全对齐",
+  "updatedAt": "2026-06-22T12:04:39.575Z"
 }

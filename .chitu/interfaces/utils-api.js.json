@@ -35,9 +35,9 @@
     "getOverviewCards",
     "saveOverviewCards",
     "migrate",
-    "// 凭证上传\n  uploadVoucher",
+    "uploadVoucher",
     "downloadAuthedImage",
-    "// 新增：云端同步\n  syncFromCloud",
+    "syncFromCloud",
     "api"
   ],
   "imports": [],
