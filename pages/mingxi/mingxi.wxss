@@ -1090,6 +1090,14 @@ page {
   margin-right: 16rpx;
   background: #d1d1d1;
 }
+.bill-icon {
+  font-size: 32rpx;
+  line-height: 1;
+  width: 44rpx;
+  flex-shrink: 0;
+  margin-right: 12rpx;
+  text-align: center;
+}
 .bill-item--in .bill-dot,
 .bill-item--out .bill-dot,
 .bill-item--advance .bill-dot,
@@ -1163,9 +1171,10 @@ page {
   font-size: 26rpx;
   font-weight: 500;
   color: #666;
-  width: 110rpx;
+  width: 150rpx;
   flex-shrink: 0;
   text-align: right;
+  white-space: nowrap;
 }
 .bill-item--in .bill-date,
 .bill-item--out .bill-date,
@@ -4104,6 +4113,14 @@ page {
   margin-right: 16rpx;
   background: #d1d1d1;
 }
+.bill-icon {
+  font-size: 32rpx;
+  line-height: 1;
+  width: 44rpx;
+  flex-shrink: 0;
+  margin-right: 12rpx;
+  text-align: center;
+}
 .bill-item--in .bill-dot,
 .bill-item--out .bill-dot,
 .bill-item--advance .bill-dot,
@@ -4177,9 +4194,10 @@ page {
   font-size: 26rpx;
   font-weight: 500;
   color: #666;
-  width: 110rpx;
+  width: 150rpx;
   flex-shrink: 0;
   text-align: right;
+  white-space: nowrap;
 }
 .bill-item--in .bill-date,
 .bill-item--out .bill-date,

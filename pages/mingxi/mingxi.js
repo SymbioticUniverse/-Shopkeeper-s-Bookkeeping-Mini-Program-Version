@@ -2382,7 +2382,7 @@ Page({
       api.addItem(scope, newItem)
     }
 
-    this.setData({ detailItems: api.getItems(scope), showBookPopup: false, bookPhoto: '' })
+    this.setData({ detailItems: this._withCatIcon(scope, api.getItems(scope)), showBookPopup: false, bookPhoto: '' })
     this._calcOverviewData()
     wx.showToast({ title: '记账成功', icon: 'success' })
     this._redrawReportCharts()
@@ -2639,9 +2639,17 @@ Page({
     }
   },
 
+  // 按账单的分类名查出对应 emoji，给每条明细附 _icon（用于列表行的分类图标）；分类已删/未知回退 📌
+  _withCatIcon(scope, items) {
+    const cats = api.getCategories(scope) || (scope === 'company' ? this.data.companyCategories : this.data.personalCategories) || []
+    const map = {}
+    cats.forEach(c => { if (c && c.name) map[c.name] = c.emoji || '' })
+    return (items || []).map(it => ({ ...it, _icon: map[it.category] || '📌' }))
+  },
+
   initDetailItems() {
     const scope = this.data.detailType === 1 ? 'company' : 'personal'
-    const items = api.getItems(scope)
+    const items = this._withCatIcon(scope, api.getItems(scope))
     this.setData({ detailItems: items })
   },
 
@@ -4307,7 +4315,7 @@ Page({
       showAiChat: false,
       currentTab: 0,
       showOverview: false,
-      detailItems: items,
+      detailItems: this._withCatIcon(scope, items),
       modalItem: found,
     })
   },
@@ -4384,7 +4392,7 @@ Page({
     }
     api.addItem(scope, newItem)
     reply.card.itemId = newItem.id
-    this.setData({ detailItems: api.getItems(scope) })
+    this.setData({ detailItems: this._withCatIcon(scope, api.getItems(scope)) })
     this._calcOverviewData()
   },
 

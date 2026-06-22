@@ -459,8 +459,7 @@
                     bindtap="onBillTap"
                     data-id="{{item.id}}"
                     data-from="detail">
-                <view class="bill-dot"></view>
-                <text class="bill-cat">{{item.category}}</text>
+                <text class="bill-icon">{{item._icon}}</text>
                 <text class="bill-type">{{item.typeLabel}}</text>
                 <text wx:if="{{item.settleStatus === 'company_settled'}}" class="bill-settle-tag bill-settle-tag--pending">待确认</text>
                 <text wx:elif="{{item._autoSettle}}" class="bill-settle-tag bill-settle-tag--auto">自动</text>
