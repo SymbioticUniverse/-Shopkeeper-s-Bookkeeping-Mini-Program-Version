@@ -9210,11 +9210,11 @@ page {
   justify-content: center;
 }
 .profile-modal {
-  width: 560rpx;
+  width: 580rpx;
   background: #fff;
-  border-radius: 28rpx;
-  box-shadow: 0 16rpx 48rpx rgba(0, 0, 0, 0.16);
-  padding: 40rpx 36rpx 32rpx;
+  border-radius: 32rpx;
+  box-shadow: 0 20rpx 56rpx rgba(0, 0, 0, 0.18);
+  padding: 48rpx 40rpx 36rpx;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -9222,35 +9222,82 @@ page {
 .profile-modal-title {
   font-size: 37rpx;
   font-weight: 600;
-  color: #000;
-  margin-bottom: 32rpx;
+  color: #1a1a1a;
+  margin-bottom: 8rpx;
+}
+.profile-modal-subtitle {
+  font-size: 22rpx;
+  color: #999;
+  margin-bottom: 36rpx;
 }
 .profile-avatar-pick {
-  width: 160rpx;
-  height: 160rpx;
+  position: relative;
+  width: 168rpx;
+  height: 168rpx;
   border-radius: 50%;
   background: rgba(0, 0, 0, 0.04);
   display: flex;
   align-items: center;
   justify-content: center;
-  overflow: hidden;
-  box-shadow: 0 6rpx 18rpx rgba(0, 0, 0, 0.08);
+  box-shadow: 0 8rpx 24rpx rgba(0, 0, 0, 0.1);
 }
 .profile-avatar-img {
   width: 100%;
   height: 100%;
+  border-radius: 50%;
 }
 .profile-avatar-ph {
   width: 100%;
   height: 100%;
+  border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
 }
+/* 头像右下角相机角标：提示「可更换」 */
+.profile-avatar-badge {
+  position: absolute;
+  right: 2rpx;
+  bottom: 2rpx;
+  width: 52rpx;
+  height: 52rpx;
+  border-radius: 50%;
+  background: #00d042;
+  border: 4rpx solid #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4rpx 12rpx rgba(0, 208, 66, 0.35);
+}
+.profile-avatar-badge-ico {
+  color: #fff;
+  font-size: 30rpx;
+  line-height: 1;
+}
 .profile-avatar-tip {
   font-size: 22rpx;
   color: #999;
-  margin: 16rpx 0 28rpx;
+  margin: 18rpx 0 30rpx;
+}
+.profile-field {
+  width: 100%;
+  margin-bottom: 36rpx;
+}
+.profile-field-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 6rpx;
+  margin-bottom: 14rpx;
+}
+.profile-field-label {
+  font-size: 30rpx;
+  color: #1a1a1a;
+  font-weight: 500;
+}
+.profile-field-count {
+  font-size: 22rpx;
+  color: #bbb;
 }
 .profile-name-input {
   width: 100%;
@@ -9259,8 +9306,11 @@ page {
   border-radius: 16rpx;
   padding: 0 24rpx;
   font-size: 30rpx;
+  color: #1a1a1a;
   box-sizing: border-box;
-  margin-bottom: 32rpx;
+}
+.profile-name-ph {
+  color: #bbb;
 }
 .profile-modal-btns {
   display: flex;
@@ -9269,11 +9319,11 @@ page {
 }
 .profile-btn {
   flex: 1;
-  height: 84rpx;
+  height: 88rpx;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 16rpx;
+  border-radius: 18rpx;
   font-size: 30rpx;
   font-weight: 500;
 }
@@ -9284,7 +9334,7 @@ page {
 .profile-btn--save {
   background: #00d042;
   color: #fff;
-  box-shadow: 0 6rpx 18rpx rgba(0, 208, 66, 0.28);
+  box-shadow: 0 8rpx 20rpx rgba(0, 208, 66, 0.3);
 }
 .profile-btn--save.is-disabled {
   opacity: 0.5;
@@ -9304,14 +9354,18 @@ page {
 /* 暗色适配 */
 .page--dark .profile-modal {
   background: #1e1e1e;
-  box-shadow: 0 16rpx 48rpx rgba(0, 0, 0, 0.5);
+  box-shadow: 0 20rpx 56rpx rgba(0, 0, 0, 0.5);
 }
 .page--dark .profile-modal-title { color: #fff; }
+.page--dark .profile-modal-subtitle { color: #888; }
 .page--dark .profile-avatar-pick { background: rgba(255, 255, 255, 0.08); }
+.page--dark .profile-avatar-badge { border-color: #1e1e1e; }
+.page--dark .profile-field-label { color: #fff; }
 .page--dark .profile-name-input {
   background: rgba(255, 255, 255, 0.08);
   color: #fff;
 }
+.page--dark .profile-name-ph { color: #777; }
 .page--dark .profile-btn--skip {
   background: rgba(255, 255, 255, 0.1);
   color: #ccc;

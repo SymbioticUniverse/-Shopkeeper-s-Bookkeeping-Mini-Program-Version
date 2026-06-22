@@ -1882,12 +1882,20 @@
   <view class="profile-modal-mask" wx:if="{{showProfileModal}}" catchtap="onProfileSkip">
     <view class="profile-modal" catchtap="">
       <text class="profile-modal-title">完善资料</text>
+      <text class="profile-modal-subtitle">设置你的昵称和头像</text>
       <view class="profile-avatar-pick" catchtap="onChooseAvatar">
         <image wx:if="{{profileAvatarLocal}}" class="profile-avatar-img" src="{{profileAvatarLocal}}" mode="aspectFill"></image>
         <view wx:else class="profile-avatar-ph"><text class="my-avatar-plus">＋</text></view>
+        <view class="profile-avatar-badge"><text class="profile-avatar-badge-ico">＋</text></view>
       </view>
-      <text class="profile-avatar-tip">{{profileUploading ? '上传中…' : '点击设置头像'}}</text>
-      <input class="profile-name-input" value="{{profileName}}" placeholder="设置昵称" maxlength="20" bindinput="onProfileNameInput"/>
+      <text class="profile-avatar-tip">{{profileUploading ? '上传中…' : '点击更换头像'}}</text>
+      <view class="profile-field">
+        <view class="profile-field-head">
+          <text class="profile-field-label">昵称</text>
+          <text class="profile-field-count">{{(profileName || '').length}}/20</text>
+        </view>
+        <input class="profile-name-input" value="{{profileName}}" placeholder="请输入昵称" placeholder-class="profile-name-ph" maxlength="20" bindinput="onProfileNameInput"/>
+      </view>
       <view class="profile-modal-btns">
         <view class="profile-btn profile-btn--skip" catchtap="onProfileSkip">跳过</view>
         <view class="profile-btn profile-btn--save {{profileUploading ? 'is-disabled' : ''}}" catchtap="onProfileSave">完成</view>

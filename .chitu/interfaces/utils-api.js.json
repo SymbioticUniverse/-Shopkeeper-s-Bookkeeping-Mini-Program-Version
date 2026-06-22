@@ -41,6 +41,6 @@
     "api"
   ],
   "imports": [],
-  "capability": "登录接口响应直接带回 hasCompany/companyRole，前端免去额外 GET /api/company 即可判定身份引导，老用户（尤其 boss）登录不再被重复询问身份，消除引导页闪现",
-  "updatedAt": "2026-06-21T12:51:15.360Z"
+  "capability": "用户资料弹窗重设计（角标/字数计数/暗色适配），头像上传压缩+单份存储，登录后自动同步刷新简览+头像，跨端 last-write-wins 用户资料时间戳冲突检测",
+  "updatedAt": "2026-06-22T10:16:35.726Z"
 }

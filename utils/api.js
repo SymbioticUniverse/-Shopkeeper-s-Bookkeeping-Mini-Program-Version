@@ -9,8 +9,8 @@
 
 // ==================== 配置 ====================
 
-/** 后端 API 基址（生产环境改为真实域名） */
-const BASE_URL = 'http://localhost:3000/api'
+/** 后端 API 基址（真机调试：电脑局域网 IP，手机需连同一 WiFi；生产环境改为真实域名） */
+const BASE_URL = 'http://192.168.1.112:3000/api'
 
 // ==================== Token 管理 ====================
 
@@ -302,8 +302,10 @@ function getUserInfo() {
 }
 
 function saveUserInfo(info) {
-  _save('userInfo', info)
-  _pushBackend('POST', '/auth/user-info', info)
+  // 打上更新时间戳（毫秒），供跨端 last-write-wins 对比；调用方已带 updatedAt 则沿用
+  const stamped = { ...info, updatedAt: info.updatedAt || Date.now() }
+  _save('userInfo', stamped)
+  _pushBackend('POST', '/auth/user-info', stamped)
 }
 
 function removeUserInfo() {
@@ -393,7 +395,17 @@ async function syncFromCloud() {
       _save('feedbackList', feedbackList.value)
     }
     if (userInfo.status === 'fulfilled' && userInfo.value) {
-      _save('userInfo', userInfo.value)
+      // last-write-wins 安全降级：仅当后端已返回 updatedAt(>0) 且本地更新时，
+      // 保留本地并反推后端；后端尚未支持时间戳时退回「云端权威」，不破坏跨端同步
+      const localU = wx.getStorageSync('userInfo') || null
+      const remoteU = userInfo.value
+      const localTs = (localU && localU.updatedAt) || 0
+      const remoteTs = (remoteU && remoteU.updatedAt) || 0
+      if (remoteTs > 0 && localTs > remoteTs) {
+        _pushBackend('POST', '/auth/user-info', localU)
+      } else {
+        _save('userInfo', remoteU)
+      }
     }
     if (overviewCards.status === 'fulfilled' && overviewCards.value) {
       _save('customOverviewCards', overviewCards.value)
@@ -447,11 +459,13 @@ function _findScope(id) {
  * @param {string} filePath — wx.chooseImage/chooseMedia 返回的 tempFilePath
  * @returns {Promise<string>} — 解析为图片 URL
  */
-function uploadVoucher(filePath) {
+function uploadVoucher(filePath, type) {
   const token = _getToken()
+  // type==='avatar' → 走头像专用通道（后端存 avatar/ 目录、单份覆盖、返回免鉴权 URL）
+  const query = type === 'avatar' ? '?type=avatar' : ''
   return new Promise((resolve, reject) => {
     wx.uploadFile({
-      url: BASE_URL + '/upload',
+      url: BASE_URL + '/upload' + query,
       filePath,
       name: 'file',
       header: {

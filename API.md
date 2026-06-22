@@ -999,3 +999,47 @@ user_settings: { user_id, key, value, updated_at }
 **前端临时方案**：`api.downloadAuthedImage(url)` 用 `wx.downloadFile` 带 token 头把头像下成本地临时路径再喂给 `<image>`（多一次请求）。
 
 **期望后端改动**：头像单独走一条**公开（免鉴权）只读路由**（头像本身不敏感），或上传时按 `type=avatar` 存公开目录并返回可被 `<image>` 直接加载的 URL。届时前端去掉 `downloadAuthedImage` 绕过，直接 `<image src="{{avatarUrl}}">`。
+
+### 7.3 账号与公司角色持久化（避免重复引导）
+
+**原则**：手机号即账号身份——同一手机号 = 同一 `user`。用户的**公司归属与角色（boss/employee + companyUid）必须服务端持久化**，登录后可被客户端取回（当前经 `syncFromCloud` 中的 `GET /api/company`）。
+
+**前端依赖**：登录成功后客户端 `await syncFromCloud()` → 若已取到公司信息（含 companyUid），则**跳过「选择身份/创建公司」引导**，老用户（尤其 boss）登录不再被重复询问身份。
+
+**期望后端保证**：
+- 同一手机号多次登录指向同一 `user`，其 `company_members`（角色、companyUid）稳定持久；
+- `GET /api/company` 对已创建/加入公司的用户稳定返回其公司与角色；
+- （可选优化）`login-by-phone` 响应直接带回 `companyRole` / `hasCompany`，免去登录后额外一次 `GET /company` 往返即可判定，进一步消除引导闪现。
+
+### 7.4 头像单份存储（上传前清理旧文件）
+
+**问题**：`POST /api/upload` 每次都用 `crypto.randomUUID()` 生成新文件名、保存后**从不删除同一用户的旧文件**。用户每换一次头像就在磁盘多留一个文件，永不回收 → 单用户头像文件无限堆积，小服务器存储吃不消。
+
+**前端已配合**：
+- 头像上传带 `?type=avatar`（普通凭证不带），后端可据此区分头像；
+- 客户端选图后先 `wx.compressImage`（压到 400 宽 / quality 80）再上传，单图体积已大幅下降。
+
+**期望后端改动**：当 `type=avatar` 时，保存新头像**之前先清空该用户的 avatar 目录**（`{safeId}/avatar/` 下旧文件全删），或使用**固定文件名覆盖写入**，保证「单个用户头像磁盘上恒为一份」。普通凭证（非 avatar）不受影响，仍按年/月保留。
+
+> 与 7.2 配合：`type=avatar` 既走免鉴权 public 路由（解决 401 显示），又做单份覆盖（解决堆积），一处改动解决头像两个痛点。
+
+### 7.5 用户资料时间戳（昵称/头像跨端 last-write-wins）
+
+**目标**：同一手机号在多端（真机 / 开发者工具）改昵称或头像，以**最新时间戳为准**自动同步——哪端新用哪端，本地比云端新就反推后端，避免旧数据覆盖新数据。
+
+**现状**：`users` 表已有 `updated_at`（服务器 `datetime('now')`），但 `GET /api/auth/user-info`（auth.js:250）**不返回它**，`POST /api/auth/user-info`（auth.js:263）也**不接收前端传的时间戳**（用服务器时间）。前端因此拿不到云端时间戳，无法对比。
+
+**前端已落地**：
+- `saveUserInfo` 写入时带 `updatedAt`（毫秒），一并 `POST /auth/user-info`；
+- `syncFromCloud` 对 userInfo 做**安全降级的 last-write-wins**：
+  - 后端返回的 `updatedAt > 0` 且 `本地 updatedAt > 云端` → 保留本地并反推后端；
+  - 否则（后端未返回 `updatedAt`，或云端更新/同等）→ 用云端覆盖本地（即当前行为）。
+- 因此后端未改前**不破坏现状**，后端补齐后**自动启用**双向对比。
+
+**期望后端改动**（任一可行方案）：
+- `GET /auth/user-info` 在响应里**返回 `updatedAt`**（毫秒数）。这是前端能对比的**硬前提**。
+- `POST /auth/user-info` **接收并存储前端传的 `updatedAt`**（建议新增列 `profile_updated_at INTEGER` 存毫秒，或把现有 `updated_at` 以毫秒返回），并在写入时**比较时间戳**：若传入 `updatedAt` 比库中旧则忽略（服务端兜底防旧覆盖新）。
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| `updatedAt` | `number` | 资料（昵称/头像）最后更新的毫秒时间戳，`GET` 需返回、`POST` 需接收存储 |

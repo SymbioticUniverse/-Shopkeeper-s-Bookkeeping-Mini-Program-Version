@@ -726,18 +726,6 @@ Page({
   },
 
   // ---- 资料设置（昵称/头像）+ 头像显示 ----
-  _isFreshUser(u) {
-    return !!u && !u.avatarUrl && /^\d{3}\*{4}\d{4}$/.test(u.nickName || '')
-  },
-
-  _maybeProfileSetup(userInfo) {
-    if (this._isFreshUser(userInfo)) {
-      this.setData({ showProfileModal: true, profileName: '', profileAvatarLocal: '', profileAvatarUrl: '' })
-    } else {
-      this._refreshAvatarDisplay(userInfo)
-    }
-  },
-
   // /voucher 私有头像需带 token 下成本地路径，<image> 才能渲染（裸 URL 会 401）
   async _refreshAvatarDisplay(userInfo) {
     const u = userInfo || this.data.userInfo
@@ -767,40 +755,54 @@ Page({
       mediaType: ['image'],
       sizeType: ['compressed'],
       sourceType: ['album', 'camera'],
-      success: async (res) => {
+      success: (res) => {
         const f = res.tempFiles && res.tempFiles[0]
-        const local = f && f.tempFilePath
-        if (!local) {
+        const raw = f && f.tempFilePath
+        if (!raw) {
           wx.showToast({ title: '未选到图片', icon: 'none' })
           return
         }
-        // 前端预校验：后端只收 jpg/png 且 ≤5MB（iPhone HEIC / 超大图会被拒）
-        if (f.size && f.size > 5 * 1024 * 1024) {
-          wx.showToast({ title: '图片需小于 5MB', icon: 'none' })
-          return
-        }
-        if (!/\.(jpe?g|png)$/i.test(local)) {
+        if (!/\.(jpe?g|png)$/i.test(raw)) {
           wx.showToast({ title: '仅支持 jpg/png 图片', icon: 'none' })
           return
         }
-        this.setData({ profileAvatarLocal: local, profileUploading: true })
-        wx.showLoading({ title: '上传中…', mask: true })
-        try {
-          const url = await api.uploadVoucher(local)
-          this.setData({ profileAvatarUrl: url, profileUploading: false })
-          wx.hideLoading()
-          wx.showToast({ title: '头像已上传', icon: 'success' })
-        } catch (e) {
-          this.setData({ profileUploading: false, profileAvatarLocal: '' })
-          wx.hideLoading()
-          wx.showToast({ title: (e && e.error) || '头像上传失败', icon: 'none' })
+        // 头像压成小图：减小上传体积、降渲染内存。compressImage 在某些环境偶发不回调，
+        // 加 3s 超时兜底，超时则改用原图，避免卡住后续流程
+        let done = false
+        const proceed = (p) => {
+          if (done) return
+          done = true
+          this._uploadAvatar(p)
         }
+        const timer = setTimeout(() => proceed(raw), 3000)
+        wx.compressImage({
+          src: raw,
+          quality: 80,
+          compressedWidth: 400,
+          success: (c) => { clearTimeout(timer); proceed(c.tempFilePath) },
+          fail: () => { clearTimeout(timer); proceed(raw) }
+        })
       },
       fail: (err) => {
         // 用户主动取消不提示
         if (err && /cancel/i.test(err.errMsg || '')) return
         wx.showToast({ title: '选择图片失败', icon: 'none' })
       }
+    })
+  },
+
+  // 上传头像小图：预览用本地小图，成功后存 URL
+  _uploadAvatar(local) {
+    this.setData({ profileAvatarLocal: local, profileUploading: true })
+    wx.showLoading({ title: '上传中…', mask: true })
+    api.uploadVoucher(local, 'avatar').then((url) => {
+      this.setData({ profileAvatarUrl: url, profileUploading: false })
+      wx.hideLoading()
+      wx.showToast({ title: '头像已上传', icon: 'success' })
+    }).catch((e) => {
+      this.setData({ profileUploading: false, profileAvatarLocal: '' })
+      wx.hideLoading()
+      wx.showToast({ title: (e && e.error) || '头像上传失败', icon: 'none' })
     })
   },
 
@@ -831,7 +833,8 @@ Page({
       showProfileModal: false,
       avatarDisplay: this.data.profileAvatarLocal || this.data.avatarDisplay
     })
-    this._syncOverviewCards()
+    // 仅刷新卡名（昵称变化），不重绘简览 canvas，避免真机崩溃重启
+    this._syncOverviewCards(true)
     wx.showToast({ title: '已保存', icon: 'success' })
   },
 
@@ -883,7 +886,7 @@ Page({
     this.setData(set)
   },
 
-  _syncOverviewCards() {
+  _syncOverviewCards(skipCharts) {
     const saved = api.getOverviewCards()
     const userInfo = this.data.userInfo
     const companyInfo = api.getCompanyInfo()
@@ -925,7 +928,8 @@ Page({
       this.setData({ overviewCards: enriched, customCards: [] })
     }
     this._calcOverviewData()
-    setTimeout(() => this._initOverviewCharts(), 400)
+    // skipCharts：资料弹窗保存等场景不重绘简览 canvas（真机重绘易崩溃重启）
+    if (!skipCharts) setTimeout(() => this._initOverviewCharts(), 400)
   },
 
   _calcOverviewData() {
@@ -3844,6 +3848,12 @@ Page({
       // 登录后从云端同步数据（异步，不阻塞后续操作）
       api.syncFromCloud().then(() => {
         this.initDetailItems()
+        // 后端权威 companyInfo 落地后重建简览卡：boss 此时才会出现公司账本
+        this._syncOverviewCards()
+        // 把拉到的最新 userInfo 刷到页面 + 重新加载头像（跨端改了头像/昵称这里才更新）
+        const su = api.getUserInfo()
+        if (su) this.setData({ userInfo: su })
+        this._refreshAvatarDisplay(su)
       })
     }).catch(() => {
       wx.showToast({ title: '登录失败', icon: 'none' })
@@ -3864,6 +3874,12 @@ Page({
         // 登录后从云端同步数据（异步，不阻塞后续操作）
         api.syncFromCloud().then(() => {
           this.initDetailItems()
+          // 后端权威 companyInfo 落地后重建简览卡：boss 此时才会出现公司账本
+          this._syncOverviewCards()
+          // 把拉到的最新 userInfo 刷到页面 + 重新加载头像（跨端改了头像/昵称这里才更新）
+          const su = api.getUserInfo()
+          if (su) this.setData({ userInfo: su })
+          this._refreshAvatarDisplay(su)
         })
       }).catch(() => {
         wx.showToast({ title: '登录失败', icon: 'none' })
@@ -3951,6 +3967,12 @@ Page({
         const ci = api.getCompanyInfo()
         if (ci && ci.companyUid) this.setData({ companyUid: ci.companyUid })
         this.initDetailItems()
+        // 后端权威 companyInfo 落地后重建简览卡：boss 此时才会出现公司账本
+        this._syncOverviewCards()
+        // 把拉到的最新 userInfo 刷到页面 + 重新加载头像（跨端改了头像/昵称这里才更新）
+        const su = api.getUserInfo()
+        if (su) this.setData({ userInfo: su })
+        this._refreshAvatarDisplay(su)
       })
       // 同一账号：后端已返回 hasCompany → 跳过身份引导，老用户不再被重复询问
       if (result.hasCompany) {
@@ -3979,6 +4001,12 @@ Page({
           const ci = api.getCompanyInfo()
           if (ci && ci.companyUid) this.setData({ companyUid: ci.companyUid })
           this.initDetailItems()
+          // 后端权威 companyInfo 落地后重建简览卡：boss 此时才会出现公司账本
+          this._syncOverviewCards()
+          // 把拉到的最新 userInfo 刷到页面 + 重新加载头像（跨端改了头像/昵称这里才更新）
+          const su = api.getUserInfo()
+          if (su) this.setData({ userInfo: su })
+          this._refreshAvatarDisplay(su)
         })
         if (result.hasCompany) {
           this.onGuideComplete()

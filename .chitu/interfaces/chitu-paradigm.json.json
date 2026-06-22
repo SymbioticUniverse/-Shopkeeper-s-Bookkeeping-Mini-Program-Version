@@ -2,6 +2,6 @@
   "file": ".chitu/paradigm.json",
   "exports": [],
   "imports": [],
-  "capability": "mingxi 页面中心 Tab 按钮 CSS 与 WXML 对齐：浮动圆形按钮 flex 居中 + 下方文字标签，废弃的 tab-item-center/tab-icon-center-wrap 类已清理",
-  "updatedAt": "2026-06-20T14:43:41.516Z"
+  "capability": "用户资料弹窗重设计（角标/字数计数/暗色适配），头像上传压缩+单份存储，登录后自动同步刷新简览+头像，跨端 last-write-wins 用户资料时间戳冲突检测",
+  "updatedAt": "2026-06-22T10:16:35.726Z"
 }
