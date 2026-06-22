@@ -12,14 +12,14 @@
       "from": "jsonwebtoken"
     },
     {
-      "symbol": "_devSecret",
-      "from": "crypto"
+      "symbol": "_db",
+      "from": "../db"
     },
     {
-      "symbol": "db",
-      "from": "../db"
+      "symbol": "(require)",
+      "from": "crypto"
     }
   ],
-  "capability": "开发环境下 getSecret() 仅在模块加载时生成一次随机密钥并缓存，generateToken() 和 parseToken() 使用同一密钥，开发环境登录恢复正常",
-  "updatedAt": "2026-06-18T15:49:56.194Z"
+  "capability": "后端性能安全加固：6 个新索引（sessions.token 认证热路径提速 + 5 个业务查询索引）、auth 中间件 require/prepare 提升到模块层消除请求内开销、_devSecret 惰性生成、addColumnSafely 正则防注入、GET /items 分页（limit/offset，向后兼容无参调用）",
+  "updatedAt": "2026-06-22T10:32:46.790Z"
 }

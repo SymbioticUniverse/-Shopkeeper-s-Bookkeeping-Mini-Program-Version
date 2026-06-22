@@ -155,11 +155,24 @@ function initSchema() {
   db.exec(`
     CREATE INDEX IF NOT EXISTS idx_items_user_scope ON items(user_id, scope);
     CREATE INDEX IF NOT EXISTS idx_items_linked ON items(linked_id);
+    CREATE INDEX IF NOT EXISTS idx_items_date ON items(date);
     CREATE INDEX IF NOT EXISTS idx_notifications_user ON notifications(user_id);
+    CREATE INDEX IF NOT EXISTS idx_sessions_token ON sessions(token);
+    CREATE INDEX IF NOT EXISTS idx_sessions_user ON sessions(user_id);
+    CREATE INDEX IF NOT EXISTS idx_feedbacks_user ON feedbacks(user_id);
+    CREATE INDEX IF NOT EXISTS idx_overview_cards_user ON overview_cards(user_id);
+    CREATE INDEX IF NOT EXISTS idx_companies_boss ON companies(boss_user_id);
   `)
 
   // Migration helper: 仅在列不存在时执行 ALTER TABLE
+  // 安全校验：table/column 仅允许字母数字下划线（防 SQL 注入）
+  const SAFE_ID = /^[a-zA-Z_][a-zA-Z0-9_]*$/
+
   function addColumnSafely(table, column, definition) {
+    if (!SAFE_ID.test(table) || !SAFE_ID.test(column)) {
+      console.error(`[MIGRATE] 非法标识符: table=${table}, column=${column}`)
+      return
+    }
     const colInfo = db.pragma(`table_info('${table}')`)
     if (!colInfo.some(c => c.name === column)) {
       db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`)

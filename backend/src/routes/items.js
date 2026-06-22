@@ -119,11 +119,36 @@ function voucherToDiskPath(voucher, userId) {
 // ==================== 获取账单列表 ====================
 
 router.get('/', requireAuth, (req, res) => {
-  const { scope } = req.query
+  const { scope, limit, offset } = req.query
   if (!scope || !['personal', 'company'].includes(scope)) {
     return res.status(400).json({ error: 'scope 参数无效，需为 personal 或 company' })
   }
 
+  // 分页：仅当显式传 limit 时启用（兼容前端 syncFromCloud/refreshItems 无参调用）
+  if (limit !== undefined) {
+    const pageSize = Math.min(Math.max(parseInt(limit) || 500, 1), 2000)
+    const pageOffset = Math.max(parseInt(offset) || 0, 0)
+
+    const rows = db.prepare(`
+      SELECT * FROM items
+      WHERE user_id = ? AND scope = ?
+      ORDER BY id DESC
+      LIMIT ? OFFSET ?
+    `).all(req.userId, scope, pageSize, pageOffset)
+
+    const total = db.prepare(`
+      SELECT COUNT(*) AS cnt FROM items WHERE user_id = ? AND scope = ?
+    `).get(req.userId, scope)
+
+    return res.json({
+      items: rows.map(rowToItem),
+      total: total ? total.cnt : 0,
+      limit: pageSize,
+      offset: pageOffset
+    })
+  }
+
+  // 无分页参数：保持原有行为（向后兼容）
   const rows = db.prepare(`
     SELECT * FROM items
     WHERE user_id = ? AND scope = ?

@@ -14,10 +14,15 @@ if (!JWT_SECRET) {
   console.warn('[WARN] JWT_SECRET 未设置，使用随机密钥（仅开发环境可用）')
 }
 
-const _devSecret = require('crypto').randomBytes(32).toString('hex')
+// 惰性生成开发密钥（仅在未设置 JWT_SECRET 且首次调用时生成）
+let _devSecret = null
 
 function getSecret() {
-  return JWT_SECRET || _devSecret
+  if (JWT_SECRET) return JWT_SECRET
+  if (!_devSecret) {
+    _devSecret = require('crypto').randomBytes(32).toString('hex')
+  }
+  return _devSecret
 }
 
 // 生成 token
@@ -36,6 +41,9 @@ function parseToken(token) {
 }
 
 // 认证中间件 — 必须登录，且 token 在会话表中有效
+const _db = require('../db').db
+const _sessionCheck = _db.prepare("SELECT user_id FROM sessions WHERE token = ? AND expires_at > datetime('now')")
+
 function requireAuth(req, res, next) {
   const authHeader = req.headers.authorization || ''
   const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : (req.query.token || '')
@@ -46,8 +54,7 @@ function requireAuth(req, res, next) {
   }
 
   // 验证 token 存在于会话表（未被 logout 清除）
-  const db = require('../db').db
-  const session = db.prepare('SELECT user_id FROM sessions WHERE token = ? AND expires_at > datetime(\'now\')').get(token)
+  const session = _sessionCheck.get(token)
   if (!session) {
     return res.status(401).json({ error: '会话已注销，请重新登录' })
   }
