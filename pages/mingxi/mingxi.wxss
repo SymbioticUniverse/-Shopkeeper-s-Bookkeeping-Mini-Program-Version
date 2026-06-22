@@ -9328,8 +9328,16 @@ page {
   font-weight: 500;
 }
 .profile-btn--skip {
-  background: rgba(0, 0, 0, 0.05);
-  color: #666;
+  background: #f2f3f5;
+  color: #333;
+  border: 1rpx solid rgba(0, 0, 0, 0.06);
+}
+.profile-btn--skip:active {
+  background: #e7e9ec;
+}
+.profile-btn--save:active {
+  box-shadow: 0 4rpx 12rpx rgba(0, 208, 66, 0.3);
+  transform: translateY(1rpx);
 }
 .profile-btn--save {
   background: #00d042;
@@ -9367,7 +9375,11 @@ page {
 }
 .page--dark .profile-name-ph { color: #777; }
 .page--dark .profile-btn--skip {
-  background: rgba(255, 255, 255, 0.1);
-  color: #ccc;
+  background: rgba(255, 255, 255, 0.12);
+  color: #eee;
+  border: 1rpx solid rgba(255, 255, 255, 0.08);
+}
+.page--dark .profile-btn--skip:active {
+  background: rgba(255, 255, 255, 0.18);
 }
 .page--dark .my-avatar--empty { background: rgba(255, 255, 255, 0.1); }

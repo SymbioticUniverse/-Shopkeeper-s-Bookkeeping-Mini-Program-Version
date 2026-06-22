@@ -1389,7 +1389,7 @@
       <view class="card grid-span-3 my-card" wx:else>
         <view class="my-profile">
           <text class="my-login-text" bindtap="onLoginEntry" wx:if="{{isLoggedIn === false}}">{{t.my_login_register}}</text>
-          <text class="my-nickname" bindtap="onLogout" wx:else>{{userInfo.nickName}}</text>
+          <text class="my-nickname" bindtap="onMyAvatarTap" wx:else>{{userInfo.nickName}}</text>
           <image class="my-avatar" src="{{avatarDisplay}}" wx:if="{{isLoggedIn && avatarDisplay}}" mode="aspectFill" bindtap="onMyAvatarTap"></image>
           <view class="my-avatar my-avatar--empty" wx:elif="{{isLoggedIn}}" bindtap="onMyAvatarTap"><text class="my-avatar-plus">＋</text></view>
           <view class="my-avatar" wx:else></view>
@@ -1879,10 +1879,10 @@
   </view>
 
   <!-- 资料设置弹窗（新用户引导 + 我的页编辑共用） -->
-  <view class="profile-modal-mask" wx:if="{{showProfileModal}}" catchtap="onProfileSkip">
-    <view class="profile-modal" catchtap="">
-      <text class="profile-modal-title">完善资料</text>
-      <text class="profile-modal-subtitle">设置你的昵称和头像</text>
+  <view class="profile-modal-mask" wx:if="{{showProfileModal}}" catchtap="onProfileMaskTap">
+    <view class="profile-modal" catchtap="nop">
+      <text class="profile-modal-title">{{profileEditMode ? '编辑资料' : '完善资料'}}</text>
+      <text class="profile-modal-subtitle">{{profileEditMode ? '修改你的昵称和头像' : '设置你的昵称和头像'}}</text>
       <view class="profile-avatar-pick" catchtap="onChooseAvatar">
         <image wx:if="{{profileAvatarLocal}}" class="profile-avatar-img" src="{{profileAvatarLocal}}" mode="aspectFill"></image>
         <view wx:else class="profile-avatar-ph"><text class="my-avatar-plus">＋</text></view>
@@ -1892,12 +1892,12 @@
       <view class="profile-field">
         <view class="profile-field-head">
           <text class="profile-field-label">昵称</text>
-          <text class="profile-field-count">{{(profileName || '').length}}/20</text>
+          <text class="profile-field-count">{{profileName.length}}/20</text>
         </view>
         <input class="profile-name-input" value="{{profileName}}" placeholder="请输入昵称" placeholder-class="profile-name-ph" maxlength="20" bindinput="onProfileNameInput"/>
       </view>
       <view class="profile-modal-btns">
-        <view class="profile-btn profile-btn--skip" catchtap="onProfileSkip">跳过</view>
+        <view class="profile-btn profile-btn--skip" catchtap="onProfileSkip">{{profileEditMode ? '取消' : '跳过'}}</view>
         <view class="profile-btn profile-btn--save {{profileUploading ? 'is-disabled' : ''}}" catchtap="onProfileSave">完成</view>
       </view>
     </view>

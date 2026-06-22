@@ -233,6 +233,7 @@ Page({
     userInfo: null,
     avatarDisplay: '',          // 头像实际显示路径（本地临时/带头下载到本地），优先于 userInfo.avatarUrl
     showProfileModal: false,    // 资料设置弹窗（新用户引导 + 我的页编辑共用）
+    profileEditMode: false,     // true=我的页编辑（标题/按钮用「编辑/取消」），false=新用户引导（用「完善/跳过」）
     profileName: '',
     profileAvatarLocal: '',     // 弹窗内已选/已传头像的本地预览路径
     profileAvatarUrl: '',       // 弹窗内已上传到服务端的头像 URL
@@ -808,8 +809,10 @@ Page({
 
   onMyAvatarTap() {
     const cur = this.data.userInfo || {}
+    this._profileOpenAt = Date.now()
     this.setData({
       showProfileModal: true,
+      profileEditMode: true,
       profileName: cur.nickName || '',
       profileAvatarLocal: this.data.avatarDisplay || '',
       profileAvatarUrl: ''
@@ -839,6 +842,12 @@ Page({
   },
 
   onProfileSkip() {
+    this.setData({ showProfileModal: false })
+  },
+
+  onProfileMaskTap() {
+    // 拦截「打开弹窗的同一次点击」穿透到刚渲染的蒙层导致秒关
+    if (Date.now() - (this._profileOpenAt || 0) < 350) return
     this.setData({ showProfileModal: false })
   },
 
@@ -3840,7 +3849,7 @@ Page({
       this.setData({ isLoggedIn: true, userInfo, showLoginPage: false, loginPhone: '', loginCode: '' })
       // 用后端 isNew 替代前端脱敏手机号启发式判定
       if (result.isNew) {
-        this.setData({ showProfileModal: true, profileName: '', profileAvatarLocal: '', profileAvatarUrl: '' })
+        this.setData({ showProfileModal: true, profileEditMode: false, profileName: '', profileAvatarLocal: '', profileAvatarUrl: '' })
       } else {
         this._refreshAvatarDisplay(userInfo)
       }
@@ -3866,7 +3875,7 @@ Page({
         const userInfo = { nickName: result.nickName, avatarUrl: result.avatarUrl }
         this.setData({ isLoggedIn: true, userInfo, showLoginPage: false })
         if (result.isNew) {
-          this.setData({ showProfileModal: true, profileName: '', profileAvatarLocal: '', profileAvatarUrl: '' })
+          this.setData({ showProfileModal: true, profileEditMode: false, profileName: '', profileAvatarLocal: '', profileAvatarUrl: '' })
         } else {
           this._refreshAvatarDisplay(userInfo)
         }
@@ -3957,7 +3966,7 @@ Page({
       const userInfo = { nickName: result.nickName, avatarUrl: result.avatarUrl }
       this.setData({ isLoggedIn: true, userInfo, loginPhone: '', loginCode: '' })
       if (result.isNew) {
-        this.setData({ showProfileModal: true, profileName: '', profileAvatarLocal: '', profileAvatarUrl: '' })
+        this.setData({ showProfileModal: true, profileEditMode: false, profileName: '', profileAvatarLocal: '', profileAvatarUrl: '' })
       } else {
         this._refreshAvatarDisplay(userInfo)
       }
@@ -3991,7 +4000,7 @@ Page({
         const userInfo = { nickName: result.nickName, avatarUrl: result.avatarUrl }
         this.setData({ isLoggedIn: true, userInfo })
         if (result.isNew) {
-          this.setData({ showProfileModal: true, profileName: '', profileAvatarLocal: '', profileAvatarUrl: '' })
+          this.setData({ showProfileModal: true, profileEditMode: false, profileName: '', profileAvatarLocal: '', profileAvatarUrl: '' })
         } else {
           this._refreshAvatarDisplay(userInfo)
         }
