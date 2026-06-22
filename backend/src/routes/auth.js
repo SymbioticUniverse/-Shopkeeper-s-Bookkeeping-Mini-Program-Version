@@ -87,7 +87,7 @@ router.post('/login-by-phone', (req, res) => {
   db.prepare('DELETE FROM verify_codes WHERE phone = ?').run(phone)
 
   // 查找或创建用户
-  let user = db.prepare('SELECT id, nick_name, avatar_url FROM users WHERE phone = ?').get(phone)
+  let user = db.prepare('SELECT id, nick_name, avatar_url, profile_updated_at FROM users WHERE phone = ?').get(phone)
   let isNew = false
   if (!user) {
     // 新用户，使用手机号脱敏作为默认昵称
@@ -122,7 +122,8 @@ router.post('/login-by-phone', (req, res) => {
     token,
     isNew,
     hasCompany,
-    companyRole
+    companyRole,
+    updatedAt: user.profile_updated_at || null
   })
 })
 
@@ -193,7 +194,7 @@ router.post('/login-by-wechat', async (req, res) => {
   const nickname = nickName || '微信用户'
   const avatar = avatarUrl || ''
 
-  let user = db.prepare('SELECT id, nick_name, avatar_url FROM users WHERE openid = ?').get(openid)
+  let user = db.prepare('SELECT id, nick_name, avatar_url, profile_updated_at FROM users WHERE openid = ?').get(openid)
   let isNew = false
 
   if (!user) {
@@ -229,11 +230,10 @@ router.post('/login-by-wechat', async (req, res) => {
     token,
     isNew,
     hasCompany,
-    companyRole
+    companyRole,
+    updatedAt: user.profile_updated_at || null
   })
 })
-
-// ==================== 退出登录 ====================
 
 router.post('/logout', requireAuth, (req, res) => {
   // 从会话表删除 token
@@ -248,20 +248,35 @@ router.post('/logout', requireAuth, (req, res) => {
 // ==================== 获取用户信息 ====================
 
 router.get('/user-info', requireAuth, (req, res) => {
-  const user = db.prepare('SELECT nick_name, avatar_url FROM users WHERE id = ?').get(req.userId)
+  const user = db.prepare('SELECT nick_name, avatar_url, profile_updated_at FROM users WHERE id = ?').get(req.userId)
   if (!user) {
     return res.json(null)
   }
   res.json({
     nickName: user.nick_name,
-    avatarUrl: user.avatar_url
+    avatarUrl: user.avatar_url,
+    updatedAt: user.profile_updated_at || null
   })
 })
 
 // ==================== 保存用户信息 ====================
 
 router.post('/user-info', requireAuth, (req, res) => {
-  const { nickName, avatarUrl } = req.body || {}
+  const { nickName, avatarUrl, updatedAt } = req.body || {}
+
+  // 7.5 冲突检测：客户端 lastKnownUpdatedAt ≠ 服务器当前值 → 409
+  if (updatedAt !== undefined) {
+    const current = db.prepare('SELECT profile_updated_at FROM users WHERE id = ?').get(req.userId)
+    const serverUpdatedAt = current ? current.profile_updated_at : 0
+    // 服务端从未被更新过(0)则不冲突；否则必须相等
+    if (serverUpdatedAt !== 0 && serverUpdatedAt !== updatedAt) {
+      return res.status(409).json({
+        error: '用户资料已被其他设备修改，请刷新后重试',
+        serverUpdatedAt
+      })
+    }
+  }
+
   const updates = []
   const params = []
 
@@ -275,9 +290,13 @@ router.post('/user-info', requireAuth, (req, res) => {
   }
 
   if (updates.length > 0) {
+    const newUpdatedAt = Date.now()
     updates.push('updated_at = datetime(\'now\')')
+    updates.push('profile_updated_at = ?')
+    params.push(newUpdatedAt)
     params.push(req.userId)
     db.prepare(`UPDATE users SET ${updates.join(', ')} WHERE id = ?`).run(...params)
+    return res.json({ success: true, updatedAt: newUpdatedAt })
   }
 
   res.json({ success: true })

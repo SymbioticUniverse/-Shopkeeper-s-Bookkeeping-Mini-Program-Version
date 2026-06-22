@@ -187,6 +187,9 @@ function initSchema() {
   addColumnSafely('notifications', 'target_user_id', 'INTEGER DEFAULT NULL')
   addColumnSafely('notifications', 'item_id', 'INTEGER DEFAULT NULL')
 
+  // Migration: 用户资料时间戳（毫秒），用于跨端 last-write-wins
+  addColumnSafely('users', 'profile_updated_at', 'INTEGER NOT NULL DEFAULT 0')
+
   // Migration: amount TEXT → REAL（旧库存在时重建表）
   try {
     const colInfo = db.pragma('table_info(items)')

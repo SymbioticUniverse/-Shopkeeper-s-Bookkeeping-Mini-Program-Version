@@ -29,6 +29,6 @@
       "from": "../middleware/auth"
     }
   ],
-  "capability": "登录接口响应直接带回 hasCompany/companyRole，前端免去额外 GET /api/company 即可判定身份引导，老用户（尤其 boss）登录不再被重复询问身份，消除引导页闪现",
-  "updatedAt": "2026-06-21T12:51:15.360Z"
+  "capability": "用户头像上传自动清理旧文件（单用户单份存储），GET/POST /user-info 支持 updatedAt 字段实现跨端 last-write-wins 冲突检测（409），登录响应同步返回 updatedAt 供前端初始化时间戳对比。",
+  "updatedAt": "2026-06-22T10:13:33.385Z"
 }

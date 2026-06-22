@@ -107,6 +107,22 @@ const upload = multer({
 // ==================== POST /api/upload — 上传 ====================
 
 router.post('/', requireAuth, (req, res, next) => {
+  // 7.4 头像单份存储：上传前清理旧头像文件（单用户头像磁盘上恒为一份）
+  if (req.query.type === 'avatar') {
+    const safeId = sanitizeUserId(req.userId)
+    const avatarDir = path.join(VOUCHER_DIR, safeId, 'avatar')
+    if (fs.existsSync(avatarDir)) {
+      try {
+        const oldFiles = fs.readdirSync(avatarDir)
+        for (const f of oldFiles) {
+          try { fs.unlinkSync(path.join(avatarDir, f)) } catch { /* ignore */ }
+        }
+      } catch (e) {
+        console.error('[AVATAR] 清理旧头像失败:', e.message)
+      }
+    }
+  }
+
   upload.single('file')(req, res, function (err) {
     if (err) {
       if (err instanceof multer.MulterError) {
