@@ -27,8 +27,7 @@
 | `settleStatus` | `string` | 否 | 结清状态：未设（未结清）/ `'company_settled'`（一方已确认、待对方确认的中间态，仍视为未结清）/ `'settled'`（已结清，`typeLabel` 已转为收入/支出） |
 | `settleInfo` | `object` | 否 | 结清快照（结清时间、对方、金额等），结清完成时写入 |
 | `_voided` | `boolean` | 否 | 是否已作废，默认 `false` |
-
-**type 与 typeLabel 映射关系：**
+| `_autoSettle` | `boolean` | 否 | 是否为系统自动生成的结清记录，默认 `false`。此标记的记录不可手动删除 |
 
 | 业务类型 | `type` | `typeLabel` |
 |----------|--------|-------------|
@@ -331,19 +330,219 @@
 | `phone` | `string` | 手机号 |
 | `code` | `string` | 6 位短信验证码 |
 
-**返回值：** `UserInfo` — 登录成功返回用户信息（含 nickName、avatarUrl 等）。
+**返回值：**
+```json
+{
+  "nickName": "138****8000",
+  "avatarUrl": "",
+  "token": "eyJhbGci...",
+  "isNew": true,
+  "hasCompany": false,
+  "companyRole": null,
+  "updatedAt": null
+}
+```
+  1086	
+  1087	---
+  1088	
+  1089	## 八、数据模型
+  1090	
+  1091	> 以下为后端数据库实际表结构（SQLite），与五节设计一致，个别字段已按实施调整。
+  1092	
+  1093	### 8.1 用户表 `users`
+  1094	
+  1095	| 列 | 类型 | 说明 |
+  1096	|---|------|------|
+  1097	| `id` | INTEGER PK | 自增主键 |
+  1098	| `phone` | TEXT UNIQUE | 手机号（脱敏后存储，如 `138****8000`） |
+  1099	| `openid` | TEXT | 微信 openid |
+  1100	| `nickName` | TEXT | 昵称 |
+  1101	| `avatarUrl` | TEXT | 头像 URL |
+  1102	| `profile_updated_at` | INTEGER | 资料最后更新时间戳（毫秒），支持跨端 last-write-wins |
+  1103	| `created_at` | TEXT | 创建时间 |
+  1104	| `updated_at` | TEXT | 服务器更新时间 |
+  1105	
+  1106	### 8.2 会话表 `sessions`
+  1107	
+  1108	| 列 | 类型 | 说明 |
+  1109	|---|------|------|
+  1110	| `id` | INTEGER PK | 自增主键 |
+  1111	| `token` | TEXT UNIQUE | JWT token（索引） |
+  1112	| `user_id` | INTEGER | 关联 users.id |
+  1113	| `expires_at` | TEXT | 过期时间 |
+  1114	
+  1115	### 8.3 验证码表 `verify_codes`
+  1116	
+  1117	| 列 | 类型 | 说明 |
+  1118	|---|------|------|
+  1119	| `id` | INTEGER PK | 自增主键 |
+  1120	| `phone` | TEXT | 手机号 |
+  1121	| `code` | TEXT | 6 位验证码 |
+  1122	| `expires_at` | TEXT | 过期时间 |
+  1123	
+  1124	### 8.4 账单表 `items`
+  1125	
+  1126	| 列 | 类型 | 说明 |
+  1127	|---|------|------|
+  1128	| `id` | INTEGER PK | 自增主键 |
+  1129	| `user_id` | INTEGER | 关联 users.id（索引） |
+  1130	| `scope` | TEXT | `personal` / `company`（索引） |
+  1131	| `category` | TEXT | 分类 emoji+名称 |
+  1132	| `type` | TEXT | `in` / `out` |
+  1133	| `typeLabel` | TEXT | 收入/支出/垫付/应付 |
+  1134	| `amount` | TEXT | 金额（字符串存储，保留精度） |
+  1135	| `date` | TEXT | 日期 `YYYY-MM-DD` |
+  1136	| `note` | TEXT | 备注 |
+  1137	| `target` | TEXT | 目标对象名称 |
+  1138	| `targetType` | TEXT | `internal` / `external` |
+  1139	| `linkedId` | INTEGER | 关联镜像账单 id |
+  1140	| `voucher` | TEXT | 凭证图片 URL |
+  1141	| `settleStatus` | TEXT | `company_settled` / `settled`，未设 = 未结清 |
+  1142	| `settleInfo` | TEXT | 结清快照 JSON |
+  1143	| `_voided` | INTEGER | 0（正常）/ 1（作废） |
+  1144	| `created_at` | TEXT | 创建时间 |
+  1145	| `updated_at` | TEXT | 更新时间 |
+  1146	
+  1147	**索引**：`(user_id, scope)`、`linkedId`、`(user_id, date)`
+  1148	
+  1149	### 8.5 分类表 `categories`
+  1150	
+  1151	| 列 | 类型 | 说明 |
+  1152	|---|------|------|
+  1153	| `id` | INTEGER PK | 自增主键 |
+  1154	| `user_id` | INTEGER | 关联 users.id |
+  1155	| `scope` | TEXT | `personal` / `company` |
+  1156	| `name` | TEXT | 分类名 |
+  1157	| `emoji` | TEXT | emoji 图标 |
+  1158	| `inOut` | TEXT | `in` / `out` |
+  1159	| `sort_order` | INTEGER | 排序 |
+  1160	
+  1161	### 8.6 公司表 `companies`
+  1162	
+  1163	| 列 | 类型 | 说明 |
+  1164	|---|------|------|
+  1165	| `id` | INTEGER PK | 自增主键 |
+  1166	| `uid` | TEXT UNIQUE | 公司邀请码 |
+  1167	| `name` | TEXT | 公司名称 |
+  1168	| `boss_title` | TEXT | 老板头衔 |
+  1169	| `boss_user_id` | INTEGER | 老板用户 id |
+  1170	| `created_at` | TEXT | 创建时间 |
+  1171	
+  1172	### 8.7 公司成员表 `company_members`
+  1173	
+  1174	| 列 | 类型 | 说明 |
+  1175	|---|------|------|
+  1176	| `id` | INTEGER PK | 自增主键 |
+  1177	| `company_id` | INTEGER | 关联 companies.id |
+  1178	| `user_id` | INTEGER | 关联 users.id（索引） |
+  1179	| `role` | TEXT | `boss` / `employee` |
+  1180	| `status` | TEXT | `pending` / `approved` / `rejected` |
+  1181	| `joined_at` | TEXT | 加入时间 |
+  1182	
+  1183	### 8.8 审核表 `audits`
+  1184	
+  1185	| 列 | 类型 | 说明 |
+  1186	|---|------|------|
+  1187	| `id` | INTEGER PK | 自增主键 |
+  1188	| `company_id` | INTEGER | 关联 companies.id |
+  1189	| `applicant_id` | INTEGER | 申请人 user_id |
+  1190	| `applicant_nick` | TEXT | 申请人昵称 |
+  1191	| `status` | TEXT | `pending` / `approved` / `rejected` |
+  1192	| `created_at` | TEXT | 申请时间 |
+  1193	
+  1194	### 8.9 通知表 `notifications`
+  1195	
+  1196	| 列 | 类型 | 说明 |
+  1197	|---|------|------|
+  1198	| `id` | INTEGER PK | 自增主键 |
+  1199	| `user_id` | INTEGER | 接收人 user_id（索引） |
+  1200	| `type` | TEXT | `audit_approved` / `audit_rejected` 等 |
+  1201	| `title` | TEXT | 通知标题 |
+  1202	| `detail` | TEXT | 通知详情 |
+  1203	| `read` | INTEGER | 0（未读）/ 1（已读） |
+  1204	| `created_at` | TEXT | 创建时间 |
+  1205	
+  1206	### 8.10 反馈表 `feedbacks`
+  1207	
+  1208	| 列 | 类型 | 说明 |
+  1209	|---|------|------|
+  1210	| `id` | INTEGER PK | 自增主键 |
+  1211	| `user_id` | INTEGER | 提交人 user_id |
+  1212	| `content` | TEXT | 反馈内容 |
+  1213	| `contact` | TEXT | 联系方式 |
+  1214	| `created_at` | TEXT | 提交时间 |
+  1215	
+  1216	### 8.11 设置表 `user_settings`
+  1217	
+  1218	| 列 | 类型 | 说明 |
+  1219	|---|------|------|
+  1220	| `user_id` | INTEGER | 关联 users.id |
+  1221	| `key` | TEXT | 设置键名 |
+  1222	| `value` | TEXT | 设置值（JSON） |
+  1223	| `updated_at` | TEXT | 更新时间 |
+  1224	
+  1225	**主键**：`(user_id, key)`
+  1226	
+  1227	### 8.12 简览卡片表 `overview_cards`
+  1228	
+  1229	| 列 | 类型 | 说明 |
+  1230	|---|------|------|
+  1231	| `id` | INTEGER PK | 自增主键 |
+  1232	| `user_id` | INTEGER | 关联 users.id |
+  1233	| `card_id` | TEXT | 卡片标识 |
+  1234	| `x` | INTEGER | 布局 x |
+  1235	| `y` | INTEGER | 布局 y |
+  1236	| `span` | INTEGER | 列数（1/2） |
+  1237	
+  1238	---
+  1239	
+  1240	## 九、安全加固清单
+  1241	
+  1242	| 加固项 | 状态 |
+  1243	|--------|------|
+  1244	| `sessions.token` 索引 | ✅ 认证热路径加速 |
+  1245	| 6 个业务查询索引 | ✅ `items(user_id, scope)` 等 |
+  1246	| `addColumnSafely` 正则防注入 | ✅ DDL 安全 |
+  1247	| `_devSecret` 惰性生成 | ✅ 首次请求时生成 |
+  1248	| `GET /items` 分页（limit/offset） | ✅ 向后兼容无参调用 |
+  1249	| JWT 签发幂等（同一 phone 取同一 token） | ✅ 防并发刷库 |
+  1250	| CSRF 防护（SOP + 自定义头） | ✅ 非标准头强制预检 |
+  1251	| 并发会话防冲突（同一 phone 多次登录复用 token） | ✅ 不串号 |
+  1252	| 服务器时间一致性（`Date.now()` 统一） | ✅ |
+  1253	
+  1254	---
+  1255	
+  1256	## 十、已知约束与后续方向
+  1257	
+  1258	- **金额存储**：`amount` 为 TEXT 字符串，`Number` 运算时需注意浮点精度（前端 `parseFloat` 格式化到分）。
+  1259	- **Settle ID 方案**：当前 `Date.now() + 随机后缀`，中低并发够用；高并发下可换 UUID v7 或自增 ID。
+  1260	- **单进程模型**：SQLite + Express 单进程，水平扩展需换 PostgreSQL + 连接池（见高并发方案）。
+  1261	- **图片存储**：当前本地磁盘 `vouchers/`，生产环境应迁对象存储（OSS/COS）。
+  1262	- **短信服务**：验证码当前日志输出，生产需对接阿里云/腾讯云短信。
+  1263	- **微信登录**：当前 openid 占位，生产需对接 `code2Session`。
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| `nickName` | `string` | 昵称 |
+| `avatarUrl` | `string` | 头像 URL |
+| `token` | `string` | JWT 会话令牌，后续鉴权接口需带 `Authorization: Bearer <token>` |
+| `isNew` | `boolean` | 是否首次注册（该手机号首次登录） |
+| `hasCompany` | `boolean` | 是否已加入公司 |
+| `companyRole` | `string\|null` | 公司角色：`'boss'` / `'employee'` / `null` |
+| `updatedAt` | `number\|null` | 用户资料最后更新时间戳（毫秒），用于跨端冲突检测 |
 
 ---
 
-#### `loginByWechat(wxUserInfo)`
+#### `loginByWechat(code, nickName, avatarUrl)`
 
-微信授权登录。前端通过微信 SDK 获取用户信息后传入。
+微信授权登录。前端通过 `wx.login()` 获取 `code`，连同用户授权信息传入。
 
 | 参数 | 类型 | 说明 |
 |------|------|------|
-| `wxUserInfo` | `object` | 微信 SDK 返回的用户信息（nickName, avatarUrl 等） |
+| `code` | `string` | 微信 `wx.login()` 返回的临时登录凭证 |
+| `nickName` | `string` | 用户微信昵称（可选） |
+| `avatarUrl` | `string` | 用户微信头像 URL（可选） |
 
-**返回值：** `UserInfo` — 登录成功返回用户信息。
+**返回值：** 同 `loginByPhone`，包含 `token` / `isNew` / `hasCompany` / `companyRole` / `updatedAt`。
 
 ---
 
@@ -978,9 +1177,9 @@ user_settings: { user_id, key, value, updated_at }
 
 ## 七、后端待办需求（前端依赖）
 
-> 以下能力前端已落地，但当前靠「前端绕过方案」临时支撑。后端补齐后可去掉绕过，体验更干净、判定更可靠。
+> 以下能力前端已落地。**全部 6 项已实现并验证。**
 
-### 7.1 登录返回 `isNew`（新用户注册引导）
+### 7.1 ✅ 已交付 — 登录返回 `isNew`（新用户注册引导）
 
 **现状**：`POST /api/auth/login-by-phone`「登录即注册」——手机号未注册则自动建号，默认昵称 = 脱敏手机号（如 `138****8000`）、`avatarUrl` 为空，响应**不区分新老用户**。
 
@@ -992,7 +1191,7 @@ user_settings: { user_id, key, value, updated_at }
 |------|------|------|
 | `isNew` | `boolean` | 该手机号/openid 是否首次注册（本次登录新建用户） |
 
-### 7.2 头像公开访问路由（免鉴权）
+### 7.2 ✅ 已交付 — 头像公开访问路由（免鉴权）
 
 **现状**：头像复用凭证上传 `POST /api/upload`，返回 URL 走 `GET /voucher/*`，该路由**要求 Bearer token + 归属校验**。小程序 `<image src>` 无法携带 `Authorization` 头 → 头像 **401 加载失败**。
 
@@ -1000,7 +1199,7 @@ user_settings: { user_id, key, value, updated_at }
 
 **期望后端改动**：头像单独走一条**公开（免鉴权）只读路由**（头像本身不敏感），或上传时按 `type=avatar` 存公开目录并返回可被 `<image>` 直接加载的 URL。届时前端去掉 `downloadAuthedImage` 绕过，直接 `<image src="{{avatarUrl}}">`。
 
-### 7.3 账号与公司角色持久化（避免重复引导）
+### 7.3 ✅ 已交付 — 账号与公司角色持久化（避免重复引导）
 
 **原则**：手机号即账号身份——同一手机号 = 同一 `user`。用户的**公司归属与角色（boss/employee + companyUid）必须服务端持久化**，登录后可被客户端取回（当前经 `syncFromCloud` 中的 `GET /api/company`）。
 
@@ -1011,7 +1210,7 @@ user_settings: { user_id, key, value, updated_at }
 - `GET /api/company` 对已创建/加入公司的用户稳定返回其公司与角色；
 - （可选优化）`login-by-phone` 响应直接带回 `companyRole` / `hasCompany`，免去登录后额外一次 `GET /company` 往返即可判定，进一步消除引导闪现。
 
-### 7.4 头像单份存储（上传前清理旧文件）
+### 7.4 ✅ 已交付 — 头像单份存储（上传前清理旧文件）
 
 **问题**：`POST /api/upload` 每次都用 `crypto.randomUUID()` 生成新文件名、保存后**从不删除同一用户的旧文件**。用户每换一次头像就在磁盘多留一个文件，永不回收 → 单用户头像文件无限堆积，小服务器存储吃不消。
 
@@ -1023,7 +1222,7 @@ user_settings: { user_id, key, value, updated_at }
 
 > 与 7.2 配合：`type=avatar` 既走免鉴权 public 路由（解决 401 显示），又做单份覆盖（解决堆积），一处改动解决头像两个痛点。
 
-### 7.5 用户资料时间戳（昵称/头像跨端 last-write-wins）
+### 7.5 ✅ 已交付 — 用户资料时间戳（昵称/头像跨端 last-write-wins）
 
 **目标**：同一手机号在多端（真机 / 开发者工具）改昵称或头像，以**最新时间戳为准**自动同步——哪端新用哪端，本地比云端新就反推后端，避免旧数据覆盖新数据。
 
@@ -1043,3 +1242,21 @@ user_settings: { user_id, key, value, updated_at }
 | 字段 | 类型 | 说明 |
 |------|------|------|
 | `updatedAt` | `number` | 资料（昵称/头像）最后更新的毫秒时间戳，`GET` 需返回、`POST` 需接收存储 |
+
+### 7.6 ✅ 已交付 — 联动账单成对新建：跳过「指向对方」的 linkedId 校验
+
+**问题**：「内部对象 + 垫付/应付」会一次性新建**两条互相关联**的账单（`item.id=A, linkedId=B` 与 `mirrorItem.id=B, linkedId=A`），走 `POST /api/items/linked`。但后端在**插入之前**就用 `validateLinkedId`（items.js:62-66）校验 linkedId——该函数要求 `linkedId` 指向的账单**已存在于库中且属于当前用户**（`SELECT id FROM items WHERE id=? AND user_id=?`）。可这两条是同一请求里一起创建、互相引用，校验那一刻**谁都还没入库** → 查不到 → `items.js:536-542` 返回 400 `item.linkedId 指向的账单不存在或不属于当前用户`。**只要是成对互相关联的新建，这个校验永远过不去**，与账单内容无关。
+
+**影响**：`addLinkedItems` 先写本地、再 fire-and-forget 推送（`_pushBackend` 只 `console.warn` 不抛错），所以**本地记账正常、UI 提示成功**，但这两条**不会同步到后端** → 跨端 / 退出再登录后丢失。
+
+**前端无法单独干净修复**：`POST /items`（items.js:200）、`PUT /items/:id`（items.js:325）有同样的 `validateLinkedId` 校验。前端唯一绕法是把一次事务拆成「建 mirror（不带 linkedId）→ 建 item（linkedId 指向已入库 mirror）→ PUT 回填 mirror.linkedId」3 步串行，但会**失去「两条同时成败」的事务原子性**（中途失败留孤儿账单），不推荐。
+
+**期望后端改动（一行）**：成对新建时跳过「指向对方」的校验，其余 linkedId 仍照常校验，插入仍在事务里、原子性不变（items.js:536-542）：
+```js
+if (item.linkedId && item.linkedId !== mirrorItem.id && !validateLinkedId(req.userId, item.linkedId)) {
+  return res.status(400).json({ error: 'item.linkedId 指向的账单不存在或不属于当前用户' })
+}
+if (mirrorItem.linkedId && mirrorItem.linkedId !== item.id && !validateLinkedId(req.userId, mirrorItem.linkedId)) {
+  return res.status(400).json({ error: 'mirrorItem.linkedId 指向的账单不存在或不属于当前用户' })
+}
+```

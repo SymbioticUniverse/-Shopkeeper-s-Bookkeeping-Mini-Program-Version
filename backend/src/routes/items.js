@@ -93,6 +93,12 @@ function validateVoucher(voucher, userId) {
   return null  // 非法 voucher
 }
 
+/** 生成安全随机整数 ID（防并发碰撞，替代 Date.now()） */
+function randomId() {
+  // Date.now() 毫秒 * 1000 + 随机 0-999 → ~1.7e15，在安全整数范围内
+  return Date.now() * 1000 + Math.floor(Math.random() * 1000)
+}
+
 /** 从 voucher URL 提取磁盘文件路径 */
 function voucherToDiskPath(voucher, userId) {
   if (!voucher) return null
@@ -533,11 +539,11 @@ router.post('/linked', requireAuth, (req, res) => {
     return res.status(400).json({ error: 'mirrorItem.date 格式无效，须为 YYYY-MM-DD' })
   }
 
-  // 校验 linkedId 归属
-  if (item.linkedId && !validateLinkedId(req.userId, item.linkedId)) {
+  // 校验 linkedId 归属（成对互指则跳过）
+  if (item.linkedId && item.linkedId !== mirrorItem.id && !validateLinkedId(req.userId, item.linkedId)) {
     return res.status(400).json({ error: 'item.linkedId 指向的账单不存在或不属于当前用户' })
   }
-  if (mirrorItem.linkedId && !validateLinkedId(req.userId, mirrorItem.linkedId)) {
+  if (mirrorItem.linkedId && mirrorItem.linkedId !== item.id && !validateLinkedId(req.userId, mirrorItem.linkedId)) {
     return res.status(400).json({ error: 'mirrorItem.linkedId 指向的账单不存在或不属于当前用户' })
   }
 
@@ -618,7 +624,7 @@ router.put('/:id/settle', requireAuth, (req, res) => {
 
   const settleScope = item.scope
   const today = new Date().toISOString().slice(0, 10)
-  const now = Date.now()
+  const baseId = randomId()
 
   // 查找镜像（垫付项）
   const mirrorItem = item.linked_id
@@ -644,7 +650,7 @@ router.put('/:id/settle', requireAuth, (req, res) => {
           .run(settleInfoStr, id)
 
         // 创建公司支出自动记录
-        const cExpId = now + 10
+        const cExpId = baseId + 10
         db.prepare(`
           INSERT INTO items (id, user_id, scope, category, type, type_label, amount, date, note, target, target_type, settleInfo, _autoSettle)
           VALUES (?, ?, 'company', ?, 'out', '支出', ?, ?, '', ?, ?, ?, 1)
@@ -664,7 +670,7 @@ router.put('/:id/settle', requireAuth, (req, res) => {
             db.prepare(`UPDATE items SET settleStatus = 'settled', settleInfo = ?, type_label = '支出' WHERE id = ?`)
               .run(pSettleInfo, mirrorItem.id)
 
-            const pIncId = now + 11
+            const pIncId = baseId + 11
             db.prepare(`
               INSERT INTO items (id, user_id, scope, category, type, type_label, amount, date, note, target, target_type, settleInfo, _autoSettle)
               VALUES (?, ?, 'personal', ?, 'in', '收入', ?, ?, '', ?, ?, ?, 1)
@@ -700,7 +706,7 @@ router.put('/:id/settle', requireAuth, (req, res) => {
           .run(settleInfoStr, id)
 
         // 创建个人支出自动记录
-        const pExpId = now + 10
+        const pExpId = baseId + 10
         db.prepare(`
           INSERT INTO items (id, user_id, scope, category, type, type_label, amount, date, note, target, target_type, settleInfo, _autoSettle)
           VALUES (?, ?, 'personal', ?, 'out', '支出', ?, ?, '', ?, ?, ?, 1)
@@ -719,7 +725,7 @@ router.put('/:id/settle', requireAuth, (req, res) => {
           db.prepare(`UPDATE items SET settleStatus = 'settled', settleInfo = ?, type_label = '收入' WHERE id = ?`)
             .run(cSettleInfo, mirrorItem.id)
 
-          const cIncId = now + 11
+          const cIncId = baseId + 11
           db.prepare(`
             INSERT INTO items (id, user_id, scope, category, type, type_label, amount, date, note, target, target_type, settleInfo, _autoSettle)
             VALUES (?, ?, 'company', ?, 'in', '收入', ?, ?, '', ?, ?, ?, 1)
@@ -778,7 +784,7 @@ router.post('/:id/settle-confirm', requireAuth, (req, res) => {
   }
 
   const today = new Date().toISOString().slice(0, 10)
-  const now = Date.now()
+  const baseId = randomId()
   const settleInfoStr = settleTime + ' 由[垫付]结清'
 
   try {
@@ -788,7 +794,7 @@ router.post('/:id/settle-confirm', requireAuth, (req, res) => {
         .run(settleInfoStr, id)
 
       // 创建个人收入自动记录
-      const pIncId = now + 10
+      const pIncId = baseId + 10
       db.prepare(`
         INSERT INTO items (id, user_id, scope, category, type, type_label, amount, date, note, target, target_type, settleInfo, _autoSettle)
         VALUES (?, ?, 'personal', ?, 'in', '收入', ?, ?, '', ?, ?, ?, 1)

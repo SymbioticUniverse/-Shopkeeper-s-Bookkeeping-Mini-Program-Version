@@ -29,6 +29,6 @@
       "from": "../middleware/auth"
     }
   ],
-  "capability": "后端性能安全加固：6 个新索引（sessions.token 认证热路径提速 + 5 个业务查询索引）、auth 中间件 require/prepare 提升到模块层消除请求内开销、_devSecret 惰性生成、addColumnSafely 正则防注入、GET /items 分页（limit/offset，向后兼容无参调用）",
-  "updatedAt": "2026-06-22T10:32:46.791Z"
+  "capability": "API.md 文档同步至最新代码状态（7.1-7.6全部标记完成，补数据模型/安全加固/约束章节）；后端修复 linkedId 成对互指校验死锁与 settle 自动记录 ID 碰撞两个 bug",
+  "updatedAt": "2026-06-22T12:01:45.898Z"
 }
