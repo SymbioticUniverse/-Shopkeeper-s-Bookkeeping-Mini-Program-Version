@@ -62,6 +62,55 @@ $ node --check src/routes/upload.js → OK
 $ node --check src/db.js            → OK
 ```
 
+### 7.3 前端配合 — 登录后同步刷新 (mingxi.js + api.js)
+
+**mingxi.js 4 处登录路径统一补充:**
+- ✅ `onLoginByPhone` → syncFromCloud 后 `.then()` 内调用 `_syncOverviewCards()` + `setData({userInfo})` + `_refreshAvatarDisplay(su)`
+- ✅ `onLoginByWechat` → 同上
+- ✅ `onWechatLoginSuccess` → 同上（phone 已绑定）
+- ✅ `onWechatLoginSuccess` → 同上（同一账号）
+- ✅ 删除 `_isFreshUser` / `_maybeProfileSetup` 死代码（登录响应已带回 hasCompany，不再需要客户端推测）
+
+**mingxi.js 头像上传重构:**
+- ✅ `wx.compressImage` 压缩先行（400 宽 / quality 80），3s 超时 fallback 用原图
+- ✅ 压缩后调用 `_uploadAvatar(local)`，Promise 风格 `.then/.catch` 处理上传结果
+- ✅ 传给 `api.uploadVoucher(local, 'avatar')` — 后端据此走头像专用通道
+- ✅ 前端预校验（5MB / jpg-png）移到 compress 之前保留
+
+**mingxi.js 简览安全:**
+- ✅ `_syncOverviewCards(skipCharts)` — 资料弹窗保存时传 `true`，避免真机 canvas 重绘崩溃重启
+
+**mingxi.wxml / mingxi.wxss 资料弹窗重设计:**
+- ✅ 新增 subtitle、头像角标 badge、昵称 field-head + 字数计数
+- ✅ 暗色模式配套 CSS 完整
+- ✅ 无未使用 class、无越界 rpx
+
+**utils/api.js:**
+- ✅ `saveUserInfo` 自动打 updatedAt 毫秒戳（调用方已带则用调用方的）
+- ✅ `syncFromCloud` last-write-wins 安全降级：仅当 `remoteTs > 0 && localTs > remoteTs` 保留本地并反推；否则云端权威
+- ✅ `uploadVoucher(filePath, type)` — type='avatar' 时加 `?type=avatar` query，不传时兼容旧调用
+
+**API.md:**
+- ✅ 新增 7.3（公司角色持久化）、7.4（头像单份存储）、7.5（用户资料时间戳）
+
+### 边界情况
+
+| 场景 | 预期 | 实际 |
+|------|------|------|
+| syncFromCloud 后端不返回 updatedAt | 云端权威覆盖 | ✅ `remoteTs > 0` 不成立，走 else |
+| syncFromCloud 本地无 userInfo | 云端覆盖 | ✅ `localTs = 0`，不大于 remoteTs |
+| compressImage 不回调 | 3s 后用原图 | ✅ setTimeout 兜底 |
+| uploadVoucher 旧调用（无 type） | query 为空，后端走普通凭证 | ✅ |
+| profile 弹窗保存 | 不重绘 canvas | ✅ `skipCharts=true` |
+| 暗色模式资料弹窗 | 所有元素有 dark 样式 | ✅ 逐项核对 |
+
+### 语法检查
+
+```
+$ node --check pages/mingxi/mingxi.js  → OK (小程序环境依赖 wx API，语法层面无问题)
+$ node --check utils/api.js             → OK
+```
+
 ## 结论
 
-所有变更通过自检，无已知缺陷。
+所有变更（后端 3 文件 + 前端 5 文件）通过自检，无已知缺陷。
