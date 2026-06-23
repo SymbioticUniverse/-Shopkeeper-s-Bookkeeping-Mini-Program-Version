@@ -2231,7 +2231,7 @@ Page({
     if (!item) return
     const isPersonal = from === 'settle' ? this.data.settleType === 0 : this.data.detailType === 0
     this.setData({
-      modalItem: { ...item, _settleText: this._formatSettleText(item), _timeText: this._billTimeText(item) }, modalFrom: from, modalIsPersonal: isPersonal,
+      modalItem: { ...item, _settleText: this._formatSettleText(item), _timeText: this._billTimeText(item), _readonly: !!(item._autoSettle || item.settleStatus === 'settled') }, modalFrom: from, modalIsPersonal: isPersonal,
       modalEdit: { category: item.category, amount: item.amount, note: item.note || '' },
     })
   },
@@ -2773,7 +2773,9 @@ Page({
 
   initDetailItems() {
     const scope = this.data.detailType === 1 ? 'company' : 'personal'
-    this.setData({ detailItems: this._buildDetailList(scope, api.getItems(scope)) })
+    // 明细只展示原始记账：隐藏后端结清生成的自动对账记录（_autoSettle）；统计口径不受影响（仍用 api.getItems 全量）
+    const list = api.getItems(scope).filter(it => !it._autoSettle)
+    this.setData({ detailItems: this._buildDetailList(scope, list) })
   },
 
   initSettleItems() {
@@ -4437,7 +4439,7 @@ Page({
       currentTab: 0,
       showOverview: false,
       detailItems: this._buildDetailList(scope, items),
-      modalItem: found ? { ...found, _settleText: this._formatSettleText(found), _timeText: this._billTimeText(found) } : null,
+      modalItem: found ? { ...found, _settleText: this._formatSettleText(found), _timeText: this._billTimeText(found), _readonly: !!(found._autoSettle || found.settleStatus === 'settled') } : null,
     })
   },
 
