@@ -3012,6 +3012,14 @@ Page({
     this.setData({ showExportBill: false })
   },
 
+  onExportPersonal() {
+    wx.showToast({ title: '请选择导出内容', icon: 'none' })
+  },
+
+  onExportCompany() {
+    wx.showToast({ title: '请选择导出内容', icon: 'none' })
+  },
+
   onContactEntry() {
     this.setData({ showContactPage: true, contactFeedback: '' })
   },

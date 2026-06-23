@@ -1010,8 +1010,8 @@
             <text class="report-period-text {{exportPeriod === 3 ? 'report-period-text--active' : ''}}">日度</text>
           </view>
         </view>
-        <view class="export-bill-body">
-          <!-- 日期范围 + 导出格式 -->
+        <view class="export-book-body">
+          <!-- 时间范围 + 导出格式 -->
           <view class="export-bill-top">
             <view class="export-bill-range">
               <text class="export-bill-range-label">从</text>
@@ -1039,29 +1039,25 @@
               </picker>
             </view>
           </view>
-          <!-- 导出项目选择（可滚动） -->
-          <view class="export-bill-spacer"></view>
-          <scroll-view class="export-bill-scroll" scroll-y enhanced show-scrollbar="{{false}}">
-            <view class="export-bill-section-label {{exportPersonalAll ? 'export-bill-section-label--on' : ''}}" bindtap="onExportPersonalAllToggle">
-              <text>个人总账本</text>
-            </view>
-            <view class="export-bill-grid">
-              <view class="export-bill-grid-item {{item.checked ? 'export-bill-grid-item--on' : ''}}" wx:for="{{exportPersonalItems}}" wx:key="key" bindtap="onExportPersonalToggle" data-key="{{item.key}}">
-                <text class="export-bill-grid-text">{{item.label}}</text>
+          <text class="export-book-lead">选择要导出的账本</text>
+          <view class="export-book-picker">
+            <view class="export-book-card export-book-card--personal" hover-class="export-book-card--press" hover-stay-time="60" bindtap="onExportPersonal">
+              <view class="export-book-badge"><image class="export-book-icon" src="/assets/icons/gerenzhangben.png" mode="aspectFit"/></view>
+              <view class="export-book-info">
+                <text class="export-book-title">个人账本</text>
+                <text class="export-book-desc">导出你的个人收支明细</text>
               </view>
+              <view class="export-book-arrow"></view>
             </view>
-            <view class="export-bill-section-label {{exportCompanyAll ? 'export-bill-section-label--on' : ''}}" bindtap="onExportCompanyAllToggle">
-              <text>公司总账本</text>
-            </view>
-            <view class="export-bill-grid">
-              <view class="export-bill-grid-item {{item.checked ? 'export-bill-grid-item--on' : ''}}" wx:for="{{exportCompanyItems}}" wx:key="key" bindtap="onExportCompanyToggle" data-key="{{item.key}}">
-                <text class="export-bill-grid-text">{{item.label}}</text>
+            <view class="export-book-card export-book-card--company" hover-class="export-book-card--press" hover-stay-time="60" bindtap="onExportCompany">
+              <view class="export-book-badge"><image class="export-book-icon" src="/assets/icons/gongsizhangben.png" mode="aspectFit"/></view>
+              <view class="export-book-info">
+                <text class="export-book-title">公司账本</text>
+                <text class="export-book-desc">导出公司收支明细</text>
               </view>
+              <view class="export-book-arrow"></view>
             </view>
-          </scroll-view>
-          <view class="export-bill-spacer"></view>
-          <!-- 导出按钮 -->
-          <view class="export-bill-btn"><text>一键导出</text></view>
+          </view>
         </view>
       </view>
       <!-- 审核页 -->
