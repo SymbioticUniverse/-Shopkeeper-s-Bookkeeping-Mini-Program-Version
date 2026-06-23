@@ -1,4 +1,5 @@
 const api = require('../../utils/api')
+const xlsx = require('../../utils/xlsx')
 
 // 多语言翻译表
 const LANG_TABLE = {
@@ -324,7 +325,7 @@ Page({
     notifyTouchStartY: 0,
     hasUnreadNotify: false,
     exportPeriod: 0, // 0月度/1季度/2年度/3日度
-    exportFormatOptions: ['.PDF', '.CSV', '.EXCEL'],
+    exportFormatOptions: ['.EXCEL', '.PDF'],
     exportFormatIndex: 0,
     exportPickerDate: '', // 月:YYYY-MM 年:YYYY 日:YYYY-MM-DD
     exportDateText: '',
@@ -2749,11 +2750,23 @@ Page({
   },
 
   // 明细列表预处理：① 按分类名附分类 emoji（_icon，未知回退 📌）② 排序：日期倒序为主（新日期在前），同一天内按 id（前端记账=Date.now() 毫秒时间戳）倒序，到毫秒严格
+  // 顶部搜索：匹配明细的全字段（日期/类型/分类/对象/金额/备注/状态），大小写不敏感
+  _matchSearch(it, q) {
+    if (!q) return true
+    const status = it._voided ? '已作废'
+      : (it.settleStatus === 'settled' || it.settleStatus === 'company_settled') ? '已结清' : ''
+    const hay = [it.date, it.typeLabel, it.category, it.target, it.amount, it.note, status]
+      .map(v => (v === null || v === undefined) ? '' : String(v)).join(' ').toLowerCase()
+    return hay.indexOf(q) !== -1
+  },
+
   _buildDetailList(scope, items) {
     const cats = api.getCategories(scope) || (scope === 'company' ? this.data.companyCategories : this.data.personalCategories) || []
     const map = {}
     cats.forEach(c => { if (c && c.name) map[c.name] = c.emoji || '' })
+    const q = (this.data.searchText || '').trim().toLowerCase()
     return (items || [])
+      .filter(it => this._matchSearch(it, q))
       .map(it => ({ ...it, _icon: map[it.category] || '📌' }))
       .sort((a, b) => {
         const da = (a.date || '').slice(0, 10), db2 = (b.date || '').slice(0, 10)
@@ -3019,11 +3032,214 @@ Page({
   },
 
   onExportPersonal() {
-    wx.showToast({ title: '请选择导出内容', icon: 'none' })
+    if (this.data.exportFormatOptions[this.data.exportFormatIndex] !== '.EXCEL') {
+      wx.showToast({ title: 'PDF 即将支持，请先选 .EXCEL', icon: 'none' })
+      return
+    }
+    const nick = (this.data.userInfo && this.data.userInfo.nickName) || '个人'
+    this._exportBillXlsx('personal', nick, false, '账本')
   },
 
   onExportCompany() {
-    wx.showToast({ title: '请选择导出内容', icon: 'none' })
+    if (this.data.exportFormatOptions[this.data.exportFormatIndex] !== '.EXCEL') {
+      wx.showToast({ title: 'PDF 即将支持，请先选 .EXCEL', icon: 'none' })
+      return
+    }
+    const name = (api.getCompanyInfo && (api.getCompanyInfo() || {}).companyName) || '公司'
+    this._exportBillXlsx('company', name, true, '账单表')
+  },
+
+  // 导出范围判定：口径同 _inReportRange，用导出页自己的时间状态
+  _inExportRange(it) {
+    const date = (it && it.date ? String(it.date) : '').slice(0, 10)
+    if (!date) return false
+    const { exportPeriod, exportPickerDate } = this.data
+    if (exportPeriod === 0) return date.slice(0, 7) === exportPickerDate
+    if (exportPeriod === 2) return date.slice(0, 4) === String(exportPickerDate).slice(0, 4)
+    if (exportPeriod === 3) return date === exportPickerDate
+    const y = this.data.exportSelectedYear
+    const q = (this.data.exportQuarterMultiIndex || [0, 0])[1]
+    if (parseInt(date.slice(0, 4)) !== parseInt(y)) return false
+    const mo = parseInt(date.slice(5, 7))
+    return mo >= q * 3 + 1 && mo <= q * 3 + 3
+  },
+
+  // 上期匹配器（环比用）：返回 { label, test }，上期=紧邻的同粒度区间（月→上月/季→上季/年→上年/日→前一天）
+  _prevExportMatcher() {
+    const { exportPeriod, exportPickerDate } = this.data
+    const pad = n => String(n).padStart(2, '0')
+    if (exportPeriod === 0) {
+      const [y, m] = String(exportPickerDate || '').split('-').map(Number)
+      let py = y, pm = (m || 1) - 1
+      if (pm < 1) { pm = 12; py -= 1 }
+      const ym = `${py}-${pad(pm)}`
+      return { label: `${py}年${pad(pm)}月`, test: it => (it.date || '').slice(0, 7) === ym }
+    }
+    if (exportPeriod === 2) {
+      const y = parseInt(String(exportPickerDate).slice(0, 4)) - 1
+      return { label: `${y}年`, test: it => (it.date || '').slice(0, 4) === String(y) }
+    }
+    if (exportPeriod === 3) {
+      const [yy, mm, dd] = String(exportPickerDate || '').split('-').map(Number)
+      const d = new Date(yy, (mm || 1) - 1, (dd || 1))
+      d.setDate(d.getDate() - 1)
+      const ds = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
+      return { label: `${d.getFullYear()}年${pad(d.getMonth() + 1)}月${pad(d.getDate())}日`, test: it => (it.date || '').slice(0, 10) === ds }
+    }
+    // 季度：上季（Q1 的上季为上一年 Q4）
+    let y = parseInt(this.data.exportSelectedYear)
+    let q = (this.data.exportQuarterMultiIndex || [0, 0])[1] - 1
+    if (q < 0) { q = 3; y -= 1 }
+    return {
+      label: `${y}年${this.data.quarterOptions[q]}`,
+      test: it => {
+        if (parseInt((it.date || '').slice(0, 4)) !== y) return false
+        const mo = parseInt((it.date || '').slice(5, 7))
+        return mo >= q * 3 + 1 && mo <= q * 3 + 3
+      },
+    }
+  },
+
+  // 账本 Excel 导出：多 sheet —— ①总表(明细,含作废并标注) ②报表(按分类,排除作废,口径同报表页)；
+  // withYoY=true 再加一张 ③环比报表(收入段+支出段,本期 vs 上期,含分类与涨跌)。公司账本用 withYoY。
+  // 数据=对应账单明细(排除自动对账记录 _autoSettle)+导出页所选时间范围；文件名=ownerName+时间+fileSuffix.xlsx
+  _exportBillXlsx(scope, ownerName, withYoY, fileSuffix) {
+    const all = api.getItems(scope).filter(it => !it._autoSettle)
+    const rows = all.filter(it => this._inExportRange(it)).sort((a, b) => {
+      const da = (a.date || '').slice(0, 10), db = (b.date || '').slice(0, 10)
+      if (da !== db) return da < db ? 1 : -1
+      return (Number(b.id) || 0) - (Number(a.id) || 0)
+    })
+    if (!rows.length) {
+      wx.showToast({ title: '该时间范围暂无账单', icon: 'none' })
+      return
+    }
+    const round2 = n => Math.round(n * 100) / 100
+    const S = xlsx.STYLE
+    // 整行套色带：用于「收入」「支出」分段标题，跨 cols 列填同一底色
+    const band = (text, style, cols) => {
+      const r = [{ v: text, s: style }]
+      for (let i = 1; i < cols; i++) r.push({ v: '', s: style })
+      return r
+    }
+    const head = arr => arr.map(v => ({ v, s: S.HEAD }))
+
+    // ① 总表（明细）：按日期分组，组首插一条蓝色日期带「笼罩」当组明细
+    //   月报表/日报表 → 按天分组(YYYY-MM-DD)；季度/年度报表 → 按月分组(YYYY-MM)。rows 已按日期降序，故组首=区间末
+    const statusOf = it => it._voided ? '已作废'
+      : (it.settleStatus === 'settled' || it.settleStatus === 'company_settled') ? '已结清' : '正常'
+    const byMonth = this.data.exportPeriod === 1 || this.data.exportPeriod === 2
+    const dateKey = it => {
+      const d = (it.date || '').slice(0, 10)
+      return byMonth ? d.slice(0, 7) : d
+    }
+    const COLS1 = 7
+    const sheet1 = [head(['日期', '类型', '分类', '对象', '金额', '状态', '备注'])]
+    let lastKey = null
+    rows.forEach(it => {
+      const k = dateKey(it)
+      if (k && k !== lastKey) {
+        sheet1.push(band(k, S.DATE, COLS1))
+        lastKey = k
+      }
+      sheet1.push([it.date || '', it.typeLabel || '', it.category || '', it.target || '',
+        round2(parseFloat(it.amount) || 0), statusOf(it), it.note || ''])
+    })
+
+    // 聚合口径（排除作废）：收入=收入，支出=支出+垫付
+    const isIncome = it => it.typeLabel === '收入'
+    const isExpense = it => it.typeLabel === '支出' || it.typeLabel === '垫付'
+    const aggregate = items => {
+      const inc = {}, exp = {}
+      let income = 0, expense = 0
+      items.filter(it => !it._voided).forEach(it => {
+        const amt = parseFloat(it.amount) || 0
+        const name = it.category || '未分类'
+        if (isIncome(it)) { income += amt; (inc[name] = inc[name] || { count: 0, amount: 0 }).count++; inc[name].amount += amt }
+        else if (isExpense(it)) { expense += amt; (exp[name] = exp[name] || { count: 0, amount: 0 }).count++; exp[name].amount += amt }
+      })
+      return { income, expense, inc, exp }
+    }
+
+    // ② 报表（按分类）—— 收入段（绿）/ 支出段（红）上下分开，各带分段色带 + 表头 + 合计
+    const cur = aggregate(rows)
+    const catRows = (map, total) => Object.keys(map).map(name => ({
+      name, count: map[name].count, amount: map[name].amount,
+      pct: total > 0 ? Math.round(map[name].amount / total * 100) : 0,
+    })).sort((a, b) => b.amount - a.amount)
+    const incomeCats = catRows(cur.inc, cur.income)
+    const expenseCats = catRows(cur.exp, cur.expense)
+    const COLS2 = 4
+    const sheet2 = []
+    sheet2.push(band('收入报表', S.INCOME, COLS2))
+    sheet2.push(head(['分类', '笔数', '金额', '占比']))
+    incomeCats.forEach(c => sheet2.push([c.name, c.count, round2(c.amount), c.pct + '%']))
+    sheet2.push([{ v: '收入合计', s: S.HEAD }, { v: incomeCats.reduce((s, c) => s + c.count, 0), s: S.HEAD }, { v: round2(cur.income), s: S.HEAD }, { v: (cur.income > 0 ? 100 : 0) + '%', s: S.HEAD }])
+    sheet2.push([])
+    sheet2.push(band('支出报表', S.EXPENSE, COLS2))
+    sheet2.push(head(['分类', '笔数', '金额', '占比']))
+    expenseCats.forEach(c => sheet2.push([c.name, c.count, round2(c.amount), c.pct + '%']))
+    sheet2.push([{ v: '支出合计', s: S.HEAD }, { v: expenseCats.reduce((s, c) => s + c.count, 0), s: S.HEAD }, { v: round2(cur.expense), s: S.HEAD }, { v: (cur.expense > 0 ? 100 : 0) + '%', s: S.HEAD }])
+    sheet2.push([])
+    sheet2.push([{ v: '结余', s: S.HEAD }, '', { v: round2(cur.income - cur.expense), s: S.HEAD }, ''])
+
+    const sheets = [
+      { name: '总表', rows: sheet1 },
+      { name: '报表', rows: sheet2 },
+    ]
+
+    // ③ 环比报表（公司账本）：本期 vs 上期，收入段 + 支出段同一张表，含分类与涨跌
+    if (withYoY) {
+      const pm = this._prevExportMatcher()
+      const prev = aggregate(all.filter(it => pm.test(it)))
+      const yoy = (c, p) => {
+        if (!p && !c) return '—'
+        if (!p) return '新增'
+        const r = (c - p) / p * 100
+        if (Math.abs(r) < 0.05) return '持平'
+        return (r > 0 ? '上升 ' : '下降 ') + Math.abs(r).toFixed(1) + '%'
+      }
+      const amtOf = (map, name) => (map[name] ? map[name].amount : 0)
+      const union = (a, b) => {
+        const set = {}
+        Object.keys(a).forEach(k => { set[k] = 1 }); Object.keys(b).forEach(k => { set[k] = 1 })
+        return Object.keys(set).sort((x, y) => (amtOf(a, y) - amtOf(a, x)) || (amtOf(b, y) - amtOf(b, x)))
+      }
+      const sheet3 = []
+      sheet3.push(band(`收入环比（对比${pm.label}）`, S.INCOME, 4))
+      sheet3.push(head(['项目', '上期', '本期', '环比']))
+      sheet3.push([{ v: '总收入', s: S.HEAD }, { v: round2(prev.income), s: S.HEAD }, { v: round2(cur.income), s: S.HEAD }, { v: yoy(cur.income, prev.income), s: S.HEAD }])
+      union(cur.inc, prev.inc).forEach(name => sheet3.push([name, round2(amtOf(prev.inc, name)), round2(amtOf(cur.inc, name)), yoy(amtOf(cur.inc, name), amtOf(prev.inc, name))]))
+      sheet3.push([])
+      sheet3.push(band(`支出环比（对比${pm.label}）`, S.EXPENSE, 4))
+      sheet3.push(head(['项目', '上期', '本期', '环比']))
+      sheet3.push([{ v: '总支出', s: S.HEAD }, { v: round2(prev.expense), s: S.HEAD }, { v: round2(cur.expense), s: S.HEAD }, { v: yoy(cur.expense, prev.expense), s: S.HEAD }])
+      union(cur.exp, prev.exp).forEach(name => sheet3.push([name, round2(amtOf(prev.exp, name)), round2(amtOf(cur.exp, name)), yoy(amtOf(cur.exp, name), amtOf(prev.exp, name))]))
+      sheets.push({ name: '环比报表', rows: sheet3 })
+    }
+
+    let buffer
+    try {
+      buffer = xlsx.buildXlsx(sheets)
+    } catch (e) {
+      wx.showToast({ title: '生成表格失败', icon: 'none' })
+      return
+    }
+    const time = String(this.data.exportDateText || '').replace(/[\\/:*?"<>|]/g, '')
+    const safeOwner = String(ownerName || '个人').replace(/[\\/:*?"<>|]/g, '')
+    const filePath = `${wx.env.USER_DATA_PATH}/${safeOwner}${time}${fileSuffix || '账本'}.xlsx`
+    try {
+      wx.getFileSystemManager().writeFileSync(filePath, buffer)
+    } catch (e) {
+      wx.showToast({ title: '生成文件失败', icon: 'none' })
+      return
+    }
+    wx.openDocument({
+      filePath,
+      fileType: 'xlsx',
+      showMenu: true,
+      fail: () => wx.showToast({ title: '打开文件失败', icon: 'none' }),
+    })
   },
 
   onContactEntry() {
@@ -4337,9 +4553,11 @@ Page({
   // ---- 顶部搜索 ----
   onHeaderSearchInput(e) {
     this.setData({ searchText: e.detail.value })
+    this.initDetailItems() // 输入即时过滤明细列表（setData 后 this.data.searchText 已同步更新）
   },
   onHeaderSearch() {
-    // 搜索逻辑待接入
+    // 搜索栏是全局顶栏：点确认跳到明细页(tab 0)并按 searchText 过滤；switchTab 内部会 initDetailItems
+    this.switchTab({ currentTarget: { dataset: { index: 0 } } })
   },
   onHeaderSearchVoiceStart() {
     this.setData({ searchRecording: true })

@@ -25,6 +25,9 @@
           <view class="mic-base"></view>
         </view>
         <input class="header-search-input" placeholder="" value="{{searchText}}" bindinput="onHeaderSearchInput" confirm-type="search" bindconfirm="onHeaderSearch" />
+        <view class="header-search-go" bindtap="onHeaderSearch">
+          <text class="search-go-icon">↵</text>
+        </view>
       </view>
       <view class="header-right-icon" bindtap="onExpandMenuTap">
         <view class="header-expand-btn">

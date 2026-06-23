@@ -212,6 +212,20 @@ page {
   font-size: 26rpx;
   color: #333;
 }
+.header-search-go {
+  flex-shrink: 0;
+  width: 36rpx;
+  height: 36rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.header-search-go:active { opacity: 0.5; }
+.search-go-icon {
+  font-size: 30rpx;
+  line-height: 1;
+  color: #888;
+}
 .invisible {
   visibility: hidden;
 }
