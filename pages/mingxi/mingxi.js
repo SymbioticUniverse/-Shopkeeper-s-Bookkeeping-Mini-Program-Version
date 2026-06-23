@@ -2120,6 +2120,19 @@ Page({
     this.setData({ [items]: updated })
   },
 
+  // 结清记录文案：后端写的是「时间 由[垫付]/[应付]结清」，这里把括号里的角色换成真实对象名，更清楚：
+  // 占位「公司」→ 真实公司名（自己的/加入链接的，取 companyInfo.companyName）；占位「个人」→ 用户昵称；外部对象→记账时填的名字
+  _formatSettleText(item) {
+    if (!item) return ''
+    const raw = item.settleInfo || ''
+    if (!raw) return ''
+    let name = (item.target && String(item.target).trim()) || ''
+    if (name === '公司') name = (api.getCompanyInfo() || {}).companyName || '公司'
+    else if (name === '个人') name = (this.data.userInfo && this.data.userInfo.nickName) || '个人'
+    if (!name) return raw
+    return raw.replace(/由\s*[\[【][^\]】]*[\]】]\s*结清/, `由 ${name} 结清`)
+  },
+
   onBillTap(e) {
     const id = e.currentTarget.dataset.id
     const from = e.currentTarget.dataset.from || 'detail'
@@ -2128,7 +2141,7 @@ Page({
     if (!item) return
     const isPersonal = from === 'settle' ? this.data.settleType === 0 : this.data.detailType === 0
     this.setData({
-      modalItem: item, modalFrom: from, modalIsPersonal: isPersonal,
+      modalItem: { ...item, _settleText: this._formatSettleText(item), _timeText: this._billTimeText(item) }, modalFrom: from, modalIsPersonal: isPersonal,
       modalEdit: { category: item.category, amount: item.amount, note: item.note || '' },
     })
   },
@@ -2382,7 +2395,7 @@ Page({
       api.addItem(scope, newItem)
     }
 
-    this.setData({ detailItems: this._withCatIcon(scope, api.getItems(scope)), showBookPopup: false, bookPhoto: '' })
+    this.setData({ detailItems: this._buildDetailList(scope, api.getItems(scope)), showBookPopup: false, bookPhoto: '' })
     this._calcOverviewData()
     wx.showToast({ title: '记账成功', icon: 'success' })
     this._redrawReportCharts()
@@ -2639,17 +2652,38 @@ Page({
     }
   },
 
-  // 按账单的分类名查出对应 emoji，给每条明细附 _icon（用于列表行的分类图标）；分类已删/未知回退 📌
-  _withCatIcon(scope, items) {
+  // 明细列表预处理：① 按分类名附分类 emoji（_icon，未知回退 📌）② 排序：日期倒序为主（新日期在前），同一天内按 id（前端记账=Date.now() 毫秒时间戳）倒序，到毫秒严格
+  _buildDetailList(scope, items) {
     const cats = api.getCategories(scope) || (scope === 'company' ? this.data.companyCategories : this.data.personalCategories) || []
     const map = {}
     cats.forEach(c => { if (c && c.name) map[c.name] = c.emoji || '' })
-    return (items || []).map(it => ({ ...it, _icon: map[it.category] || '📌' }))
+    return (items || [])
+      .map(it => ({ ...it, _icon: map[it.category] || '📌' }))
+      .sort((a, b) => {
+        const da = (a.date || '').slice(0, 10), db2 = (b.date || '').slice(0, 10)
+        if (da !== db2) return da < db2 ? 1 : -1
+        return (Number(b.id) || 0) - (Number(a.id) || 0)
+      })
+  },
+
+  // 详情弹窗用的完整时间（到秒）：前端记账 id=Date.now()，直接取其时分秒；后端自动结清记录从 settleInfo 解析到分钟；都没有则只显示日期
+  _billTimeText(it) {
+    if (!it) return ''
+    const d = (it.date || '').slice(0, 10)
+    const pad = n => String(n).padStart(2, '0')
+    const idn = Number(it.id)
+    if (idn >= 1e12) {
+      const t = new Date(idn)
+      return `${d} ${pad(t.getHours())}:${pad(t.getMinutes())}:${pad(t.getSeconds())}`
+    }
+    const m = it.settleInfo && String(it.settleInfo).match(/(\d{1,2}):(\d{2})/)
+    if (m) return `${d} ${pad(Number(m[1]))}:${m[2]}:00`
+    return d
   },
 
   initDetailItems() {
     const scope = this.data.detailType === 1 ? 'company' : 'personal'
-    const items = this._withCatIcon(scope, api.getItems(scope))
+    const items = this._buildDetailList(scope, api.getItems(scope))
     this.setData({ detailItems: items })
   },
 
@@ -4315,8 +4349,8 @@ Page({
       showAiChat: false,
       currentTab: 0,
       showOverview: false,
-      detailItems: this._withCatIcon(scope, items),
-      modalItem: found,
+      detailItems: this._buildDetailList(scope, items),
+      modalItem: found ? { ...found, _settleText: this._formatSettleText(found), _timeText: this._billTimeText(found) } : null,
     })
   },
 
@@ -4392,7 +4426,7 @@ Page({
     }
     api.addItem(scope, newItem)
     reply.card.itemId = newItem.id
-    this.setData({ detailItems: this._withCatIcon(scope, api.getItems(scope)) })
+    this.setData({ detailItems: this._buildDetailList(scope, api.getItems(scope)) })
     this._calcOverviewData()
   },
 

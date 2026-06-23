@@ -1559,8 +1559,8 @@
         <input wx:else class="bill-modal-input" value="{{modalEdit.note}}" bindinput="onModalFieldEdit" data-field="note"/>
       </view>
       <view class="bill-modal-row">
-        <text class="bill-modal-label">日期</text>
-        <text class="bill-modal-value">{{modalItem.date}}</text>
+        <text class="bill-modal-label">时间</text>
+        <text class="bill-modal-value">{{modalItem._timeText || modalItem.date}}</text>
       </view>
       <view wx:if="{{modalItem.voucher}}" class="bill-modal-row">
         <text class="bill-modal-label">凭证</text>
@@ -1568,7 +1568,7 @@
       </view>
       <view wx:if="{{modalItem.settleInfo}}" class="bill-modal-row">
         <text class="bill-modal-label">结清</text>
-        <text class="bill-modal-settle-info">{{modalItem.settleInfo}}</text>
+        <text class="bill-modal-settle-info">{{modalItem._settleText || modalItem.settleInfo}}</text>
       </view>
       <view class="bill-modal-divider"></view>
       <view class="bill-modal-btns">
