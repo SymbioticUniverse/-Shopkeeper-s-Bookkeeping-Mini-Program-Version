@@ -1014,17 +1014,28 @@
           <!-- 时间范围 + 导出格式 -->
           <view class="export-bill-top">
             <view class="export-bill-range">
-              <text class="export-bill-range-label">从</text>
-              <picker mode="date" value="{{exportDateFrom}}" end="{{maxDate}}" bindchange="onExportDateFromChange">
+              <text class="export-bill-range-label">时间</text>
+              <picker wx:if="{{exportPeriod === 0}}" mode="date" fields="month" value="{{exportPickerDate}}" end="{{maxDate}}" bindchange="onExportPickerChange">
                 <view class="detail-date-box">
-                  <text class="report-date-text">{{exportDateFrom || '开始日期'}}</text>
+                  <text class="report-date-text">{{exportDateText}}</text>
                   <view class="report-date-arrow"></view>
                 </view>
               </picker>
-              <text class="export-bill-range-label">到</text>
-              <picker mode="date" value="{{exportDateTo}}" end="{{maxDate}}" bindchange="onExportDateToChange">
+              <picker wx:elif="{{exportPeriod === 1}}" mode="multiSelector" range="{{reportQuarterRange}}" value="{{exportQuarterMultiIndex}}" bindchange="onExportQuarterChange" bindcolumnchange="onExportQuarterColumnChange">
                 <view class="detail-date-box">
-                  <text class="report-date-text">{{exportDateTo || '结束日期'}}</text>
+                  <text class="report-date-text">{{exportDateText}}</text>
+                  <view class="report-date-arrow"></view>
+                </view>
+              </picker>
+              <picker wx:elif="{{exportPeriod === 2}}" mode="date" fields="year" value="{{exportPickerDate}}" end="{{maxDate}}" bindchange="onExportPickerChange">
+                <view class="detail-date-box">
+                  <text class="report-date-text">{{exportDateText}}</text>
+                  <view class="report-date-arrow"></view>
+                </view>
+              </picker>
+              <picker wx:elif="{{exportPeriod === 3}}" mode="date" value="{{exportPickerDate}}" end="{{maxDate}}" bindchange="onExportPickerChange">
+                <view class="detail-date-box">
+                  <text class="report-date-text">{{exportDateText}}</text>
                   <view class="report-date-arrow"></view>
                 </view>
               </picker>

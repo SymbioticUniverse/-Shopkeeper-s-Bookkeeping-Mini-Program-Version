@@ -326,8 +326,10 @@ Page({
     exportPeriod: 0, // 0月度/1季度/2年度/3日度
     exportFormatOptions: ['.PDF', '.CSV', '.EXCEL'],
     exportFormatIndex: 0,
-    exportDateFrom: '',
-    exportDateTo: '',
+    exportPickerDate: '', // 月:YYYY-MM 年:YYYY 日:YYYY-MM-DD
+    exportDateText: '',
+    exportQuarterMultiIndex: [0, 0],
+    exportSelectedYear: 2026,
     exportPersonalItems: [
       { key: 'personal_advance', label: '个人垫付款', checked: true },
       { key: 'personal_payable', label: '个人应付款', checked: true },
@@ -668,6 +670,10 @@ Page({
       'reportQuarterRange[0]': years,
       reportQuarterMultiIndex: [yearIdx, Math.floor((m - 1) / 3)],
       reportSelectedYear: y,
+      exportPickerDate: `${y}-${mm}`,
+      exportDateText: `${y}年${mm}月`,
+      exportQuarterMultiIndex: [yearIdx, Math.floor((m - 1) / 3)],
+      exportSelectedYear: y,
     })
     // 初始化多语言
     const lang = api.getSetting('appLanguage') || 'zh-CN'
@@ -3245,19 +3251,64 @@ Page({
 
   onExportPeriodTap(e) {
     const period = parseInt(e.currentTarget.dataset.period)
-    this.setData({ exportPeriod: period })
+    this.setData({ exportPeriod: period, exportDateText: this._exportDateTextFor(period) })
+  },
+
+  // 按当前周期与已选时间，生成导出页时间选择器的显示文案
+  _exportDateTextFor(period) {
+    if (period === 1) {
+      const y = this.data.exportSelectedYear
+      const q = this.data.quarterOptions[(this.data.exportQuarterMultiIndex || [0, 0])[1]] || '1季度'
+      return `${y}年${q}`
+    }
+    const [y, m, d] = (this.data.exportPickerDate || '').split('-')
+    if (period === 0) return `${y}年${m || '01'}月`
+    if (period === 2) return `${y}年`
+    return `${y}年${m || '01'}月${d || '01'}日`
   },
 
   onExportFormatChange(e) {
     this.setData({ exportFormatIndex: parseInt(e.detail.value) })
   },
 
-  onExportDateFromChange(e) {
-    this.setData({ exportDateFrom: e.detail.value })
+  onExportPickerChange(e) {
+    const val = e.detail.value
+    const { exportPeriod } = this.data
+    if (exportPeriod === 0) {
+      const [y, m] = val.split('-')
+      this.setData({ exportPickerDate: val, exportDateText: `${y}年${m}月` })
+    } else if (exportPeriod === 2) {
+      this.setData({ exportPickerDate: val, exportDateText: `${val}年` })
+    } else if (exportPeriod === 3) {
+      const [y, m, d] = val.split('-')
+      this.setData({ exportPickerDate: val, exportDateText: `${y}年${m}月${d}日` })
+    }
   },
 
-  onExportDateToChange(e) {
-    this.setData({ exportDateTo: e.detail.value })
+  // 季度多列：列变更只记年份
+  onExportQuarterColumnChange(e) {
+    const { column, value } = e.detail
+    if (column === 0) {
+      const year = this.data.reportQuarterRange[0][value]
+      this.setData({ exportSelectedYear: parseInt(year) })
+    }
+  },
+
+  // 季度多列：确认
+  onExportQuarterChange(e) {
+    let [yearIdx, quarterIdx] = e.detail.value
+    const year = this.data.reportQuarterRange[0][yearIdx]
+    const now = new Date()
+    if (parseInt(year) === now.getFullYear()) {
+      const curQ = Math.floor(now.getMonth() / 3)
+      if (quarterIdx > curQ) { quarterIdx = curQ; wx.showToast({ title: '不能选择未来季度', icon: 'none' }) }
+    }
+    const quarter = this.data.quarterOptions[quarterIdx]
+    this.setData({
+      exportQuarterMultiIndex: [yearIdx, quarterIdx],
+      exportSelectedYear: parseInt(year),
+      exportDateText: `${year}年${quarter}`,
+    })
   },
 
   onExportPersonalToggle(e) {
