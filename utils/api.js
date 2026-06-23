@@ -10,7 +10,7 @@
 // ==================== 配置 ====================
 
 /** 后端 API 基址（真机调试：电脑局域网 IP，手机需连同一 WiFi；生产环境改为真实域名） */
-const BASE_URL = 'http://192.168.1.112:3000/api'
+const BASE_URL = 'http://192.168.1.111:3000/api'
 
 // ==================== Token 管理 ====================
 
@@ -478,6 +478,21 @@ function _findScope(id) {
   return 'company'
 }
 
+/** 当前后端 origin（去掉 BASE_URL 末尾的 /api） */
+function _apiOrigin() {
+  return BASE_URL.replace(/\/api\/?$/, '')
+}
+
+/**
+ * 把绝对图片 URL 的 host 重写成当前后端 host，保留路径。
+ * 后端拼图片 URL 时把上传那刻的 host 写死进了库（upload.js req.get('host')），
+ * IP/域名一变存量 URL 就连不上；图片始终随后端走，故只需把 host 对齐 BASE_URL。
+ */
+function _rewriteHost(url) {
+  if (!url || !/^https?:\/\//.test(url)) return url
+  return url.replace(/^https?:\/\/[^/]+/, _apiOrigin())
+}
+
 // ==================== 凭证上传 ====================
 
 /**
@@ -528,6 +543,7 @@ function uploadVoucher(filePath, type) {
  */
 function downloadAuthedImage(url) {
   const token = _getToken()
+  url = _rewriteHost(url)
   return new Promise((resolve, reject) => {
     wx.downloadFile({
       url,

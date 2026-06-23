@@ -1,26 +1,36 @@
-# Self-Review — 7.7 图片路由挂载修复
+# Self-Review — utils/api.js _rewriteHost + IP update
 
 ## 修改文件
-- `backend/src/app.js`: 2 行
-- `API.md`: 1 行
+- `utils/api.js`: +17 lines (2 new functions, 1 call site)
 
 ## 逐项核查
 
-### backend/src/app.js (line 101, 104)
-- ✅ `app.get('/voucher/*', ...)` → `app.use('/voucher', ...)` — Express `app.use` 自动剥离挂载前缀
-- ✅ `app.get('/public/voucher/*', ...)` → `app.use('/public/voucher', ...)` — 同上
-- ✅ 其余路由均使用 `app.use`，风格统一
-- ✅ `serveVoucher` 签名 `(req, res, next)` 兼容 `app.use` 中间件链
-- ✅ `servePublicVoucher` 签名 `(req, res)` 作为终端 handler，不会调用 next
+### `_apiOrigin()` (line 481-483)
+- ✅ Removes `/api` or `/api/` suffix from BASE_URL
+- ✅ Regex `/\/api\/?$/` correctly handles both cases
+- ✅ Internal helper, not exported — no API surface change
 
-### 路径校验验证
-- **serveVoucher**: `req.path="/4/2026/06/uuid.jpg"` → `relPath="4/2026/06/uuid.jpg"` → `startsWith("4/")` → ✅ 通过
-- **servePublicVoucher**: `req.path="/4/avatar/uuid.jpg"` → `parts=["4","avatar","uuid.jpg"]` → `parts[1]==="avatar"` → ✅ 通过
+### `_rewriteHost(url)` (line 491-493)
+- ✅ Guards null/undefined URL → returns as-is
+- ✅ Guards non-http URLs → returns as-is (no false rewrites on relative paths)
+- ✅ Regex `^https?:\/\/[^/]+` matches scheme+host only, preserves path
+- ✅ Replacement uses `_apiOrigin()` so it auto-tracks BASE_URL changes
 
-### API.md (7.7)
-- ✅ ⚠️待修 → ✅已交付，描述更新
+### `downloadAuthedImage()` (line 546)
+- ✅ Calls `_rewriteHost(url)` before wx.downloadFile
+- ✅ Token is still read before the rewrite (correct, independent operations)
+- ✅ Only call site — focused fix, no similar patterns missed
+
+### BASE_URL (line 13)
+- ✅ IP changed 192.168.1.112 → 192.168.1.111 (user's network change)
 
 ## 边界情况
-- ✅ `app.use` 匹配所有 HTTP method，但 handler 只读文件不产生副作用，非 GET 请求会执行同样校验后返回 404（文件不存在），无安全风险
-- ✅ 路由 `/voucher`（无尾部路径）命中时 `relPath` 为空 → `startsWith` 失败 → 403 被拒绝，不会泄露目录
-- ✅ 路由 `/public/voucher`（无尾部路径）同理 → `parts.length < 3` → 403
+- ✅ URL is null/undefined → returns as-is, wx.downloadFile will fail with clear error
+- ✅ URL is relative path → regex won't match, returns as-is
+- ✅ URL has port (e.g. :3000) → regex `[^/]+` includes port, correctly replaced
+- ✅ URL has no port → same, correctly handled
+- ✅ _apiOrigin() returns just scheme+host → replacement is clean
+
+## 接口文档
+- No new exports — `_apiOrigin` and `_rewriteHost` are internal
+- Interface doc `.chitu/interfaces/utils-api.js.json` does not need updating
