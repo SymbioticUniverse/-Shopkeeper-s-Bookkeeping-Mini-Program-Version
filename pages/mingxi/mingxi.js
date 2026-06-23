@@ -197,6 +197,8 @@ Page({
     reportQuarterRange: [[], ['1季度', '2季度', '3季度', '4季度']],
     reportQuarterMultiIndex: [6, 1],
     reportSelectedYear: 2026,
+    reportSummary: { income: '0.00', expense: '0.00', balance: '0.00', balanceNeg: false, incomeCats: [], expenseCats: [], proUnlocked: true, empty: true }, // 报表筛选汇总：总收入/支出/结余 + 分类拆解；proUnlocked 预留鉴权钩子
+    reportChartType: 0, // 报表图表三合一：0=折线 1=柱状 2=饼图，点击切换共用同一区域
     touchStartX: 0,
     touchStartY: 0,
     tooltipVisible: false,
@@ -690,6 +692,7 @@ Page({
     if (savedPCats && savedPCats.length) this.setData({ personalCategories: savedPCats })
     if (savedCCats && savedCCats.length) this.setData({ companyCategories: savedCCats })
     this.updateReportDate()
+    this._updateReportSummary()
     this.initDetailItems()
     this.initSettleItems()
     this._syncOverviewCards()
@@ -1110,9 +1113,7 @@ Page({
     if (dir) setTimeout(() => this.setData({ tabSlideDir: '' }), 400)
     if (index === 1) {
       setTimeout(() => {
-        this.initLineChart()
-        this.initBarChart()
-        this.initPieCharts()
+        this._refreshReport()
       }, 300)
     }
     if (index === 0) {
@@ -1570,6 +1571,103 @@ Page({
     }
   },
 
+  // ===== 报表筛选汇总：总收入/支出/结余 + 分类拆解 =====
+  // 预留鉴权接口：分类拆解后期可做成 VIP 能力。现返回 true 表示全部解锁；
+  // 接入登录态 / 会员后改为真实判断即可，例如 return !!(api.isVip && api.isVip())
+  _canUseProSummary() {
+    return true
+  },
+
+  // 当前报表筛选范围判定：月(YYYY-MM)/年(YYYY)/日(YYYY-MM-DD)看 reportPickerDate；季看 reportSelectedYear + reportQuarterMultiIndex[1]
+  _inReportRange(it) {
+    const date = (it && it.date ? String(it.date) : '').slice(0, 10)
+    if (!date) return false
+    const { reportPeriod, reportPickerDate } = this.data
+    if (reportPeriod === 0) return date.slice(0, 7) === reportPickerDate
+    if (reportPeriod === 2) return date.slice(0, 4) === String(reportPickerDate)
+    if (reportPeriod === 3) return date === reportPickerDate
+    // 季度
+    const y = this.data.reportSelectedYear
+    const q = (this.data.reportQuarterMultiIndex || [0, 0])[1]
+    if (parseInt(date.slice(0, 4)) !== parseInt(y)) return false
+    const mo = parseInt(date.slice(5, 7))
+    return mo >= q * 3 + 1 && mo <= q * 3 + 3
+  },
+
+  // 口径同简览(_calcOverviewData)：收入=收入；支出=支出+垫付；结余=收入-支出；排除作废
+  _updateReportSummary() {
+    const scope = this.data.reportType === 1 ? 'company' : 'personal'
+    const ranged = (api.getItems(scope) || []).filter(it => !it._voided && this._inReportRange(it))
+    const pro = this._canUseProSummary()
+
+    const isIncome = (it) => it.typeLabel === '收入'
+    const isExpense = (it) => it.typeLabel === '支出' || it.typeLabel === '垫付'
+    const sum = (fn) => ranged.filter(fn).reduce((s, it) => s + (parseFloat(it.amount) || 0), 0)
+    const income = sum(isIncome)
+    const expense = sum(isExpense)
+    const balance = income - expense
+
+    let incomeCats = []
+    let expenseCats = []
+    if (pro) {
+      const cats = api.getCategories(scope) || []
+      const emojiOf = {}
+      cats.forEach(c => { if (c && c.name) emojiOf[c.name] = c.emoji || '📌' })
+      const build = (fn, total) => {
+        const map = {}
+        ranged.filter(fn).forEach(it => {
+          const name = it.category || '未分类'
+          map[name] = (map[name] || 0) + (parseFloat(it.amount) || 0)
+        })
+        return Object.keys(map).map(name => ({
+          name,
+          emoji: emojiOf[name] || '📌',
+          amount: map[name].toFixed(2),
+          pct: total > 0 ? Math.round(map[name] / total * 100) : 0
+        })).sort((a, b) => parseFloat(b.amount) - parseFloat(a.amount))
+      }
+      incomeCats = build(isIncome, income)
+      expenseCats = build(isExpense, expense)
+    }
+
+    this.setData({
+      reportSummary: {
+        income: income.toFixed(2),
+        expense: expense.toFixed(2),
+        balance: balance.toFixed(2),
+        balanceNeg: balance < 0,
+        incomeCats,
+        expenseCats,
+        proUnlocked: pro,
+        empty: ranged.length === 0
+      }
+    })
+  },
+
+  // 报表图表三合一：点击切换，折线/柱状/饼图共用同一区域
+  switchReportChart(e) {
+    const t = parseInt(e.currentTarget.dataset.t)
+    if (isNaN(t) || t === this.data.reportChartType) return
+    this.setData({ reportChartType: t })
+    this._drawCurrentChart()
+  },
+
+  // 仅绘制当前选中的那一种图（其它未渲染，避免对不存在的 canvas 反复重试）
+  _drawCurrentChart() {
+    const t = this.data.reportChartType
+    setTimeout(() => {
+      if (t === 0) this.initLineChart()
+      else if (t === 1) this.initBarChart()
+      else this.initPieCharts()
+    }, 80)
+  },
+
+  // 报表刷新入口：重算汇总 + 重绘当前图
+  _refreshReport() {
+    this._updateReportSummary()
+    this._drawCurrentChart()
+  },
+
   drawPieChart(ctx, w, h, segments, colors, selectedIdx) {
     const dk = this.data.isDarkMode
     // Background
@@ -1907,9 +2005,7 @@ Page({
       currentReportCard: next,
       reportType: next % 2,
     })
-    this.initLineChart()
-    this.initBarChart()
-    this.initPieCharts()
+    this._refreshReport()
   },
 
   // 切换报表周期
@@ -1917,9 +2013,7 @@ Page({
     const period = parseInt(e.currentTarget.dataset.period)
     this.setData({ reportPeriod: period })
     this.updateReportDate()
-    this.initLineChart()
-    this.initBarChart()
-    this.initPieCharts()
+    this._refreshReport()
   },
 
   // 日期选择器变更（月度/年度/日度）
@@ -1943,9 +2037,7 @@ Page({
       this.setData({ reportPickerDate: val })
       this.setData({ reportDateText: `${y}年${m}月${d}日` })
     }
-    this.initLineChart()
-    this.initBarChart()
-    this.initPieCharts()
+    this._refreshReport()
   },
 
   // 季度多列选择器列变更
@@ -1972,9 +2064,7 @@ Page({
       reportSelectedYear: parseInt(year),
       reportDateText: `${year}年${quarter}`,
     })
-    this.initLineChart()
-    this.initBarChart()
-    this.initPieCharts()
+    this._refreshReport()
   },
 
   // 根据周期更新日期文案
@@ -2683,8 +2773,7 @@ Page({
 
   initDetailItems() {
     const scope = this.data.detailType === 1 ? 'company' : 'personal'
-    const items = this._buildDetailList(scope, api.getItems(scope))
-    this.setData({ detailItems: items })
+    this.setData({ detailItems: this._buildDetailList(scope, api.getItems(scope)) })
   },
 
   initSettleItems() {
@@ -2914,7 +3003,7 @@ Page({
   },
 
   onExportBillEntry() {
-    this.setData({ showExportBill: true })
+    this.setData({ currentTab: 4, showOverview: false, showExportBill: true })
   },
 
   onExportBillBack() {
@@ -4149,9 +4238,7 @@ Page({
     if (d.currentTab !== 1) return
     if (d.showExpandMenu || d.showCamera || d.scanRecognizing || d.showBookPopup || d.modalItem || d.showAiChat || d.aiRecording || d.searchRecording) return
     setTimeout(() => {
-      this.initLineChart()
-      this.initBarChart()
-      this.initPieCharts()
+      this._drawCurrentChart()
     }, 300)
   },
 

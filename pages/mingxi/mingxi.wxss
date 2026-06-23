@@ -753,7 +753,8 @@ page {
   border-radius: 26rpx;
   padding: 14rpx 18rpx;
   gap: 10rpx;
-  overflow-y: auto;
+  min-height: 0;
+  overflow: hidden;
 }
 
 /* 日期 + 收入/支出 行 */
@@ -3776,7 +3777,8 @@ page {
   border-radius: 26rpx;
   padding: 14rpx 18rpx;
   gap: 10rpx;
-  overflow-y: auto;
+  min-height: 0;
+  overflow: hidden;
 }
 
 /* 日期 + 收入/支出 行 */
@@ -9401,3 +9403,200 @@ page {
   background: rgba(255, 255, 255, 0.18);
 }
 .page--dark .my-avatar--empty { background: rgba(255, 255, 255, 0.1); }
+
+/* ---- 报表筛选汇总 ---- */
+.report-summary {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  margin-top: 16rpx;
+  padding: 22rpx 22rpx 8rpx;
+  background: rgba(255, 255, 255, 0.55);
+  border-radius: 22rpx;
+  box-shadow: 0 6rpx 20rpx rgba(0, 0, 0, 0.06);
+}
+.rsum-totals {
+  display: flex;
+}
+.rsum-tot {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8rpx;
+  position: relative;
+}
+.rsum-tot + .rsum-tot::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 10rpx;
+  bottom: 10rpx;
+  width: 1rpx;
+  background: rgba(0, 0, 0, 0.06);
+}
+.rsum-tot-label {
+  font-size: 22rpx;
+  color: #a0a0a0;
+}
+.rsum-tot-val {
+  font-size: 36rpx;
+  font-weight: 700;
+}
+.rsum-tot-val--in { color: #00d042; }
+.rsum-tot-val--out { color: #ed2e2e; }
+.rsum-empty,
+.rsum-locked {
+  margin-top: 8rpx;
+  padding: 28rpx 0;
+  text-align: center;
+  font-size: 24rpx;
+  color: #b8b8b8;
+}
+.rsum-group {
+  margin-top: 24rpx;
+}
+.rsum-group-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8rpx;
+}
+.rsum-group-name {
+  font-size: 26rpx;
+  font-weight: 600;
+  color: #333;
+}
+.rsum-group-sum {
+  font-size: 26rpx;
+  font-weight: 600;
+}
+.rsum-group-sum--in { color: #00d042; }
+.rsum-group-sum--out { color: #ed2e2e; }
+.rsum-cat {
+  display: flex;
+  align-items: center;
+  padding: 14rpx 0;
+}
+.rsum-cat + .rsum-cat {
+  border-top: 1rpx solid rgba(0, 0, 0, 0.04);
+}
+.rsum-cat-emoji {
+  width: 40rpx;
+  font-size: 28rpx;
+  text-align: center;
+}
+.rsum-cat-name {
+  width: 132rpx;
+  margin-left: 8rpx;
+  font-size: 26rpx;
+  color: #333;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.rsum-cat-bar {
+  flex: 1;
+  height: 12rpx;
+  margin: 0 16rpx;
+  background: rgba(0, 0, 0, 0.05);
+  border-radius: 6rpx;
+  overflow: hidden;
+}
+.rsum-cat-bar-fill {
+  height: 100%;
+  border-radius: 6rpx;
+  min-width: 4rpx;
+}
+.rsum-cat-bar-fill--in { background: #00d042; }
+.rsum-cat-bar-fill--out { background: #ed2e2e; }
+.rsum-cat-pct {
+  width: 60rpx;
+  font-size: 22rpx;
+  color: #a0a0a0;
+  text-align: right;
+}
+.rsum-cat-amt {
+  width: 140rpx;
+  font-size: 26rpx;
+  font-weight: 600;
+  text-align: right;
+}
+.rsum-cat-amt--in { color: #00d042; }
+.rsum-cat-amt--out { color: #ed2e2e; }
+
+.page--dark .report-summary {
+  background: rgba(255, 255, 255, 0.05);
+  box-shadow: 0 6rpx 20rpx rgba(0, 0, 0, 0.25);
+}
+.page--dark .rsum-tot + .rsum-tot::before { background: rgba(255, 255, 255, 0.08); }
+.page--dark .rsum-group-name,
+.page--dark .rsum-cat-name { color: #e6e6e6; }
+.page--dark .rsum-cat + .rsum-cat { border-top-color: rgba(255, 255, 255, 0.06); }
+.page--dark .rsum-cat-bar { background: rgba(255, 255, 255, 0.08); }
+.page--dark .rsum-tot-label,
+.page--dark .rsum-cat-pct,
+.page--dark .rsum-empty,
+.page--dark .rsum-locked { color: #888; }
+
+/* ---- 报表图表三合一：切换 tab + 共用舞台 ---- */
+.report-chart-tabs {
+  display: flex;
+  flex-shrink: 0;
+  gap: 6rpx;
+  padding: 6rpx;
+  background: rgba(255, 255, 255, 0.6);
+  border-radius: 14rpx;
+}
+.rct-tab {
+  flex: 1;
+  text-align: center;
+  padding: 12rpx 0;
+  font-size: 24rpx;
+  color: #a0a0a0;
+  border-radius: 10rpx;
+  transition: color 0.2s, background 0.2s;
+}
+.rct-tab--active {
+  color: #fff;
+  background: #00d042;
+  font-weight: 600;
+}
+.report-chart-stage {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  min-height: 360rpx;
+}
+.page--dark .report-chart-tabs { background: rgba(255, 255, 255, 0.06); }
+.page--dark .rct-tab { color: #888; }
+.page--dark .rct-tab--active { color: #fff; background: #00d042; }
+
+/* ---- 报表汇总底部：导出引导 ---- */
+.rsum-footer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16rpx;
+  margin-top: 24rpx;
+  padding: 22rpx 0 8rpx;
+  border-top: 1rpx solid rgba(0, 0, 0, 0.05);
+}
+.rsum-more-tip {
+  font-size: 22rpx;
+  color: #b0b0b0;
+}
+.rsum-export-btn {
+  width: 100%;
+  text-align: center;
+  padding: 24rpx 0;
+  font-size: 28rpx;
+  font-weight: 600;
+  color: #fff;
+  background: #00d042;
+  border-radius: 16rpx;
+  box-shadow: 0 6rpx 16rpx rgba(0, 208, 66, 0.25);
+}
+.rsum-export-btn:active { opacity: 0.85; }
+.page--dark .rsum-footer { border-top-color: rgba(255, 255, 255, 0.06); }
+.page--dark .rsum-more-tip { color: #888; }
