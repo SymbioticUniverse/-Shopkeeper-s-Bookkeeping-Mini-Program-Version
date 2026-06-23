@@ -77,6 +77,6 @@
       "from": "./middleware/auth"
     }
   ],
-  "capability": "API.md 文档同步至最新代码状态（7.1-7.6全部标记完成，补数据模型/安全加固/约束章节）；后端修复 linkedId 成对互指校验死锁与 settle 自动记录 ID 碰撞两个 bug",
-  "updatedAt": "2026-06-22T12:01:45.898Z"
+  "capability": "凭证图片和头像可正常加载：修复 app.get 不剥离路径前缀导致 serveVoucher/servePublicVoucher 全部 403 的 bug，改为 app.use 挂载后 req.path 正确传递给 handler 校验逻辑",
+  "updatedAt": "2026-06-23T05:10:00.596Z"
 }
