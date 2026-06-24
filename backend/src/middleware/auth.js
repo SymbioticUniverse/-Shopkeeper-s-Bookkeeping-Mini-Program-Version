@@ -2,6 +2,9 @@
  * 认证中间件 — 校验 JWT token
  */
 const jwt = require('jsonwebtoken')
+const fs = require('fs')
+const path = require('path')
+const crypto = require('crypto')
 
 const JWT_SECRET = process.env.JWT_SECRET
 
@@ -10,17 +13,36 @@ if (!JWT_SECRET) {
   if (process.env.NODE_ENV === 'production') {
     throw new Error('FATAL: JWT_SECRET 环境变量未设置，生产环境拒绝启动')
   }
-  // 开发环境使用随机密钥（每次重启 token 失效，可接受）
-  console.warn('[WARN] JWT_SECRET 未设置，使用随机密钥（仅开发环境可用）')
 }
 
-// 惰性生成开发密钥（仅在未设置 JWT_SECRET 且首次调用时生成）
+// dev 密钥持久化文件（放在 backend 根目录，不受服务重启影响）
+const DEV_SECRET_FILE = path.join(__dirname, '..', '..', '.jwt-secret')
+
 let _devSecret = null
+
+function _loadDevSecret() {
+  try {
+    if (fs.existsSync(DEV_SECRET_FILE)) {
+      return fs.readFileSync(DEV_SECRET_FILE, 'utf8').trim()
+    }
+  } catch (e) {
+    console.warn('[WARN] 读取 .jwt-secret 失败，将重新生成:', e.message)
+  }
+  // 首次启动：生成新密钥并持久化
+  const secret = crypto.randomBytes(32).toString('hex')
+  try {
+    fs.writeFileSync(DEV_SECRET_FILE, secret, 'utf8')
+    console.log('[INFO] 已生成持久化 JWT 密钥 →', DEV_SECRET_FILE)
+  } catch (e) {
+    console.warn('[WARN] 无法写入 .jwt-secret，密钥仅存于内存（重启会失效）:', e.message)
+  }
+  return secret
+}
 
 function getSecret() {
   if (JWT_SECRET) return JWT_SECRET
   if (!_devSecret) {
-    _devSecret = require('crypto').randomBytes(32).toString('hex')
+    _devSecret = _loadDevSecret()
   }
   return _devSecret
 }
