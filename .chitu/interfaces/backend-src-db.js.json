@@ -18,6 +18,6 @@
       "from": "fs"
     }
   ],
-  "capability": "内部人员可通过 JSON 或 CSV 上传 ASR/OCR 标注数据集，后端自动执行三层学习（错词纠错→项目词分类映射→句式模式），生成可查询的纠错映射库供识别时 O(1) 查表优化",
-  "updatedAt": "2026-06-24T10:50:52.100Z"
+  "capability": "SQLite 写锁等待 5 秒 + 64MB 缓存 + 256MB mmap + PM2 多核 cluster，200 并发记账场景稳定运行",
+  "updatedAt": "2026-06-24T12:47:46.809Z"
 }

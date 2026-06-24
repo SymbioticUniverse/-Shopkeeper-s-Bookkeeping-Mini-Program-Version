@@ -17,6 +17,13 @@ const db = new Database(DB_PATH)
 db.pragma('journal_mode = WAL')
 db.pragma('foreign_keys = ON')
 
+// 并发优化参数
+db.pragma('busy_timeout = 5000')        // 写锁等待 5 秒，避免 SQLITE_BUSY
+db.pragma('cache_size = -64000')        // 64MB 页缓存
+db.pragma('mmap_size = 268435456')      // 256MB 内存映射 I/O
+db.pragma('temp_store = MEMORY')        // 临时表/排序走内存
+db.pragma('synchronous = NORMAL')       // WAL 模式下安全写入策略
+
 // ==================== 初始化表结构 ====================
 
 function initSchema() {
