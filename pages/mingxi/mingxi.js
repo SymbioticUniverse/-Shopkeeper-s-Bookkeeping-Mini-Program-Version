@@ -5158,6 +5158,7 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
 	    const updated = this.data.aiMessages.slice()
 	    updated[idx] = reply
 	    this.setData({ aiMessages: updated })
+	    wx.showToast({ title: '已取消，请重新输入', icon: 'none', duration: 1500 })
 	  },
   _formatChatTime(d) {
     return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0')
