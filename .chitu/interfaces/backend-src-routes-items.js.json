@@ -29,6 +29,6 @@
       "from": "../middleware/auth"
     }
   ],
-  "capability": "items 表新增 updated_at 列，每次 PUT 更新账单时自动写入当前时间戳，返回值中包含 updatedAt 字段",
-  "updatedAt": "2026-06-24T15:05:49.686Z"
+  "capability": "updatedAt 格式统一为毫秒时间戳，排序不再异常；POST 409 响应携带已有记录，前端 _pushDirtyItems 直接进入冲突裁决，省去一轮 pull 网络往返",
+  "updatedAt": "2026-06-24T15:23:26.161Z"
 }

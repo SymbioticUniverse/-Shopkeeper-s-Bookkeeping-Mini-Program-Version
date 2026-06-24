@@ -49,6 +49,6 @@
     "api"
   ],
   "imports": [],
-  "capability": "离线优先记账完整闭环：脏标记增量推送、墓碑删除追踪、4种双向合并冲突检测（modified_both/duplicate_id/resurrection/local_only），冲突面板逐条对比本地与云端版本，用户裁决后自动推送到服务端",
-  "updatedAt": "2026-06-24T15:09:17.118Z"
+  "capability": "updatedAt 格式统一为毫秒时间戳，排序不再异常；POST 409 响应携带已有记录，前端 _pushDirtyItems 直接进入冲突裁决，省去一轮 pull 网络往返",
+  "updatedAt": "2026-06-24T15:23:26.162Z"
 }

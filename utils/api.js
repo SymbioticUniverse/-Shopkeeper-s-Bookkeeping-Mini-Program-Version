@@ -570,7 +570,18 @@ async function _pushDirtyItems() {
         await _request('POST', '/items', { scope: scope, item: item })
         _markClean(item.id, scope)
       } catch (e) {
-        // 409 重复 ID 或网络错误 → 保持脏标记，下次重试
+        if (e && e.existingItem) {
+          // 409 + 服务端返回已有记录 → 立即创建冲突，省去一轮 pull
+          var conflicts = wx.getStorageSync(PENDING_CONFLICTS_KEY) || []
+          conflicts.push({
+            id: item.id, scope: scope, type: 'duplicate_id',
+            localVersion: item, serverVersion: e.existingItem,
+            reason: '本地新建的账单与云端已有账单 ID 冲突'
+          })
+          _save(PENDING_CONFLICTS_KEY, conflicts)
+          // 不清脏标记，冲突面板裁决后会重新推送
+        }
+        // 其他 409 或网络错误 → 保持脏标记，下次重试
       }
     } else {
       // 已同步过的修改 → PUT
@@ -755,6 +766,7 @@ function _mergeItems(key, remoteItems) {
     if (deletedIds[rIt.id]) continue
     merged.push({
       ...rIt,
+      _updatedAt: rIt.updatedAt || 0,
       _dirty: false,
       _syncedAt: Date.now(),
       _lastKnownHash: _hashItemFields(rIt)

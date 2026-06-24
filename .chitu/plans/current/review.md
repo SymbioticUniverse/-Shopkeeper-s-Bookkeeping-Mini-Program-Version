@@ -1,31 +1,35 @@
-# 自审报告 — 补全冲突面板 JS 方法
+# 自审报告 — 修复 updatedAt 格式不一致 + 409 带 serverVersion
 
 ## 变更文件
 
-### 1. `pages/mingxi/mingxi.js`（本次补全）
-- **`_handleSyncResult(result)`**：syncFromCloud 返回冲突时打开面板，设置 showConflictPanel/conflicts/conflictIndex。空值/无冲突守卫正确。
-- **`onConflictResolve(e)`**：从 dataset 读取 id/scope/resolution，在 conflicts 副本中匹配并标记 resolution。WeChat dataset 自动解析数字 id，`===` 比较安全（与现有代码行 2312 一致）。
-- **`onConflictPrev()` / `onConflictNext()`**：带边界检查的翻页。✅
-- **`onConflictDismiss()`**：
-  - 检查全部已裁决，未完成则 toast 提示
-  - 构建 resolutions 数组（resolvedItem 正确区分 serverVersion/localVersion）
-  - 调用 api.resolveConflicts + 错误 toast 兜底
-  - 始终收起面板 + 刷新数据（initDetailItems/initSettleItems/_syncOverviewCards）
-  - 与 _throttledSync 的刷新模式一致
+### 1. `backend/src/routes/items.js` — rowToItem（行 53）
 
-### 2. 此前变更（已修改，非本次）
-- `utils/api.js`：脏标记、墓碑、冲突检测、v2 syncFromCloud、resolveConflicts
-- `pages/mingxi/mingxi.wxml`：冲突面板 UI
-- `pages/mingxi/mingxi.wxss`：冲突面板样式（含暗色模式）
-- `app.js`：hasConflicts 日志
-- `API.md`：第九节离线同步文档
+- `updatedAt: row.updated_at ? new Date(row.updated_at + 'Z').getTime() : null`
+- SQLite datetime 字符串 "2026-06-24 12:30:00" → 毫秒时间戳
+- `updated_at` 为 NULL → 返回 null（守卫正确）
+- SQLite 内置格式稳定，不会有 NaN 风险
 
-## 边界检查
-- 冲突列表为空 → `_handleSyncResult` 直接 return ✅
-- 冲突 ID 不匹配 → `onConflictResolve` 中 for 循环静默结束，不崩溃 ✅
-- 网络错误 → `onConflictDismiss` catch 块 toast 提示，仍重置面板 ✅
-- 面板打开期间 → `_throttledSync` 跳过同步（line 737），防止覆盖 ✅
-- 已裁决冲突 → `conflict-nav-dot--resolved` CSS 已就绪 ✅
+### 2. `backend/src/routes/items.js` — POST 409（行 237）
+
+- `SQLITE_CONSTRAINT_PRIMARYKEY` 时 SELECT 已有记录 → `rowToItem(existing)` → 返回 `{ error, existingItem }`
+- `existing` 非空断言：INSERT 因主键冲突失败，行必然存在；SQLite 单写锁保证无 TOCTOU 竞态
+- rowToItem 会走同样的 updatedAt 毫秒转换 ✅
+
+### 3. `utils/api.js` — _pushDirtyItems（行 572）
+
+- `e.existingItem` 存在时构建 duplicate_id 冲突（与 `_detectConflicts` 同格式）
+- 追加到 `PENDING_CONFLICTS_KEY`，不清脏标记
+- 边界：
+  - 同一 ID 重复冲突：同一周期内不会重复推（顺序循环），跨周期有重复也安全
+  - `_save` 是同步 wx.setStorageSync，不会失败
+  - `e` 非 409（网络错误等）跳过 if 块，行为不变 ✅
+
+### 4. `utils/api.js` — _mergeItems（行 769）
+
+- `_updatedAt: rIt.updatedAt || 0` — 服务端条目继承后端毫秒时间戳
+- Pass 1 本地条目已有 `_updatedAt`（addItem/updateItem 时写入）
+- 老数据无 `_updatedAt` 降为 0：已有行为，非本次引入
+- 排序 `(b._updatedAt || 0) - (a._updatedAt || 0)` 现在两端都正常工作 ✅
 
 ## 结论
 ✅ 通过，可提交。

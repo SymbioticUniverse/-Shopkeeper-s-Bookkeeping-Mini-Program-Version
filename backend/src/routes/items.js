@@ -50,7 +50,7 @@ function rowToItem(row) {
     settleInfo: row.settleInfo ?? undefined,
     _autoSettle: row._autoSettle === 1,
     _voided: row.voided === 1,
-    updatedAt: row.updated_at || null
+    updatedAt: row.updated_at ? new Date(row.updated_at + 'Z').getTime() : null
   }
 }
 
@@ -234,7 +234,8 @@ router.post('/', requireAuth, (req, res) => {
     )
   } catch (err) {
     if (err.code === 'SQLITE_CONSTRAINT_PRIMARYKEY') {
-      return res.status(409).json({ error: '账单 id 已存在' })
+      const existing = db.prepare('SELECT * FROM items WHERE id = ? AND user_id = ?').get(item.id, req.userId)
+      return res.status(409).json({ error: '账单 id 已存在', existingItem: rowToItem(existing) })
     }
     throw err
   }
