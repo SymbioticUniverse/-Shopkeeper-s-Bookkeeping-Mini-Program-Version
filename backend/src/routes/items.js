@@ -49,7 +49,8 @@ function rowToItem(row) {
     settleStatus: row.settleStatus ?? undefined,
     settleInfo: row.settleInfo ?? undefined,
     _autoSettle: row._autoSettle === 1,
-    _voided: row.voided === 1
+    _voided: row.voided === 1,
+    updatedAt: row.updated_at || null
   }
 }
 
@@ -361,6 +362,9 @@ router.put('/:id', requireAuth, (req, res) => {
   if (setClauses.length === 0) {
     return res.json({ success: true })
   }
+
+  // 自动更新 updated_at（API.md §8.4）
+  setClauses.push("updated_at = datetime('now')")
 
   params.push(id)
 

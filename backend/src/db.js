@@ -221,6 +221,9 @@ function initSchema() {
     }
   }
 
+  // Migration: items 表补 updated_at（API.md §8.4）
+  addColumnSafely('items', 'updated_at', "TEXT NOT NULL DEFAULT (datetime('now'))")
+
   // Migration: 为已有 verify_codes 表添加防暴力破解列
   addColumnSafely('verify_codes', 'failed_attempts', 'INTEGER NOT NULL DEFAULT 0')
   addColumnSafely('verify_codes', 'locked_until', 'TEXT')
@@ -270,13 +273,15 @@ function initSchema() {
             settleInfo TEXT DEFAULT NULL,
             _autoSettle INTEGER NOT NULL DEFAULT 0,
             created_at TEXT NOT NULL DEFAULT (datetime('now')),
+            updated_at TEXT NOT NULL DEFAULT (datetime('now')),
             FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
           );
           INSERT INTO items_mig
             SELECT id, user_id, scope, category, type, type_label,
                    CAST(amount AS REAL), date, note, target, target_type,
                    linked_id, voucher, voided,
-                   settleStatus, settleInfo, _autoSettle, created_at
+                   settleStatus, settleInfo, _autoSettle,
+                   created_at, coalesce(updated_at, datetime('now'))
             FROM items;
           DROP TABLE items;
           ALTER TABLE items_mig RENAME TO items;

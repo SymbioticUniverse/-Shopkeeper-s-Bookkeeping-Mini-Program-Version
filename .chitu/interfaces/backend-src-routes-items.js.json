@@ -29,6 +29,6 @@
       "from": "../middleware/auth"
     }
   ],
-  "capability": "OCR 凭证识别修复字段名 Bug（BlockContent 替代 Text）并增强健壮性（Data.Content 回落、HTTP/业务错误分层）；AI 对话从硬编码 mock 升级为关键词驱动 7 字段弹性解析（时间/金额/收支/主体/分类/备注/追问）；明细列表按日期分组展示；凭证本地路径静默降级不阻塞记账",
-  "updatedAt": "2026-06-24T10:55:35.636Z"
+  "capability": "items 表新增 updated_at 列，每次 PUT 更新账单时自动写入当前时间戳，返回值中包含 updatedAt 字段",
+  "updatedAt": "2026-06-24T15:05:49.686Z"
 }

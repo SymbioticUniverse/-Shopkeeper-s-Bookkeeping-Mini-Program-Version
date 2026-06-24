@@ -18,6 +18,6 @@
       "from": "fs"
     }
   ],
-  "capability": "SQLite 写锁等待 5 秒 + 64MB 缓存 + 256MB mmap + PM2 多核 cluster，200 并发记账场景稳定运行",
-  "updatedAt": "2026-06-24T12:47:46.809Z"
+  "capability": "items 表新增 updated_at 列，每次 PUT 更新账单时自动写入当前时间戳，返回值中包含 updatedAt 字段",
+  "updatedAt": "2026-06-24T15:05:49.686Z"
 }
