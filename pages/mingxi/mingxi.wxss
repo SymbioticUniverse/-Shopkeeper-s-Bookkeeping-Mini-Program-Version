@@ -6752,18 +6752,14 @@ page {
 
 .custom-cat-body {
   flex: 1;
-  display: flex;
-  flex-direction: column;
   margin: 0 -36rpx;
   min-height: 0;
 }
 
 .custom-cat-personal-block,
 .custom-cat-company-block {
-  flex: 1;
   display: flex;
   flex-direction: column;
-  min-height: 0;
 }
 
 .custom-cat-grid-scroll {
@@ -6801,9 +6797,7 @@ page {
   flex-shrink: 0;
 }
 
-.custom-cat-body {
-  margin: 0 -36rpx;
-}
+
 
 .custom-cat-section-hd {
   display: flex;

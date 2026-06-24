@@ -769,7 +769,7 @@
           <view class="custom-cat-right"><image class="custom-cat-icon" src="/assets/icons/fenlei.png" mode="aspectFit"/><text class="custom-cat-title">{{t.custom_cat_title}}</text></view>
         </view>
         <view class="custom-cat-divider"></view>
-        <view class="custom-cat-body">
+        <scroll-view class="custom-cat-body" scroll-y enhanced show-scrollbar="{{false}}">
           <view class="custom-cat-personal-block">
             <view class="custom-cat-section-hd">
               <text class="custom-cat-section-label">个人分类</text>
@@ -780,16 +780,14 @@
                 <view class="custom-cat-tab {{catTabPersonal === 'payable' ? 'custom-cat-tab--on' : ''}}" bindtap="onCatTabChange" data-scope="personal" data-tab="payable">应付</view>
               </view>
             </view>
-            <scroll-view class="custom-cat-grid-scroll" scroll-y enhanced show-scrollbar="{{false}}">
-              <view class="custom-cat-grid">
-                <view class="custom-cat-item" wx:for="{{personalCategories}}" wx:key="id" wx:if="{{item.inOut === catTabPersonal}}" bindlongtap="onDeleteCategory" data-id="{{item.id}}" data-scope="personal">
-                  <view class="custom-cat-icon-wrap">
-                    <text class="custom-cat-emoji">{{item.emoji}}</text>
-                  </view>
-                  <text class="custom-cat-name">{{item.name}}</text>
+            <view class="custom-cat-grid">
+              <view class="custom-cat-item" wx:for="{{personalCategories}}" wx:key="id" wx:if="{{item.inOut === catTabPersonal}}" bindlongtap="onDeleteCategory" data-id="{{item.id}}" data-scope="personal">
+                <view class="custom-cat-icon-wrap">
+                  <text class="custom-cat-emoji">{{item.emoji}}</text>
                 </view>
+                <text class="custom-cat-name">{{item.name}}</text>
               </view>
-            </scroll-view>
+            </view>
             <view class="custom-cat-add" bindtap="onAddCategory" data-scope="personal">
               <view class="custom-cat-add-icon">+</view>
             </view>
@@ -805,22 +803,20 @@
                 <view class="custom-cat-tab {{catTabCompany === 'payable' ? 'custom-cat-tab--on' : ''}}" bindtap="onCatTabChange" data-scope="company" data-tab="payable">应付</view>
               </view>
             </view>
-            <scroll-view class="custom-cat-grid-scroll" scroll-y enhanced show-scrollbar="{{false}}">
-              <view class="custom-cat-grid">
-                <view class="custom-cat-item" wx:for="{{companyCategories}}" wx:key="id" wx:if="{{item.inOut === catTabCompany}}" bindlongtap="onDeleteCategory" data-id="{{item.id}}" data-scope="company">
-                  <view class="custom-cat-icon-wrap">
-                    <text class="custom-cat-emoji">{{item.emoji}}</text>
-                  </view>
-                  <text class="custom-cat-name">{{item.name}}</text>
+            <view class="custom-cat-grid">
+              <view class="custom-cat-item" wx:for="{{companyCategories}}" wx:key="id" wx:if="{{item.inOut === catTabCompany}}" bindlongtap="onDeleteCategory" data-id="{{item.id}}" data-scope="company">
+                <view class="custom-cat-icon-wrap">
+                  <text class="custom-cat-emoji">{{item.emoji}}</text>
                 </view>
+                <text class="custom-cat-name">{{item.name}}</text>
               </view>
-            </scroll-view>
+            </view>
             <view class="custom-cat-add" bindtap="onAddCategory" data-scope="company">
               <view class="custom-cat-add-icon">+</view>
             </view>
           </view>
           <view class="custom-cat-bottom-spacer"></view>
-        </view>
+        </scroll-view>
         <!-- 添加分类弹窗 -->
         <view class="cat-modal-mask" wx:if="{{showCatModal}}" bindtap="onCatModalClose"></view>
         <view class="cat-modal" wx:if="{{showCatModal}}">
