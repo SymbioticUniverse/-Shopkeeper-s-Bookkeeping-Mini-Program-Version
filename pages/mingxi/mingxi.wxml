@@ -1821,8 +1821,8 @@
                 <text class="ai-bill-amount">¥{{item.card.amount}}</text>
                 <text class="ai-bill-date">已取消</text>
               </view>
+              <text class="ai-cancel-hint">识别有误？换个说法再试一次吧</text>
             </view>
-            <text wx:if="{{item.card && item.confirmed === false}}" class="ai-cancel-hint">识别有误？换个说法再试一次吧</text>
           </view>
           <text class="ai-msg-time ai-msg-time--{{item.role}}">{{item.time}}</text>
         </view>
