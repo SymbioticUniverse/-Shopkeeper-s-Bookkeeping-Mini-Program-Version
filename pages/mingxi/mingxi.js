@@ -2695,6 +2695,12 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
   onBillDelete(e) {
     const id = e.currentTarget.dataset.id
     const from = e.currentTarget.dataset.from || 'detail'
+    const itemsKey = from === 'settle' ? 'settleItems' : 'detailItems'
+    const found = this.data[itemsKey].find(item => item.id === id)
+    if (found && found.scope === 'company') {
+      wx.showToast({ title: '公司账本记录不可删除', icon: 'none' })
+      return
+    }
     wx.showModal({
       title: '确认删除',
       content: '删除后不可恢复',
@@ -2947,9 +2953,9 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
   // ---- 账本页数据 ----
   _ledgerData(scope) {
     const items = api.getItems(scope).filter(it => !it._voided)
-    const now = new Date()
-    const mm = String(now.getMonth() + 1).padStart(2, '0')
-    const prefix = now.getFullYear() + '-' + mm
+    const ym = this.data.overviewMonth || ''
+    const prefix = ym.slice(0, 7) // YYYY-MM
+    const [y, m] = prefix ? prefix.split('-') : [String(new Date().getFullYear()), String(new Date().getMonth() + 1).padStart(2, '0')]
     const monthItems = items.filter(it => (it.date || '').slice(0, 7) === prefix)
     const sumBy = (arr, fn) => arr.filter(fn).reduce((s, it) => s + parseFloat(it.amount || 0), 0)
     // 本月：收入=收入；支出=支出+垫付（已出账）；应付不计入显示支出，但计入预算占用
@@ -2972,7 +2978,7 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
     return {
       ledgerBudget: budget,
       ledgerBudgetInput: budget > 0 ? String(budget) : '',
-      ledgerMonthLabel: `${now.getFullYear()}年${mm}月`,
+      ledgerMonthLabel: `${y}年${m}月`,
       ledgerMonthIncome: inc.toFixed(2),
       ledgerMonthExpense: exp.toFixed(2),
       ledgerMonthBalance: (inc - exp).toFixed(2),
