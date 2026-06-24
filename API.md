@@ -1191,13 +1191,13 @@ user_settings: { user_id, key, value, updated_at }
 
 > 核心原则：**前端采集，后端识别。** 所有识别能力（语音→文本、图片→结构化字段）全部走后端 API。前端不调用任何第三方识别 SDK / 插件，只负责把原始数据（音频文件 / 图片）交给后端，后端返回识别结果。
 
-**当前前端状态速查：**
+**当前前端状态速查（✅ 已落地）：**
 
-| 能力 | 当前实现 | 位置 | 待替换点 |
-|------|---------|------|---------|
-| 语音→文本 | `WechatSI` 插件 `getRecordRecognitionManager()` | `mingxi.js:4661-4672` | `_ensureRecognizer` / `_startRecognize` / `_stopRecognize` / `_onRecognizeDone` |
-| 图片→字段 | `_mockOcrParse()` 随机模拟 | `mingxi.js:4634-4643` | `_startScanRecognize` → `_mockOcrParse()` |
-| 语音入口 | AI 对话语音键 (`onAiVoiceStart`/`End`) + 底部长按 (`onAiChatOpen`/`onAiRecordEnd`) | `mingxi.js:4758-4886` | 录音改用 `wx.getRecorderManager()`，上传后用后端 ASR |
+| 能力 | 当前实现 | 位置 | 说明 |
+|------|---------|------|------|
+| 语音→文本 | `wx.getRecorderManager()` PCM 16kHz → `api.asrRecognize()` 后端 ASR | `mingxi.js:4655-4725` | `_ensureRecorder` / `_startRecognize` / `_stopRecognize` / `_onRecorderStop` / `_onRecognizeDone` |
+| 图片→字段 | `api.uploadVoucher()` → `api.ocrParse()` 后端 OCR | `mingxi.js:4618-4638` | `_startScanRecognize` → 上传 → OCR → 填充 `bookForm` |
+| 语音入口 | AI 对话语音键 (`onAiVoiceStart`/`End`) + 底部长按 (`onAiChatOpen`/`onAiRecordEnd`) | `mingxi.js:4758-4886` | UI 层未变，录音链路已切换到 `RecorderManager` |
 
 **新增后端接口：**
 
@@ -1220,9 +1220,8 @@ user_settings: { user_id, key, value, updated_at }
 | `text` | `string` | 识别出的完整文本 |
 
 **后端接入建议：**
-- 腾讯云 ASR（实时语音识别 / 一句话识别），个人可申请免费额度
-- 备选：百度 ASR / 阿里云 NLS
-- 文件格式转换如需要可在后端做（ffmpeg / sox）
+- ✅ 已接入：阿里云 NLS 一句话识别（RESTful API，`nls-gateway.cn-shanghai.aliyuncs.com`）
+- 前端上传 PCM 16kHz 单声道原始音频，后端直传不做转码
 
 ---
 
@@ -1246,17 +1245,14 @@ user_settings: { user_id, key, value, updated_at }
 | `date` | `string` | 识别出的日期，格式 `YYYY-MM-DD`（如未识别到则返回当天） |
 
 **后端接入建议：**
-- 腾讯云 OCR（通用票据识别 / 增值税发票识别），个人可申请免费额度
-- 备选：百度 OCR（通用票据识别）
-- 金额/分类/日期由后端从识别结果中抽取，如无法抽取则对应字段返回空
+- ✅ 已接入：阿里云 OCR `RecognizeAllText` API（`ocr-api.cn-hangzhou.aliyuncs.com`）
+- 金额/分类/日期由后端从识别结果中抽取，附关键词分类匹配表
 
----
+**前端调用链（已实现）：**
 
-**前端改造要点（等后端接口就绪后执行）：**
-
-1. **语音**：`wx.getRecorderManager()` 录音 → `wx.uploadFile` 调 `/api/asr/recognize` → 拿到 `text` → 走现有 `_onRecognizeDone(text)` 分发逻辑
-2. **图片**：拍照 → `api.uploadVoucher(tempFilePath)` 上传拿 URL → `api.ocrParse(imageUrl)` 调 `/api/ocr/parse` → 拿到 `{ amount, category, note, date }` → 填充 `bookForm` 替代 `_mockOcrParse()`
-3. **改动范围**：仅 `mingxi.js` 中上述几个方法，WXML/WXSS 及相机拍照流程不变
+1. **语音**：`wx.getRecorderManager()` 录音（PCM 16kHz）→ `api.asrRecognize(tempFilePath)` 上传 → 拿到 `text` → `_onRecognizeDone(text)` 分发
+2. **图片**：拍照 → `api.uploadVoucher(tempFilePath)` 上传拿 URL → `api.ocrParse(imageUrl)` → 拿到 `{ amount, category, note, date }` → 填充 `bookForm`
+3. **改动范围**：`utils/api.js`（+2 个接口函数）、`mingxi.js`（替换 WechatSI / mock），WXML/WXSS 未动
 
 ---
 

@@ -714,6 +714,11 @@ Page({
 
   onShow() {
     this._throttledSync()
+    // 预请求麦克风权限，避免首次语音使用时弹窗打断体验
+    if (this.data.isLoggedIn && !this._recordAuthRequested) {
+      this._recordAuthRequested = true
+      wx.authorize({ scope: 'scope.record' }).catch(() => {})
+    }
   },
 
   // 进页面节流同步：以后端为准刷新本地缓存（30s 内最多一次）
@@ -1089,10 +1094,6 @@ Page({
   },
 
   switchTab(e) {
-    if (this._longPressTriggered) {
-      this._longPressTriggered = false
-      return
-    }
     const index = e.currentTarget.dataset.index
     const prevTab = this.data.currentTab
     const wasOverview = this.data.showOverview
@@ -4618,29 +4619,23 @@ Page({
   // ---- 扫描凭证识别 ----
   _startScanRecognize(photo) {
     this.setData({ scanRecognizing: true, bookPhoto: photo })
-    setTimeout(() => {
-      var mock = this._mockOcrParse()
+    api.uploadVoucher(photo).then((url) => {
+      return api.ocrParse(url)
+    }).then((result) => {
+      if (!result) throw { error: '识别结果为空' }
       this.onBookEntry({ currentTarget: { dataset: { type: 'expense' } } })
       this.setData({
         scanRecognizing: false,
         bookPhoto: photo,
-        'bookForm.amount': mock.amount,
-        'bookForm.category': mock.category,
-        'bookForm.note': mock.note,
+        'bookForm.amount': result.amount || '',
+        'bookForm.category': result.category || '',
+        'bookForm.note': result.note || ''
       })
-    }, 1200)
-  },
-
-  _mockOcrParse() {
-    var pool = [
-      { category: '餐饮', note: '餐饮消费' },
-      { category: '超市', note: '超市购物' },
-      { category: '交通', note: '交通出行' },
-      { category: '日用', note: '日用百货' },
-      { category: '医疗', note: '药店购药' },
-    ]
-    var p = pool[Math.floor(Math.random() * pool.length)]
-    return { category: p.category, note: p.note, amount: (Math.random() * 200 + 10).toFixed(2) }
+    }).catch((err) => {
+      this.setData({ scanRecognizing: false })
+      var msg = (err && err.error) || (err && err.message) || '识别失败'
+      wx.showToast({ title: msg, icon: 'none' })
+    })
   },
 
   onBookPhotoPreview() {
@@ -4657,66 +4652,124 @@ Page({
   },
 
   // ---- AI 对话 ----
-  // 微信「同声传译」插件做语音转文字（纯前端，不经我们后端）。懒加载 + 缓存 manager。
-  _ensureRecognizer() {
-    if (this._recognizer) return this._recognizer
-    let plugin
-    try {
-      plugin = requirePlugin('WechatSI')
-    } catch (e) {
-      return null // 插件未在小程序后台添加 / 未注册
-    }
-    const mgr = plugin.getRecordRecognitionManager()
-    mgr.onStop = res => this._onRecognizeDone(res && res.result ? res.result : '')
-    mgr.onError = err => {
-      console.warn('[ASR] 识别错误', err)
+  // 语音转文字走后端 ASR，前端只负责录音采集 + 上传。
+  _ensureRecorder() {
+    if (this._recorder) return this._recorder
+    var that = this
+    var recorder = wx.getRecorderManager()
+    // 注意：WeChat API 是方法调用 .onStop(fn)，不是属性赋值 .onStop = fn
+    recorder.onStart(function () {
+      console.log('[ASR] 录音已开始')
+    })
+    recorder.onStop(function (res) {
+      console.log('[ASR] 录音已停止 tempFilePath=' + (res.tempFilePath || '空') + ' duration=' + (res.duration || 0))
+      that._onRecorderStop(res.tempFilePath)
+    })
+    recorder.onError(function (err) {
+      console.warn('[ASR] 录音错误', JSON.stringify(err))
+      that._aiRecognizeFor = ''
+      clearTimeout(that._recordTimeout)
+      that._recordTimeout = 0
+      that.setData({ aiRecording: false })
+      wx.showToast({ title: '录音失败，请重试', icon: 'none' })
+    })
+    // 注册音频帧回调（PCM 格式时需监听，触发静默检测）
+    this._recorder = recorder
+    return recorder
+  },
+
+  _onRecorderStop(tempFilePath) {
+    var that = this
+    clearTimeout(this._recordTimeout)
+    this._recordTimeout = 0
+    clearTimeout(this._stopFallback)
+    // 防重复调用
+    if (this._asrPending) return
+    if (!tempFilePath) {
       this._aiRecognizeFor = ''
       this.setData({ aiRecording: false })
+      console.log('[ASR] tempFilePath 为空，中止')
       wx.showToast({ title: '没听清，请重试', icon: 'none' })
+      return
     }
-    this._recognizer = mgr
-    return mgr
+    console.log('[ASR] 开始上传识别...')
+    this._asrPending = true
+    api.asrRecognize(tempFilePath).then(function (text) {
+      that._asrPending = false
+      console.log('[ASR] 识别结果 text=' + (text || '空'))
+      that._onRecognizeDone(text)
+    }).catch(function (err) {
+      that._asrPending = false
+      console.warn('[ASR] 识别失败', err)
+      that._aiRecognizeFor = ''
+      that.setData({ aiRecording: false })
+      var msg = (err && err.error) || (err && err.message) || '识别失败'
+      wx.showToast({ title: msg, icon: 'none' })
+    })
   },
 
   // forWho: 'tab'=底部长按入口(识别后开对话窗发送) / 'chat'=对话框语音键(识别后填输入框发送)
   _startRecognize(forWho) {
-    const mgr = this._ensureRecognizer()
-    if (!mgr) {
-      wx.showToast({ title: '请先在小程序后台添加「同声传译」插件', icon: 'none' })
-      return false
-    }
+    var that = this
+    var recorder = this._ensureRecorder()
     this._aiRecognizeFor = forWho
     this.setData({ aiRecording: true })
     try {
-      mgr.start({ duration: 60000, lang: 'zh_CN' })
+      recorder.start({ format: 'PCM', sampleRate: 16000, numberOfChannels: 1, duration: 15000 })
+      console.log('[ASR] recorder.start 已调用 forWho=' + forWho)
     } catch (e) {
+      console.warn('[ASR] recorder.start 异常', e)
       this._aiRecognizeFor = ''
       this.setData({ aiRecording: false })
       return false
     }
+    // 手动兜底：15s 后强制停止
+    this._recordTimeout = setTimeout(function () {
+      if (that.data.aiRecording) {
+        console.log('[ASR] 15s 兜底超时，强制停止')
+        that._stopRecognize()
+      }
+    }, 15000)
     return true
   },
 
   _stopRecognize() {
-    if (this._recognizer) {
-      try { this._recognizer.stop() } catch (e) {}
+    console.log('[ASR] _stopRecognize 调用')
+    var that = this
+    clearTimeout(this._recordTimeout)
+    this._recordTimeout = 0
+    // 立即复位 UI，不等 onStop 回调
+    this.setData({ aiRecording: false })
+    // 尝试停止录音（真机 onStop 回调触发 → ASR 识别 → 打开对话窗）
+    if (this._recorder) {
+      try { this._recorder.stop() } catch (e) { console.warn('[ASR] stop 异常', e) }
     }
+    // 兜底：onStop 未触发（开发者工具等）时清理内部状态
+    clearTimeout(this._stopFallback)
+    this._stopFallback = setTimeout(function () {
+      if (that._aiRecognizeFor) {
+        console.log('[ASR] onStop 未触发，残留清理')
+        that._aiRecognizeFor = ''
+      }
+    }, 500)
   },
 
   // 识别完成（onStop 异步回调）：按入口分发
   _onRecognizeDone(text) {
-    const who = this._aiRecognizeFor
+    console.log('[ASR] _onRecognizeDone text=' + (text || '空'))
+    var who = this._aiRecognizeFor
     this._aiRecognizeFor = ''
     this.setData({ aiRecording: false })
-    const t = (text || '').trim()
+    var t = (text || '').trim()
     if (!t) {
       wx.showToast({ title: '没听清，请再说一次', icon: 'none' })
       return
     }
     if (who === 'chat') {
       this.setData({ aiInputText: t, aiVoiceMode: false })
-      setTimeout(() => this.onAiSend(), 200)
+      setTimeout(this.onAiSend.bind(this), 200)
     } else {
+      console.log('[ASR] tab 入口，打开对话窗')
       this._sendAiUserText(t)
     }
   },
@@ -4755,17 +4808,61 @@ Page({
     }, 800)
   },
 
-  onAiChatOpen() {
-    this._longPressTriggered = true
-    this._startRecognize('tab')
+  onTabCenterTouchStart() {
+    console.log('[Touch] touchstart')
+    var that = this
+    this._tabHoldTimer = setTimeout(function () {
+      that._tabHoldTimer = 0
+      that._isHoldingTab = true
+      console.log('[Touch] 判定为长按，打开对话窗 + 开始录音')
+      // 打开对话窗
+      var greeting = {
+        role: 'ai',
+        text: '正在聆听…',
+        time: that._formatChatTime(new Date())
+      }
+      that.setData({
+        showAiChat: true,
+        aiMessages: [greeting],
+        aiInputText: '',
+        aiThinking: false,
+        aiScrollId: 'ai-msg-0',
+        aiVoiceMode: true
+      })
+      that._startRecognize('tab')
+    }, 250)
   },
 
-  onAiRecordEnd() {
-    if (!this.data.aiRecording) return
-    this._stopRecognize() // 识别结果在 onStop → _onRecognizeDone('tab')
+  onTabCenterTouchEnd() {
+    console.log('[Touch] touchend isHolding=' + this._isHoldingTab + ' timer=' + !!this._tabHoldTimer + ' recording=' + this.data.aiRecording)
+    if (this._tabHoldTimer) {
+      console.log('[Touch] 短按，切tab')
+      clearTimeout(this._tabHoldTimer)
+      this._tabHoldTimer = 0
+      this.switchTab({ currentTarget: { dataset: { index: 2 } } })
+    } else if (this._isHoldingTab) {
+      console.log('[Touch] 长按松手，停止录音')
+      this._isHoldingTab = false
+      if (this.data.aiRecording) this._stopRecognize()
+    }
+  },
+
+  onAiOverlayTouchEnd() {
+    // 录音中任意位置松手 → 立即停止
+    if (this.data.aiRecording) this._stopRecognize()
+  },
+
+  onAiOverlayTap() {
+    // 录音中点按遮罩 → 停止录音（不关窗口，等识别结果）
+    if (this.data.aiRecording) {
+      this._stopRecognize()
+    } else {
+      this.onAiChatClose()
+    }
   },
 
   onAiChatClose() {
+    if (this.data.aiRecording) this._stopRecognize()
     this.setData({ showAiChat: false, aiRecording: false })
     this._redrawReportCharts()
   },

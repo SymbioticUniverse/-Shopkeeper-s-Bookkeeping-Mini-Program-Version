@@ -9313,7 +9313,6 @@ page {
 .ai-voice-indicator--show {
   opacity: 1;
   visibility: visible;
-  pointer-events: auto;
 }
 .ai-voice-wave {
   display: flex;

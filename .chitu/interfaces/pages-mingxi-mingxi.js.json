@@ -11,6 +11,6 @@
       "from": "../../utils/xlsx"
     }
   ],
-  "capability": "AI 对话语音输入从随机 demo 升级为真实 WeChatSI 同声传译插件语音识别（长按/语音键双入口），后端挂载 ASR/OCR 路由并更新 API.md 文档标记识别能力完整方案",
-  "updatedAt": "2026-06-24T05:47:05.988Z"
+  "capability": "语音识别从前端 WeChatSI 插件切换为后端阿里云 ASR（wx.getRecorderManager PCM 录音→api.asrRecognize 上传→后端 NLS 识别），凭证 OCR 从随机 mock 切换为真实后端阿里云 OCR（拍照→uploadVoucher→ocrParse→自动填充记账表单），中心 Tab 按钮改为 touchstart/touchend 250ms 长按判定（短按切记账页、长按开 AI 对话+录音），遮罩层松手即停录音",
+  "updatedAt": "2026-06-24T07:03:41.131Z"
 }

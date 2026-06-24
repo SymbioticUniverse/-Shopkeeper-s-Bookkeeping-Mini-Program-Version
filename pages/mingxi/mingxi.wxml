@@ -1652,7 +1652,7 @@
 
   <!-- 底部 TabBar -->
   <!-- 语音录入指示器 -->
-  <view class="ai-voice-indicator {{(aiRecording || searchRecording) && !showAiChat ? 'ai-voice-indicator--show' : ''}}">
+  <view class="ai-voice-indicator {{aiRecording || searchRecording ? 'ai-voice-indicator--show' : ''}}">
     <view class="ai-voice-wave">
       <view class="ai-voice-bar"></view>
       <view class="ai-voice-bar"></view>
@@ -1664,7 +1664,7 @@
   </view>
 
   <view class="tab-bar-wrapper">
-    <view class="tab-bar-center-btn" data-index="{{2}}" bindtap="switchTab" bindlongpress="onAiChatOpen" bindtouchend="onAiRecordEnd">
+    <view class="tab-bar-center-btn" data-index="{{2}}" bindtouchstart="onTabCenterTouchStart" bindtouchend="onTabCenterTouchEnd" bindtouchcancel="onTabCenterTouchEnd">
       <image class="tab-icon-center-img" src="{{tabs[2].icon}}" mode="aspectFit"/>
     </view>
     <text class="tab-center-label">{{tabs[2].text}}</text>
@@ -1764,7 +1764,7 @@
   </view>
 
   <!-- AI 对话窗口 -->
-  <view class="ai-chat-overlay" wx:if="{{showAiChat}}" catchtap="onAiChatClose">
+  <view class="ai-chat-overlay" wx:if="{{showAiChat}}" catchtap="onAiOverlayTap" bindtouchend="onAiOverlayTouchEnd" bindtouchcancel="onAiOverlayTouchEnd">
     <view class="ai-chat-card" catchtap="nop">
       <view class="ai-chat-header">
         <text class="ai-chat-title">AI 记账助手</text>

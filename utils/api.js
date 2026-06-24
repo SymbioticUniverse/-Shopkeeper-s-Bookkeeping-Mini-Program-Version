@@ -564,6 +564,57 @@ function downloadAuthedImage(url) {
   })
 }
 
+// ==================== 识别（ASR / OCR） ====================
+
+/**
+ * 语音识别 — 上传录音文件，返回识别文本
+ * @param {string} tempFilePath — wx.getRecorderManager().stop() 返回的临时文件路径
+ * @returns {Promise<string>} — 识别出的文本
+ */
+function asrRecognize(tempFilePath) {
+  const token = _getToken()
+  return new Promise((resolve, reject) => {
+    wx.uploadFile({
+      url: BASE_URL + '/asr/recognize',
+      filePath: tempFilePath,
+      name: 'file',
+      header: {
+        ...(token ? { 'Authorization': 'Bearer ' + token } : {})
+      },
+      success(res) {
+        try {
+          const data = JSON.parse(res.data)
+          if (data.ok && typeof data.text === 'string') {
+            resolve(data.text)
+          } else {
+            reject(data)
+          }
+        } catch (e) {
+          reject(res)
+        }
+      },
+      fail(err) {
+        console.error('[API] asrRecognize 失败', err)
+        reject(err)
+      }
+    })
+  })
+}
+
+/**
+ * 凭证图片识别（OCR）— 提交图片 URL，返回结构化记账字段
+ * @param {string} imageUrl — 图片 URL（先通过 uploadVoucher 上传获得）
+ * @returns {Promise<{ amount: string, category: string, note: string, date: string }>}
+ */
+function ocrParse(imageUrl) {
+  return _request('POST', '/ocr/parse', { imageUrl }).then(function (data) {
+    if (data && data.ok) {
+      return { amount: data.amount || '', category: data.category || '', note: data.note || '', date: data.date || '' }
+    }
+    throw data
+  })
+}
+
 // ==================== 导出 ====================
 
 module.exports = {
@@ -618,4 +669,10 @@ module.exports = {
 
   // 新增：云端同步
   syncFromCloud,
+
+  // ASR 语音识别
+  asrRecognize,
+
+  // OCR 凭证识别
+  ocrParse,
 }
