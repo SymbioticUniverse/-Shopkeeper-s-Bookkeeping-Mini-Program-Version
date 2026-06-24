@@ -5157,8 +5157,16 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
 	    reply.confirmed = false
 	    const updated = this.data.aiMessages.slice()
 	    updated[idx] = reply
-	    this.setData({ aiMessages: updated })
-	    wx.showToast({ title: '已取消，请重新输入', icon: 'none', duration: 1500 })
+	    updated.push({
+	      role: 'ai',
+	      text: '识别有误？换个说法再试一次吧',
+	      time: this._formatChatTime(new Date())
+	    })
+	    const lastIdx = updated.length - 1
+	    this.setData({
+	      aiMessages: updated,
+	      aiScrollId: 'ai-msg-' + lastIdx
+	    })
 	  },
   _formatChatTime(d) {
     return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0')
