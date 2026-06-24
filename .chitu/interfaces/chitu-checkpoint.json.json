@@ -1,7 +1,56 @@
 {
   "file": ".chitu/checkpoint.json",
   "exports": [],
-  "imports": [],
-  "capability": "迭代038收尾：mingxi.js接口文档imports确认为[\"utils/api\"]，创建CHANGELOG.md记录交付状态。全部项目已交付",
-  "updatedAt": "2026-06-18T11:20:22.128Z"
+  "imports": [
+    {
+      "symbol": "api",
+      "from": "./utils/api"
+    },
+    {
+      "symbol": "api",
+      "from": "../../utils/api"
+    },
+    {
+      "symbol": "api",
+      "from": "./utils/api"
+    },
+    {
+      "symbol": "api",
+      "from": "../../utils/api"
+    },
+    {
+      "symbol": "api",
+      "from": "./utils/api"
+    },
+    {
+      "symbol": "api",
+      "from": "../../utils/api"
+    },
+    {
+      "symbol": "api",
+      "from": "./utils/api"
+    },
+    {
+      "symbol": "api",
+      "from": "../../utils/api"
+    },
+    {
+      "symbol": "api",
+      "from": "./utils/api"
+    },
+    {
+      "symbol": "api",
+      "from": "../../utils/api"
+    },
+    {
+      "symbol": "api",
+      "from": "./utils/api"
+    },
+    {
+      "symbol": "api",
+      "from": "../../utils/api"
+    }
+  ],
+  "capability": "AI 对话语音输入从随机 demo 升级为真实 WeChatSI 同声传译插件语音识别（长按/语音键双入口），后端挂载 ASR/OCR 路由并更新 API.md 文档标记识别能力完整方案",
+  "updatedAt": "2026-06-24T05:47:05.991Z"
 }

@@ -73,10 +73,22 @@
       "from": "./routes/upload"
     },
     {
+      "symbol": "asr: asrRouter",
+      "from": "./routes/asr"
+    },
+    {
+      "symbol": "ocr: ocrRouter",
+      "from": "./routes/ocr"
+    },
+    {
+      "symbol": "(require)",
+      "from": "dotenv"
+    },
+    {
       "symbol": "(require)",
       "from": "./middleware/auth"
     }
   ],
-  "capability": "凭证图片和头像可正常加载：修复 app.get 不剥离路径前缀导致 serveVoucher/servePublicVoucher 全部 403 的 bug，改为 app.use 挂载后 req.path 正确传递给 handler 校验逻辑",
-  "updatedAt": "2026-06-23T05:10:00.596Z"
+  "capability": "AI 对话语音输入从随机 demo 升级为真实 WeChatSI 同声传译插件语音识别（长按/语音键双入口），后端挂载 ASR/OCR 路由并更新 API.md 文档标记识别能力完整方案",
+  "updatedAt": "2026-06-24T05:47:05.989Z"
 }

@@ -690,6 +690,38 @@
 
 ---
 
+### 2.13 识别 (Recognize)
+
+> **战略方针：** 个人主体小程序识别能力受限（微信云 OCR 不可用），统一走后端 API 中转。前端只采集（录音/拍照），后端调第三方 ASR/OCR 返回结果。前端不直接对接任何识别 SDK 或插件。
+
+#### `asrRecognize(tempFilePath)`
+
+语音识别（ASR）— 上传录音文件，返回识别文本。
+
+| 参数 | 类型 | 说明 |
+|------|------|------|
+| `tempFilePath` | `string` | `wx.getRecorderManager().stop()` 返回的临时文件路径 |
+
+**返回值：** `Promise<string>` — 识别出的文本
+
+**底层请求：** `POST /api/asr/recognize`（`wx.uploadFile` multipart）
+
+---
+
+#### `ocrParse(imageUrl)`
+
+凭证图片识别（OCR）— 提交图片 URL，返回结构化记账字段。
+
+| 参数 | 类型 | 说明 |
+|------|------|------|
+| `imageUrl` | `string` | 图片 URL（先通过 `uploadVoucher` 上传获得） |
+
+**返回值：** `Promise<{ amount: string, category: string, note: string, date: string } | null>`
+
+**底层请求：** `POST /api/ocr/parse`（`wx.request` JSON）
+
+---
+
 ## 三、接口总览
 
 | # | 方法 | 参数 | 返回值 | 说明 |
@@ -725,6 +757,8 @@
 | 29 | `saveOverviewCards(cards)` | cards | — | 保存简览卡片 |
 | 30 | `migrate()` | — | — | 旧数据迁移（可废弃） |
 | 31 | `uploadVoucher(filePath)` | filePath | `Promise<string>` | 上传凭证图片，返回 URL |
+| 32 | `asrRecognize(tempFilePath)` | tempFilePath | `Promise<string>` | 语音转文字（后端 ASR） |
+| 33 | `ocrParse(imageUrl)` | imageUrl | `Promise<\| null>` | 凭证 OCR 识别（后端） |
 
 ---
 
@@ -1147,6 +1181,83 @@ user_settings: { user_id, key, value, updated_at }
 返回:     https://{bucket-cdn}/voucher/{user_id}/{date}/{uuid}.jpg
 ```
 
+### 任务 11：语音识别 (ASR) 与图片识别 (OCR) 后端承接
+
+**背景：** 个人主体小程序无法调用微信云 OCR，`WechatSI` 插件可用但不属于后端可控链路。**识别能力统一后移到后端**，通过第三方 API 中转，解除主体限制，前端只负责采集（录音/拍照），不直接对接任何识别 SDK 或插件。
+
+**优先级：中**（AI 对话语音入口 + 扫描凭证记账 依赖）
+
+**战略方针：**
+
+> 核心原则：**前端采集，后端识别。** 所有识别能力（语音→文本、图片→结构化字段）全部走后端 API。前端不调用任何第三方识别 SDK / 插件，只负责把原始数据（音频文件 / 图片）交给后端，后端返回识别结果。
+
+**当前前端状态速查：**
+
+| 能力 | 当前实现 | 位置 | 待替换点 |
+|------|---------|------|---------|
+| 语音→文本 | `WechatSI` 插件 `getRecordRecognitionManager()` | `mingxi.js:4661-4672` | `_ensureRecognizer` / `_startRecognize` / `_stopRecognize` / `_onRecognizeDone` |
+| 图片→字段 | `_mockOcrParse()` 随机模拟 | `mingxi.js:4634-4643` | `_startScanRecognize` → `_mockOcrParse()` |
+| 语音入口 | AI 对话语音键 (`onAiVoiceStart`/`End`) + 底部长按 (`onAiChatOpen`/`onAiRecordEnd`) | `mingxi.js:4758-4886` | 录音改用 `wx.getRecorderManager()`，上传后用后端 ASR |
+
+**新增后端接口：**
+
+---
+
+#### `POST /api/asr/recognize` — 语音识别
+
+前端录音 → 上传音频文件 → 后端调第三方 ASR → 返回识别文本。
+
+**请求：** `multipart/form-data`
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| `file` | `File` | 录音文件（mp3/aac/pcm），由 `wx.getRecorderManager()` 录制 |
+
+**响应：** `{ "ok": true, "text": "午餐 25 餐饮" }`
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| `text` | `string` | 识别出的完整文本 |
+
+**后端接入建议：**
+- 腾讯云 ASR（实时语音识别 / 一句话识别），个人可申请免费额度
+- 备选：百度 ASR / 阿里云 NLS
+- 文件格式转换如需要可在后端做（ffmpeg / sox）
+
+---
+
+#### `POST /api/ocr/parse` — 凭证图片识别
+
+前端拍照/选图 →（可选先上传拿 URL）→ 提交图片 URL → 后端调第三方 OCR → 返回结构化记账字段。
+
+**请求：** `application/json`
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| `imageUrl` | `string` | 图片 URL（可先通过 `POST /api/upload` 上传后获得） |
+
+**响应：** `{ "ok": true, "amount": "25.00", "category": "餐饮", "note": "午餐", "date": "2026-06-23" }`
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| `amount` | `string` | 识别出的金额 |
+| `category` | `string` | 识别出的分类，应落在一级分类内（如无法匹配则返回 `''`，前端让用户手动选） |
+| `note` | `string` | 识别出的备注（商户名/商品名等） |
+| `date` | `string` | 识别出的日期，格式 `YYYY-MM-DD`（如未识别到则返回当天） |
+
+**后端接入建议：**
+- 腾讯云 OCR（通用票据识别 / 增值税发票识别），个人可申请免费额度
+- 备选：百度 OCR（通用票据识别）
+- 金额/分类/日期由后端从识别结果中抽取，如无法抽取则对应字段返回空
+
+---
+
+**前端改造要点（等后端接口就绪后执行）：**
+
+1. **语音**：`wx.getRecorderManager()` 录音 → `wx.uploadFile` 调 `/api/asr/recognize` → 拿到 `text` → 走现有 `_onRecognizeDone(text)` 分发逻辑
+2. **图片**：拍照 → `api.uploadVoucher(tempFilePath)` 上传拿 URL → `api.ocrParse(imageUrl)` 调 `/api/ocr/parse` → 拿到 `{ amount, category, note, date }` → 填充 `bookForm` 替代 `_mockOcrParse()`
+3. **改动范围**：仅 `mingxi.js` 中上述几个方法，WXML/WXSS 及相机拍照流程不变
+
 ---
 
 ## 六、接口对接方式
@@ -1199,7 +1310,7 @@ user_settings: { user_id, key, value, updated_at }
 
 **期望后端改动**：头像单独走一条**公开（免鉴权）只读路由**（头像本身不敏感），或上传时按 `type=avatar` 存公开目录并返回可被 `<image>` 直接加载的 URL。届时前端去掉 `downloadAuthedImage` 绕过，直接 `<image src="{{avatarUrl}}">`。
 
-> ⚠️ 注：公开路由 `GET /public/voucher/*` 已添加，但因 `app.get('/X/*')` 挂载导致 handler 的 `req.path` 带前缀，路径校验失配 → 目前所有头像仍返回 403。该路由要真正生效，必须先修 7.7 的挂载 bug。
+> ✅ 已生效：公开路由 `GET /public/voucher/*` 的挂载已按 7.7 改为 `app.use`，`req.path` 前缀正确剥离，头像可正常加载（重启后端后验证通过）。
 
 ### 7.3 ✅ 已交付 — 账号与公司角色持久化（避免重复引导）
 

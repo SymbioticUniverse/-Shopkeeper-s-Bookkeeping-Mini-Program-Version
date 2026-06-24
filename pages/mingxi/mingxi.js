@@ -4657,29 +4657,90 @@ Page({
   },
 
   // ---- AI 对话 ----
-  onAiChatOpen() {
-    this._longPressTriggered = true
-    this.setData({ aiRecording: true })
+  // 微信「同声传译」插件做语音转文字（纯前端，不经我们后端）。懒加载 + 缓存 manager。
+  _ensureRecognizer() {
+    if (this._recognizer) return this._recognizer
+    let plugin
+    try {
+      plugin = requirePlugin('WechatSI')
+    } catch (e) {
+      return null // 插件未在小程序后台添加 / 未注册
+    }
+    const mgr = plugin.getRecordRecognitionManager()
+    mgr.onStop = res => this._onRecognizeDone(res && res.result ? res.result : '')
+    mgr.onError = err => {
+      console.warn('[ASR] 识别错误', err)
+      this._aiRecognizeFor = ''
+      this.setData({ aiRecording: false })
+      wx.showToast({ title: '没听清，请重试', icon: 'none' })
+    }
+    this._recognizer = mgr
+    return mgr
   },
 
-  onAiRecordEnd() {
-    if (!this.data.aiRecording) return
-    this.setData({ aiRecording: false })
-    const now = new Date()
-    const greeting = {
-      role: 'ai',
-      text: '你好！我是你的 AI 记账助手\n\n试试对我说：\n• "午餐 25"\n• "打车 15 交通"\n• "收到工资 8000"',
-      time: this._formatChatTime(now)
+  // forWho: 'tab'=底部长按入口(识别后开对话窗发送) / 'chat'=对话框语音键(识别后填输入框发送)
+  _startRecognize(forWho) {
+    const mgr = this._ensureRecognizer()
+    if (!mgr) {
+      wx.showToast({ title: '请先在小程序后台添加「同声传译」插件', icon: 'none' })
+      return false
     }
-    const demos = ['午餐 25', '打车回家 32', '咖啡 18', '买水果 45', '收到工资 8000']
-    const text = demos[Math.floor(Math.random() * demos.length)]
-    const userMsg = { role: 'user', text, time: this._formatChatTime(now) }
+    this._aiRecognizeFor = forWho
+    this.setData({ aiRecording: true })
+    try {
+      mgr.start({ duration: 60000, lang: 'zh_CN' })
+    } catch (e) {
+      this._aiRecognizeFor = ''
+      this.setData({ aiRecording: false })
+      return false
+    }
+    return true
+  },
+
+  _stopRecognize() {
+    if (this._recognizer) {
+      try { this._recognizer.stop() } catch (e) {}
+    }
+  },
+
+  // 识别完成（onStop 异步回调）：按入口分发
+  _onRecognizeDone(text) {
+    const who = this._aiRecognizeFor
+    this._aiRecognizeFor = ''
+    this.setData({ aiRecording: false })
+    const t = (text || '').trim()
+    if (!t) {
+      wx.showToast({ title: '没听清，请再说一次', icon: 'none' })
+      return
+    }
+    if (who === 'chat') {
+      this.setData({ aiInputText: t, aiVoiceMode: false })
+      setTimeout(() => this.onAiSend(), 200)
+    } else {
+      this._sendAiUserText(t)
+    }
+  },
+
+  // 打开对话窗 + 把一句用户文本走 _mockAiReply 解析记账
+  _sendAiUserText(text) {
+    const now = new Date()
+    const msgs = []
+    if (!this.data.showAiChat || !this.data.aiMessages.length) {
+      msgs.push({
+        role: 'ai',
+        text: '你好！我是你的 AI 记账助手\n\n试试对我说：\n• "午餐 25"\n• "打车 15 交通"\n• "收到工资 8000"',
+        time: this._formatChatTime(now)
+      })
+    } else {
+      msgs.push.apply(msgs, this.data.aiMessages)
+    }
+    msgs.push({ role: 'user', text, time: this._formatChatTime(now) })
     this.setData({
       showAiChat: true,
-      aiMessages: [greeting, userMsg],
+      aiMessages: msgs,
       aiInputText: '',
       aiThinking: true,
-      aiScrollId: 'ai-msg-1'
+      aiScrollId: 'ai-msg-' + (msgs.length - 1)
     })
     setTimeout(() => {
       const reply = this._mockAiReply(text)
@@ -4692,6 +4753,16 @@ Page({
         aiScrollId: 'ai-msg-' + (updated.length - 1)
       })
     }, 800)
+  },
+
+  onAiChatOpen() {
+    this._longPressTriggered = true
+    this._startRecognize('tab')
+  },
+
+  onAiRecordEnd() {
+    if (!this.data.aiRecording) return
+    this._stopRecognize() // 识别结果在 onStop → _onRecognizeDone('tab')
   },
 
   onAiChatClose() {
@@ -4805,18 +4876,13 @@ Page({
   },
 
   onAiVoiceStart() {
-    this.setData({ aiRecording: true })
     wx.vibrateShort({ type: 'light' })
+    this._startRecognize('chat')
   },
 
   onAiVoiceEnd() {
     if (!this.data.aiRecording) return
-    this.setData({ aiRecording: false })
-    const demos = ['午餐 25', '打车回家 32', '咖啡 18', '买水果 45']
-    const text = demos[Math.floor(Math.random() * demos.length)]
-    this.setData({ aiInputText: text })
-    this.setData({ aiVoiceMode: false })
-    setTimeout(() => this.onAiSend(), 300)
+    this._stopRecognize() // 结果在 onStop → _onRecognizeDone('chat')：填输入框并发送
   },
 
   // ---- VIP 升级 ----

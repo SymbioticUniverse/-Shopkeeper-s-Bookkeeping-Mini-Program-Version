@@ -1,7 +1,9 @@
 /**
  * 记账小程序后端 API 服务
- * v1.1.0 — 安全加固版
+ * v1.2.0 — ASR/OCR 识别
  */
+require('dotenv').config()
+
 const express = require('express')
 const path = require('path')
 const { initSchema, db } = require('./db')
@@ -102,6 +104,14 @@ app.use('/voucher', require('./middleware/auth').requireAuth, serveVoucher)
 
 // 头像公开访问 —— 免鉴权，供 <image src> 直接加载
 app.use('/public/voucher', servePublicVoucher)
+
+// 语音识别（ASR）
+const { asr: asrRouter } = require('./routes/asr')
+app.use('/api/asr', asrRouter)
+
+// 凭证图片识别（OCR）
+const { ocr: ocrRouter } = require('./routes/ocr')
+app.use('/api/ocr', ocrRouter)
 
 // ==================== 全局错误处理 ====================
 

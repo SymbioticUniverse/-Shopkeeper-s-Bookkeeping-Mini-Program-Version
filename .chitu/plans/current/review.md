@@ -1,25 +1,73 @@
-## OCR 路由修复自审
+# ASR 语音识别 + OCR/ASR 路由挂载 自审
 
-### 改动文件
-- `backend/src/routes/ocr.js` — 全文重写
+## 改动文件
 
-### 关键变更审计
+| 文件 | 变更量 | 类型 |
+|------|--------|------|
+| `pages/mingxi/mingxi.js` | +108/-47 | WeChatSI 真实语音识别 |
+| `backend/src/app.js` | +12/-3 | ASR/OCR 路由挂载 + dotenv |
+| `backend/package.json` | +5 | OCR SDK + dotenv 依赖 |
+| `API.md` | +113 | ASR/OCR API 文档 |
+| `assets/.DS_Store` | binary | 应 gitignore |
+| `.chitu/checkpoint.json` | restored | 已从 HEAD 恢复干净态 |
+| `.chitu/context/intent.json` | ±1 | 聊天状态更新 |
+
+## 逐文件审计
+
+### pages/mingxi/mingxi.js
 
 | # | 变更 | 正确性 | 说明 |
 |---|------|--------|------|
-| 1 | endpoint: `ocr-api.cn-hangzhou.aliyuncs.com` | ✅ | 文字识别OCR 仅在 cn-hangzhou 有服务接入点 |
-| 2 | Action: `RecognizeAllText` | ✅ | 专业单品版 API |
-| 3 | Version: `2021-07-07` | ✅ | 对应 API 版本 |
-| 4 | 参数: `Url` (非 `ImageURL`) + `Type=General` | ✅ | 按 SDK 源码确认 |
-| 5 | 混合发送: Type/Url→query, 签名→body | ✅ | 实测通过（IllegalImageUrl 说明参数被正确解析） |
-| 6 | V1 签名 (HMAC-SHA1) | ✅ | 用户 AK 不支持 V3，V1 已验证可用 |
-| 7 | `extractTextLines()` 适配 RecognizeAllText 响应 | ⚠️ | 响应结构基于文档推测，实测后需验证 |
-| 8 | `httpsPost` → `httpsPostWithQuery` | ✅ | 新增 query 参数支持 |
+| 1 | `_ensureRecognizer()` 懒加载 WeChatSI 插件 | ✅ | `requirePlugin('WechatSI')` try-catch，失败返回 null |
+| 2 | `_startRecognize(forWho)` 区分入口 | ✅ | 'tab'=底部长按 / 'chat'=对话框语音键 |
+| 3 | `_stopRecognize()` 停止录音 | ✅ | try-catch 保护 |
+| 4 | `_onRecognizeDone(text)` 按入口分发 | ✅ | 'chat'→填输入框发送, 其他→开对话窗 |
+| 5 | `_sendAiUserText()` 保留历史消息 | ✅ | 不再每次替换，累积 aiMessages |
+| 6 | 旧 `onAiChatOpen()` 逻辑被替换 | ✅ | 旧代码用随机 demo text，新版用真实 ASR |
+| 7 | 旧 `onAiVoiceStart/End` 用随机 demo | ✅ | 新版调用 `_startRecognize/_stopRecognize` |
+| 8 | `onAiRecordEnd` 不再直接设 aiRecording=false | ✅ | 改为调用 `_stopRecognize()`，识别结果在 onStop 回调处理 |
+| 9 | 空文本保护 | ✅ | `_onRecognizeDone` 中 trim 后为空则 toast 提示 |
 
-### 风险点
-- **extractTextLines() 未实测**：OCR API 的完整成功响应尚未获取（`IllegalImageUrl` 因图片不可用），`SubImages.BlockInfo.BlockDetails.Text` 路径基于 SDK 类型定义推断，需用户提供公网可访问图片 URL 后验证
-- **Type 枚举值**：当前硬编码 `General`，后续可能需支持 `IdCard`/`Invoice` 等
+**风险评估**：
+- WeChatSI 插件需在小程序后台添加，否则 `requirePlugin` 抛异常 → 已 try-catch 处理
+- 与 API.md 战略方针（后端 ASR）存在分歧 — API.md 标注为「后端接口就绪后执行」的过渡方案
+- `_ensureRecognizer` 返回 null 时 toast 提示用户添加插件
 
-### 遗留
-- 图片需托管在 OSS 或公网可访问地址
-- needToBuyTest 可能需要预付包月（[购买页](https://common-buy.aliyun.com/?commodityCode=ocr_api_personal)）
+### backend/src/app.js
+
+| # | 变更 | 正确性 | 说明 |
+|---|------|--------|------|
+| 1 | `require('dotenv').config()` | ✅ | 置于文件顶部，先于其他 require |
+| 2 | 版本号 `v1.2.0 — ASR/OCR 识别` | ✅ | 如实反映新增能力 |
+| 3 | `app.use('/api/asr', asrRouter)` | ✅ | asr.js 已存在且提交 |
+| 4 | `app.use('/api/ocr', ocrRouter)` | ✅ | ocr.js 已存在且提交 |
+
+### backend/package.json
+
+| # | 变更 | 正确性 | 说明 |
+|---|------|--------|------|
+| 1 | `@alicloud/ocr-api20210707` | ⚠️ | OCR SDK，但 ocr.js 已改用 V1 手写签名，此依赖可能冗余 |
+| 2 | `@alicloud/ocr20191230` | ⚠️ | 同上，调试期间安装 |
+| 3 | `@alicloud/openapi-client` | ⚠️ | V3 SDK 基类，同冗余 |
+| 4 | `@alicloud/pop-core` | ✅ | V1 签名 SDK，ocr.js 最终方案依赖此包 |
+| 5 | `dotenv` | ✅ | app.js 已 require |
+
+**风险**：`@alicloud/ocr-api20210707`、`@alicloud/ocr20191230`、`@alicloud/openapi-client` 可能未被使用，属于调试残留。但保留无害，且 ocr.js 的 `@alicloud/pop-core` 依赖确认有用。
+
+### API.md
+
+| # | 变更 | 正确性 | 说明 |
+|---|------|--------|------|
+| 1 | 2.13 识别 — `asrRecognize` / `ocrParse` | ✅ | 接口定义清晰 |
+| 2 | 接口总览新增 #32 #33 | ✅ | 编号连续 |
+| 3 | 任务 11 — ASR/OCR 后端承接 | ✅ | 战略方针 + 前后端接口 + 前端改造要点 |
+| 4 | 7.2 头像路由状态更新 | ✅ | `✅ 已生效` |
+
+**注意**：API.md 战略方针说「前端不直接对接任何识别 SDK 或插件」，但 mingxi.js 实际用了 WeChatSI 插件。API.md 标注了「前端改造要点（等后端接口就绪后执行）」— 当前状态是过渡方案。
+
+## 综合评价
+
+- **mingxi.js 语音识别**是有效的前端功能提升：从随机 demo text → 真实 WeChatSI 语音转文字
+- **app.js 路由挂载**使 ASR/OCR 后端接口可用
+- **API.md 文档**完整描述了识别能力的技术方案和演进路径
+- **遗留**：OCR SDK 依赖可能部分冗余（调试残留），但不影响运行
