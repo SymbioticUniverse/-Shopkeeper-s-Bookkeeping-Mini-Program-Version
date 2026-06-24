@@ -13,6 +13,8 @@ const express = require('express')
 const crypto = require('crypto')
 const https = require('https')
 const http = require('http')
+const path = require('path')
+const fs = require('fs')
 const { requireAuth } = require('../middleware/auth')
 
 const router = express.Router()
@@ -51,6 +53,28 @@ function buildAliyunSignature(allParams, secret) {
     .join('&')
   const stringToSign = 'POST&' + percentEncode('/') + '&' + percentEncode(canonicalQuery)
   return crypto.createHmac('sha1', secret + '&').update(stringToSign).digest('base64')
+}
+
+// 凭证图片本地存储目录（对齐 upload.js 的 VOUCHER_DIR）
+const VOUCHER_DIR = path.join(__dirname, '..', 'data', 'voucher')
+
+/**
+ * 尝试从本地磁盘读取图片（URL 为本地 voucher 路径时走此通道，免 HTTP 401）。
+ * 匹配 /voucher/ 或 /public/voucher/ 前缀，解析相对路径后从 VOUCHER_DIR 直读。
+ * 返回 Buffer 或 null（非本地 URL 或文件不存在）。
+ */
+function readLocalVoucher(imageUrl) {
+  const m = imageUrl.match(/\/(?:public\/)?voucher\/(.+?)(?:\?|$)/)
+  if (!m) return null
+  const relPath = m[1].replace(/\\/g, '/')
+  const absPath = path.resolve(VOUCHER_DIR, relPath)
+  // 防路径穿越
+  if (!absPath.startsWith(VOUCHER_DIR + path.sep)) return null
+  try {
+    return fs.readFileSync(absPath)
+  } catch {
+    return null
+  }
 }
 
 /**
@@ -259,8 +283,8 @@ router.post('/parse', requireAuth, async (req, res) => {
   }
 
   try {
-    // 1. 下载图片到内存（支持本地和远程）
-    const imageBuffer = await downloadImage(imageUrl)
+    // 1. 获取图片数据：优先本地磁盘直读（免 HTTP 401），否则远程下载
+    const imageBuffer = readLocalVoucher(imageUrl) || await downloadImage(imageUrl)
 
     // 2. 以 body 模式调用 OCR
     const result = await ocrRequest(imageBuffer)
