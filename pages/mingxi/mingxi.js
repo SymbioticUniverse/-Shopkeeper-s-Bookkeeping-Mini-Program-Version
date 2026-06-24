@@ -2636,7 +2636,9 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
           if (item.id === id || item.id === mirrorId) return { ...item, _voided: true, _open: false }
           return { ...item }
         })
-        this.setData({ [itemsKey]: updated, modalItem: null })
+        const patch2 = { [itemsKey]: updated, modalItem: null }
+        if (itemsKey === 'detailItems') patch2.detailGroups = this._buildDetailGroups(updated)
+        this.setData(patch2)
         this._calcOverviewData()
       },
     })
@@ -2659,11 +2661,13 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
         if (mirrorId) {
           api.updateItem(mirrorId, { _voided: false })
         }
-        const updated = this.data[itemsKey].map(item => {
+        const updated2 = this.data[itemsKey].map(item => {
           if (item.id === id || item.id === mirrorId) return { ...item, _voided: false, _open: false }
           return { ...item }
         })
-        this.setData({ [itemsKey]: updated, modalItem: null })
+        const patch2 = { [itemsKey]: updated2, modalItem: null }
+        if (itemsKey === 'detailItems') patch2.detailGroups = this._buildDetailGroups(updated2)
+        this.setData(patch2)
         this._calcOverviewData()
       },
     })
@@ -2678,7 +2682,9 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
       api.removeItem(found.linkedId)
     }
     const list = this.data[itemsKey].filter(item => item.id !== id && item.id !== (found && found.linkedId))
-    this.setData({ [itemsKey]: list })
+    const patch = { [itemsKey]: list }
+    if (itemsKey === 'detailItems') patch.detailGroups = this._buildDetailGroups(list)
+    this.setData(patch)
     this._calcOverviewData()
   },
 
