@@ -1,36 +1,25 @@
-# Self-Review — utils/api.js _rewriteHost + IP update
+## OCR 路由修复自审
 
-## 修改文件
-- `utils/api.js`: +17 lines (2 new functions, 1 call site)
+### 改动文件
+- `backend/src/routes/ocr.js` — 全文重写
 
-## 逐项核查
+### 关键变更审计
 
-### `_apiOrigin()` (line 481-483)
-- ✅ Removes `/api` or `/api/` suffix from BASE_URL
-- ✅ Regex `/\/api\/?$/` correctly handles both cases
-- ✅ Internal helper, not exported — no API surface change
+| # | 变更 | 正确性 | 说明 |
+|---|------|--------|------|
+| 1 | endpoint: `ocr-api.cn-hangzhou.aliyuncs.com` | ✅ | 文字识别OCR 仅在 cn-hangzhou 有服务接入点 |
+| 2 | Action: `RecognizeAllText` | ✅ | 专业单品版 API |
+| 3 | Version: `2021-07-07` | ✅ | 对应 API 版本 |
+| 4 | 参数: `Url` (非 `ImageURL`) + `Type=General` | ✅ | 按 SDK 源码确认 |
+| 5 | 混合发送: Type/Url→query, 签名→body | ✅ | 实测通过（IllegalImageUrl 说明参数被正确解析） |
+| 6 | V1 签名 (HMAC-SHA1) | ✅ | 用户 AK 不支持 V3，V1 已验证可用 |
+| 7 | `extractTextLines()` 适配 RecognizeAllText 响应 | ⚠️ | 响应结构基于文档推测，实测后需验证 |
+| 8 | `httpsPost` → `httpsPostWithQuery` | ✅ | 新增 query 参数支持 |
 
-### `_rewriteHost(url)` (line 491-493)
-- ✅ Guards null/undefined URL → returns as-is
-- ✅ Guards non-http URLs → returns as-is (no false rewrites on relative paths)
-- ✅ Regex `^https?:\/\/[^/]+` matches scheme+host only, preserves path
-- ✅ Replacement uses `_apiOrigin()` so it auto-tracks BASE_URL changes
+### 风险点
+- **extractTextLines() 未实测**：OCR API 的完整成功响应尚未获取（`IllegalImageUrl` 因图片不可用），`SubImages.BlockInfo.BlockDetails.Text` 路径基于 SDK 类型定义推断，需用户提供公网可访问图片 URL 后验证
+- **Type 枚举值**：当前硬编码 `General`，后续可能需支持 `IdCard`/`Invoice` 等
 
-### `downloadAuthedImage()` (line 546)
-- ✅ Calls `_rewriteHost(url)` before wx.downloadFile
-- ✅ Token is still read before the rewrite (correct, independent operations)
-- ✅ Only call site — focused fix, no similar patterns missed
-
-### BASE_URL (line 13)
-- ✅ IP changed 192.168.1.112 → 192.168.1.111 (user's network change)
-
-## 边界情况
-- ✅ URL is null/undefined → returns as-is, wx.downloadFile will fail with clear error
-- ✅ URL is relative path → regex won't match, returns as-is
-- ✅ URL has port (e.g. :3000) → regex `[^/]+` includes port, correctly replaced
-- ✅ URL has no port → same, correctly handled
-- ✅ _apiOrigin() returns just scheme+host → replacement is clean
-
-## 接口文档
-- No new exports — `_apiOrigin` and `_rewriteHost` are internal
-- Interface doc `.chitu/interfaces/utils-api.js.json` does not need updating
+### 遗留
+- 图片需托管在 OSS 或公网可访问地址
+- needToBuyTest 可能需要预付包月（[购买页](https://common-buy.aliyun.com/?commodityCode=ocr_api_personal)）
