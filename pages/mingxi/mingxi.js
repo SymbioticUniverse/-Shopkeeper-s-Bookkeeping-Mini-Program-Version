@@ -267,7 +267,7 @@ Page({
     aiMessages: [],
     aiInputText: '',
     aiThinking: false,
-    aiScrollId: '',
+    aiScrollTop: 0,
     aiVoiceMode: true,
     aiRecording: false,
     showExpandMenu: false, // 拓展菜单
@@ -4584,7 +4584,7 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
         aiMessages: [greeting],
         aiInputText: '',
         aiThinking: false,
-        aiScrollId: 'ai-msg-0',
+        aiScrollTop: 999999,
         aiVoiceMode: false
       })
     }
@@ -4832,7 +4832,7 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
       aiMessages: msgs,
       aiInputText: '',
       aiThinking: true,
-      aiScrollId: 'ai-msg-' + (msgs.length - 1)
+      aiScrollTop: 999999 + (msgs.length - 1)
     })
     setTimeout(() => {
       const reply = this._mockAiReply(text)
@@ -4841,7 +4841,7 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
       this.setData({
         aiMessages: updated,
         aiThinking: false,
-        aiScrollId: 'ai-msg-' + (updated.length - 1)
+        aiScrollTop: 999999 + (updated.length - 1)
       })
     }, 800)
   },
@@ -4864,7 +4864,7 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
         aiMessages: [greeting],
         aiInputText: '',
         aiThinking: false,
-        aiScrollId: 'ai-msg-0',
+        aiScrollTop: 999999,
         aiVoiceMode: true
       })
       that._startRecognize('tab')
@@ -4944,7 +4944,7 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
       aiMessages: msgs,
       aiInputText: '',
       aiThinking: true,
-      aiScrollId: 'ai-msg-' + msgs.length
+      aiScrollTop: 999999 + msgs.length
     })
 
     setTimeout(() => {
@@ -4954,7 +4954,7 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
       this.setData({
         aiMessages: updated,
         aiThinking: false,
-        aiScrollId: 'ai-msg-' + (updated.length - 1)
+        aiScrollTop: 999999 + (updated.length - 1)
       })
     }, 800)
   },
@@ -5165,7 +5165,7 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
 	    const lastIdx = updated.length - 1
 	    this.setData({
 	      aiMessages: updated,
-	      aiScrollId: 'ai-msg-' + lastIdx
+	      aiScrollTop: 999999 + lastIdx
 	    })
 	  },
   _formatChatTime(d) {

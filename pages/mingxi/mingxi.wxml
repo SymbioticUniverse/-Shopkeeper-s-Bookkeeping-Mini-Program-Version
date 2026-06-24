@@ -1777,7 +1777,7 @@
         <view class="ai-recording-pulse"></view>
         <text class="ai-recording-text">正在聆听… 松开发送</text>
       </view>
-      <scroll-view class="ai-chat-messages" scroll-y enhanced show-scrollbar="{{false}}" scroll-into-view="{{aiScrollId}}" scroll-with-animation>
+      <scroll-view class="ai-chat-messages" scroll-y enhanced show-scrollbar="{{false}}" scroll-top="{{aiScrollTop}}" scroll-with-animation>
         <view class="ai-msg" wx:for="{{aiMessages}}" wx:key="index" id="ai-msg-{{index}}">
           <view class="ai-msg-bubble ai-msg-bubble--{{item.role}}">
             <text class="ai-msg-text">{{item.text}}</text>
