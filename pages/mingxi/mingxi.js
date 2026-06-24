@@ -270,6 +270,11 @@ Page({
     aiScrollTop: 0,
     aiVoiceMode: true,
     aiRecording: false,
+    // 冲突解决
+    showConflictPanel: false,
+    conflicts: [],
+    conflictIndex: 0,
+    conflictResolving: false,
     showExpandMenu: false, // 拓展菜单
     searchText: '', // 顶部搜索关键词
     searchRecording: false, // 顶部语音搜索录音中
@@ -729,10 +734,15 @@ Page({
 
   // 进页面节流同步：以后端为准刷新本地缓存（30s 内最多一次）
   async _throttledSync() {
+    if (this.data.showConflictPanel) return
     if (Date.now() - (this._lastSyncAt || 0) < 30000) return
     this._lastSyncAt = Date.now()
     try {
-      await api.syncFromCloud()
+      var result = await api.syncFromCloud()
+      if (result && result.hasConflicts) {
+        this._handleSyncResult(result)
+        return
+      }
     } catch (e) {}
     this.initDetailItems()
     this.initSettleItems()
@@ -750,6 +760,83 @@ Page({
     if (this.data.showLedgerPage) {
       this.setData(this._ledgerData(this.data.ledgerScope))
     }
+  },
+
+  // ---- 冲突解决面板 ----
+
+  /** syncFromCloud 返回冲突时打开面板 */
+  _handleSyncResult(result) {
+    if (!result || !result.conflicts || !result.conflicts.length) return
+    this.setData({
+      showConflictPanel: true,
+      conflicts: result.conflicts,
+      conflictIndex: 0
+    })
+  },
+
+  /** 用户对单个冲突做出裁决（保留本地/云端） */
+  onConflictResolve(e) {
+    var ds = e.currentTarget.dataset
+    var id = ds.id
+    var resolution = ds.resolution
+    var conflicts = this.data.conflicts.slice()
+    for (var i = 0; i < conflicts.length; i++) {
+      if (conflicts[i].id === id) {
+        conflicts[i].resolution = resolution
+        break
+      }
+    }
+    this.setData({ conflicts: conflicts })
+  },
+
+  /** 上一个冲突 */
+  onConflictPrev() {
+    if (this.data.conflictIndex <= 0) return
+    this.setData({ conflictIndex: this.data.conflictIndex - 1 })
+  },
+
+  /** 下一个冲突 */
+  onConflictNext() {
+    if (this.data.conflictIndex >= this.data.conflicts.length - 1) return
+    this.setData({ conflictIndex: this.data.conflictIndex + 1 })
+  },
+
+  /** 应用所有裁决，完成同步 */
+  async onConflictDismiss() {
+    var conflicts = this.data.conflicts
+    // 检查是否全部已裁决
+    var unresolved = conflicts.filter(function (c) { return !c.resolution })
+    if (unresolved.length > 0) {
+      wx.showToast({ title: '请为所有冲突选择保留版本', icon: 'none' })
+      return
+    }
+    this.setData({ conflictResolving: true })
+    try {
+      var resolutions = conflicts.map(function (c) {
+        return {
+          id: c.id,
+          scope: c.scope,
+          resolution: c.resolution,
+          resolvedItem: c.resolution === 'server' || c.resolution === 'restore'
+            ? c.serverVersion
+            : c.localVersion
+        }
+      })
+      await api.resolveConflicts(resolutions)
+      wx.showToast({ title: '冲突已解决', icon: 'success' })
+    } catch (e) {
+      wx.showToast({ title: '同步失败，请重试', icon: 'none' })
+    }
+    this.setData({
+      showConflictPanel: false,
+      conflicts: [],
+      conflictIndex: 0,
+      conflictResolving: false
+    })
+    // 刷新数据
+    this.initDetailItems()
+    this.initSettleItems()
+    this._syncOverviewCards()
   },
 
   // ---- 资料设置（昵称/头像）+ 头像显示 ----
@@ -4334,7 +4421,8 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
       }
       wx.showToast({ title: '登录成功', icon: 'success' })
       // 登录后从云端同步数据（异步，不阻塞后续操作）
-      api.syncFromCloud().then(() => {
+      api.syncFromCloud().then((result) => {
+        if (result && result.hasConflicts) { this._handleSyncResult(result); return }
         this.initDetailItems()
         // 后端权威 companyInfo 落地后重建简览卡：boss 此时才会出现公司账本
         this._syncOverviewCards()
@@ -4360,7 +4448,8 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
         }
         wx.showToast({ title: '登录成功', icon: 'success' })
         // 登录后从云端同步数据（异步，不阻塞后续操作）
-        api.syncFromCloud().then(() => {
+        api.syncFromCloud().then((result) => {
+        if (result && result.hasConflicts) { this._handleSyncResult(result); return }
           this.initDetailItems()
           // 后端权威 companyInfo 落地后重建简览卡：boss 此时才会出现公司账本
           this._syncOverviewCards()
@@ -4452,7 +4541,8 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
       }
       wx.showToast({ title: '登录成功', icon: 'success' })
       // 异步同步云端数据（不阻塞身份判定）
-      api.syncFromCloud().then(() => {
+      api.syncFromCloud().then((result) => {
+        if (result && result.hasConflicts) { this._handleSyncResult(result); return }
         const ci = api.getCompanyInfo()
         if (ci && ci.companyUid) this.setData({ companyUid: ci.companyUid })
         this.initDetailItems()
@@ -4486,7 +4576,8 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
         }
         wx.showToast({ title: '登录成功', icon: 'success' })
         // 异步同步云端数据（不阻塞身份判定）
-        api.syncFromCloud().then(() => {
+        api.syncFromCloud().then((result) => {
+        if (result && result.hasConflicts) { this._handleSyncResult(result); return }
           const ci = api.getCompanyInfo()
           if (ci && ci.companyUid) this.setData({ companyUid: ci.companyUid })
           this.initDetailItems()
