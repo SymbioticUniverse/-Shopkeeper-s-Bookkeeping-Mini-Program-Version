@@ -9142,18 +9142,18 @@ page {
   font-weight: 500;
 }
 .ai-bill-btn--reject {
-  background: rgba(255,255,255,0.1);
-  color: rgba(255,255,255,0.55);
+  background: #fff;
+  color: #333;
 }
 .ai-bill-btn--confirm {
-  background: rgba(255,255,255,0.25);
+  background: #34c759;
   color: #fff;
 }
 .ai-bill-btn--confirm:active {
-  opacity: 0.7;
+  background: #2db14e;
 }
 .ai-bill-btn--reject:active {
-  background: rgba(255,255,255,0.18);
+  background: #e5e5e5;
 }
 /* 已取消卡片 */
 .ai-bill-card--rejected {
@@ -9306,8 +9306,8 @@ page {
 .page--dark .ai-toggle-label { color: #aaa; }
 .page--dark .ai-voice-btn { background: #2a2a3a; border-color: rgba(255,255,255,0.08); }
 .page--dark .ai-voice-text { color: #aaa; }
-.page--dark .ai-bill-btn--reject { background: rgba(255,255,255,0.06); color: rgba(255,255,255,0.35); }
-.page--dark .ai-bill-btn--confirm { background: rgba(255,255,255,0.15); }
+.page--dark .ai-bill-btn--reject { background: #555; color: #ddd; }
+.page--dark .ai-bill-btn--confirm { background: #34c759; }
 
 /* 暗色模式 - 拓展菜单 */
 .page--dark .header-expand-btn {
