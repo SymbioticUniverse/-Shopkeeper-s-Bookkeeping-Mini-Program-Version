@@ -2,7 +2,7 @@
  * 凭证图片识别（OCR）路由 — POST /api/ocr/parse
  *
  * 对接阿里云「文字识别OCR」专业单品 — RecognizeAllText API。
- * 前端扫描凭证 → 上传图片拿 URL → 提交 URL → 后端调 OCR → 返回结构化记账字段。
+ * 前端扫描凭证 → 上传图片拿 URL → 提交 URL → 后端下载图片 → 以二进制 body 调 OCR → 返回结构化记账字段。
  *
  * 安全：
  *   - requireAuth 校验登录态
@@ -12,6 +12,7 @@
 const express = require('express')
 const crypto = require('crypto')
 const https = require('https')
+const http = require('http')
 const { requireAuth } = require('../middleware/auth')
 
 const router = express.Router()
@@ -41,32 +42,70 @@ function percentEncode(str) {
 
 /**
  * 构建阿里云 OpenAPI V1 签名（HMAC-SHA1, SignatureVersion 1.0）
- * 签名基于 ALL 参数（query + body 合并计算），包括 Type 和 Url。
+ * 签名参数全部放 query string（body 模式只传图片二进制）。
  */
-function buildAliyunSignature(method, allParams, secret) {
+function buildAliyunSignature(allParams, secret) {
   const sortedKeys = Object.keys(allParams).sort()
   const canonicalQuery = sortedKeys
     .map(k => percentEncode(k) + '=' + percentEncode(allParams[k]))
     .join('&')
-  const stringToSign = method + '&' + percentEncode('/') + '&' + percentEncode(canonicalQuery)
+  const stringToSign = 'POST&' + percentEncode('/') + '&' + percentEncode(canonicalQuery)
   return crypto.createHmac('sha1', secret + '&').update(stringToSign).digest('base64')
 }
 
 /**
- * 发起 HTTPS POST 请求
- * @param {string} hostname - 服务接入点
- * @param {string} query - 业务参数（Type, Url）组成的 query string（不含 ?）
- * @param {string} body - 签名参数（含 Signature）组成的 form-urlencoded body
+ * 下载远程图片到内存 Buffer
  */
-function httpsPostWithQuery(hostname, query, body) {
+function downloadImage(url) {
   return new Promise((resolve, reject) => {
+    const proto = url.startsWith('https') ? https : http
+    const req = proto.get(url, { timeout: 12000 }, res => {
+      if (res.statusCode !== 200) {
+        return reject(new Error('图片下载失败，状态码: ' + res.statusCode))
+      }
+      const chunks = []
+      res.on('data', c => chunks.push(c))
+      res.on('end', () => resolve(Buffer.concat(chunks)))
+    })
+    req.on('error', reject)
+    req.setTimeout(12000, () => { req.destroy(); reject(new Error('图片下载超时')) })
+  })
+}
+
+/**
+ * 以 body 模式发起 OCR 请求：签名参数在 query string，图片二进制在 POST body。
+ */
+function ocrRequest(imageBuffer) {
+  return new Promise((resolve, reject) => {
+    const timestamp = new Date().toISOString().replace(/\.\d{3}/, '')
+    const nonce = crypto.randomUUID()
+
+    const allParams = {
+      AccessKeyId: AK_ID,
+      Action: 'RecognizeAllText',
+      Format: 'JSON',
+      SignatureMethod: 'HMAC-SHA1',
+      SignatureNonce: nonce,
+      SignatureVersion: '1.0',
+      Timestamp: timestamp,
+      Type: 'General',
+      Version: '2021-07-07'
+    }
+
+    const signature = buildAliyunSignature(allParams, AK_SECRET)
+
+    const queryParts = Object.keys(allParams).sort()
+      .map(k => percentEncode(k) + '=' + percentEncode(allParams[k]))
+    queryParts.push('Signature=' + percentEncode(signature))
+    const queryStr = queryParts.join('&')
+
     const req = https.request({
-      hostname,
-      path: '/?' + query,
+      hostname: OCR_ENDPOINT,
+      path: '/?' + queryStr,
       method: 'POST',
       headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-        'Content-Length': Buffer.byteLength(body)
+        'Content-Type': 'application/octet-stream',
+        'Content-Length': imageBuffer.length
       },
       timeout: 15000
     }, res => {
@@ -78,8 +117,8 @@ function httpsPostWithQuery(hostname, query, body) {
       })
     })
     req.on('error', reject)
-    req.setTimeout(15000, () => { req.destroy(); reject(new Error('请求超时')) })
-    req.write(body)
+    req.setTimeout(15000, () => { req.destroy(); reject(new Error('OCR 请求超时')) })
+    req.write(imageBuffer)
     req.end()
   })
 }
@@ -220,46 +259,13 @@ router.post('/parse', requireAuth, async (req, res) => {
   }
 
   try {
-    const timestamp = new Date().toISOString().replace(/\.\d{3}/, '')
-    const nonce = crypto.randomUUID()
+    // 1. 下载图片到内存（支持本地和远程）
+    const imageBuffer = await downloadImage(imageUrl)
 
-    // 全量参数（用于签名计算）
-    const allParams = {
-      AccessKeyId: AK_ID,
-      Action: 'RecognizeAllText',
-      Format: 'JSON',
-      SignatureMethod: 'HMAC-SHA1',
-      SignatureNonce: nonce,
-      SignatureVersion: '1.0',
-      Timestamp: timestamp,
-      Type: 'General',
-      Url: imageUrl,
-      Version: '2021-07-07'
-    }
+    // 2. 以 body 模式调用 OCR
+    const result = await ocrRequest(imageBuffer)
 
-    const signature = buildAliyunSignature('POST', allParams, AK_SECRET)
-
-    // 业务参数 → query string
-    const query = 'Type=General&Url=' + percentEncode(imageUrl)
-
-    // 签名参数 → POST body
-    const bodyParams = {
-      AccessKeyId: AK_ID,
-      Action: 'RecognizeAllText',
-      Format: 'JSON',
-      SignatureMethod: 'HMAC-SHA1',
-      SignatureNonce: nonce,
-      SignatureVersion: '1.0',
-      Timestamp: timestamp,
-      Version: '2021-07-07'
-    }
-    const body = Object.keys(bodyParams).sort()
-      .map(k => percentEncode(k) + '=' + percentEncode(bodyParams[k]))
-      .join('&') + '&Signature=' + percentEncode(signature)
-
-    const result = await httpsPostWithQuery(OCR_ENDPOINT, query, body)
-
-    // 解析 OCR 结果
+    // 3. 解析 OCR 结果
     const textLines = extractTextLines(result)
     if (textLines.length > 0) {
       const parsed = parseOcrResult(textLines)
