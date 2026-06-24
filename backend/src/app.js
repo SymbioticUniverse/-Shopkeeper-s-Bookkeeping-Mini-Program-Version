@@ -113,6 +113,10 @@ app.use('/api/asr', asrRouter)
 const { ocr: ocrRouter } = require('./routes/ocr')
 app.use('/api/ocr', ocrRouter)
 
+// 学习库（内部标注 → 纠错映射）
+const { learn: learnRouter } = require('./routes/learn')
+app.use('/api/learn', learnRouter)
+
 // ==================== 全局错误处理 ====================
 
 app.use((err, req, res, _next) => {

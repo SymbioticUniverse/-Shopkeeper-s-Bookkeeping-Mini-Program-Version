@@ -18,6 +18,6 @@
       "from": "fs"
     }
   ],
-  "capability": "后端性能安全加固：6 个新索引（sessions.token 认证热路径提速 + 5 个业务查询索引）、auth 中间件 require/prepare 提升到模块层消除请求内开销、_devSecret 惰性生成、addColumnSafely 正则防注入、GET /items 分页（limit/offset，向后兼容无参调用）",
-  "updatedAt": "2026-06-22T10:32:46.790Z"
+  "capability": "内部人员可通过 JSON 或 CSV 上传 ASR/OCR 标注数据集，后端自动执行三层学习（错词纠错→项目词分类映射→句式模式），生成可查询的纠错映射库供识别时 O(1) 查表优化",
+  "updatedAt": "2026-06-24T10:50:52.100Z"
 }

@@ -149,6 +149,40 @@ function initSchema() {
       y INTEGER DEFAULT 0,
       FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
     );
+
+    -- ==================== 学习库表（ASR/OCR 纠错映射） ====================
+
+    -- 第一层：错词纠错映射（ASR 识别错词 → 正确词）
+    CREATE TABLE IF NOT EXISTS asr_corrections (
+      wrong TEXT PRIMARY KEY,
+      correct TEXT NOT NULL,
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+
+    -- 第二层：项目词 → 分类映射
+    CREATE TABLE IF NOT EXISTS item_category_map (
+      item TEXT PRIMARY KEY,
+      category TEXT NOT NULL,
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+
+    -- 第三层：ASR 句式模式
+    CREATE TABLE IF NOT EXISTS asr_patterns (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      verb TEXT NOT NULL DEFAULT '',
+      subject TEXT NOT NULL DEFAULT '',
+      direction TEXT NOT NULL DEFAULT '',
+      scope TEXT NOT NULL DEFAULT 'personal',
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+
+    -- OCR 商户关键词 → 分类+备注映射
+    CREATE TABLE IF NOT EXISTS ocr_merchants (
+      keyword TEXT PRIMARY KEY,
+      category TEXT NOT NULL,
+      note TEXT NOT NULL DEFAULT '',
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
   `)
 
   // 索引（加速按用户+scope查询账单、用户查询通知）

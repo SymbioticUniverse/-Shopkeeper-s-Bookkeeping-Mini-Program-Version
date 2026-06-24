@@ -81,6 +81,10 @@
       "from": "./routes/ocr"
     },
     {
+      "symbol": "learn: learnRouter",
+      "from": "./routes/learn"
+    },
+    {
       "symbol": "(require)",
       "from": "dotenv"
     },
@@ -89,6 +93,6 @@
       "from": "./middleware/auth"
     }
   ],
-  "capability": "AI 对话语音输入从随机 demo 升级为真实 WeChatSI 同声传译插件语音识别（长按/语音键双入口），后端挂载 ASR/OCR 路由并更新 API.md 文档标记识别能力完整方案",
-  "updatedAt": "2026-06-24T05:47:05.989Z"
+  "capability": "内部人员可通过 JSON 或 CSV 上传 ASR/OCR 标注数据集，后端自动执行三层学习（错词纠错→项目词分类映射→句式模式），生成可查询的纠错映射库供识别时 O(1) 查表优化",
+  "updatedAt": "2026-06-24T10:50:52.099Z"
 }
