@@ -770,6 +770,10 @@ page {
   min-height: 0;
   overflow: hidden;
 }
+.report-summary-scroll {
+  flex: 1;
+  min-height: 0;
+}
 
 /* 日期 + 收入/支出 行 */
 .report-info-row {
@@ -1144,11 +1148,12 @@ page {
   font-size: 28rpx;
   font-weight: 500;
   color: #666;
-  width: 80rpx;
-  flex-shrink: 0;
+  flex: 1;
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  margin-right: 8rpx;
 }
 .bill-item--in .bill-note-inline,
 .bill-item--out .bill-note-inline,
@@ -1166,7 +1171,8 @@ page {
 .bill-amount {
   font-size: 30rpx;
   font-weight: 500;
-  flex: 1;
+  width: 130rpx;
+  flex-shrink: 0;
   text-align: right;
   margin-right: 12rpx;
 }
@@ -1182,20 +1188,17 @@ page {
 .bill-item--payable .bill-amount {
   color: #fff;
 }
-.bill-date {
-  font-size: 26rpx;
-  font-weight: 500;
-  color: #666;
-  width: 150rpx;
+/* date-group-header: 日期分组标题 */
+.date-group-header {
+  display: flex;
+  align-items: center;
+  padding: 16rpx 30rpx 8rpx;
   flex-shrink: 0;
-  text-align: right;
-  white-space: nowrap;
 }
-.bill-item--in .bill-date,
-.bill-item--out .bill-date,
-.bill-item--advance .bill-date,
-.bill-item--payable .bill-date {
-  color: #d7d7d7;
+.date-group-label {
+  font-size: 26rpx;
+  font-weight: 600;
+  color: #999;
 }
 .bill-note {
   font-size: 22rpx;
@@ -1254,8 +1257,7 @@ page {
 }
 .bill-item--voided .bill-cat,
 .bill-item--voided .bill-type,
-.bill-item--voided .bill-amount,
-.bill-item--voided .bill-date {
+.bill-item--voided .bill-amount {
   text-decoration: line-through;
   color: #999 !important;
 }
@@ -3794,6 +3796,10 @@ page {
   min-height: 0;
   overflow: hidden;
 }
+.report-summary-scroll {
+  flex: 1;
+  min-height: 0;
+}
 
 /* 日期 + 收入/支出 行 */
 .report-info-row {
@@ -4168,11 +4174,12 @@ page {
   font-size: 28rpx;
   font-weight: 500;
   color: #666;
-  width: 80rpx;
-  flex-shrink: 0;
+  flex: 1;
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  margin-right: 8rpx;
 }
 .bill-item--in .bill-note-inline,
 .bill-item--out .bill-note-inline,
@@ -4190,7 +4197,8 @@ page {
 .bill-amount {
   font-size: 30rpx;
   font-weight: 500;
-  flex: 1;
+  width: 130rpx;
+  flex-shrink: 0;
   text-align: right;
   margin-right: 12rpx;
 }
@@ -4206,20 +4214,17 @@ page {
 .bill-item--payable .bill-amount {
   color: #fff;
 }
-.bill-date {
-  font-size: 26rpx;
-  font-weight: 500;
-  color: #666;
-  width: 150rpx;
+/* date-group-header: 日期分组标题 */
+.date-group-header {
+  display: flex;
+  align-items: center;
+  padding: 16rpx 30rpx 8rpx;
   flex-shrink: 0;
-  text-align: right;
-  white-space: nowrap;
 }
-.bill-item--in .bill-date,
-.bill-item--out .bill-date,
-.bill-item--advance .bill-date,
-.bill-item--payable .bill-date {
-  color: #d7d7d7;
+.date-group-label {
+  font-size: 26rpx;
+  font-weight: 600;
+  color: #999;
 }
 .bill-note {
   font-size: 22rpx;
@@ -4278,8 +4283,7 @@ page {
 }
 .bill-item--voided .bill-cat,
 .bill-item--voided .bill-type,
-.bill-item--voided .bill-amount,
-.bill-item--voided .bill-date {
+.bill-item--voided .bill-amount {
   text-decoration: line-through;
   color: #999 !important;
 }

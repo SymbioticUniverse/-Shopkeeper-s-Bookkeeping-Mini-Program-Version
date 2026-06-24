@@ -55,8 +55,13 @@ function buildAliyunSignature(allParams, secret) {
   return crypto.createHmac('sha1', secret + '&').update(stringToSign).digest('base64')
 }
 
-// 凭证图片本地存储目录（对齐 upload.js 的 VOUCHER_DIR）
+  // 凭证图片本地存储目录（对齐 upload.js 的 VOUCHER_DIR）
 const VOUCHER_DIR = path.join(__dirname, '..', 'data', 'voucher')
+
+/** 判断是否为本地凭证路径（/voucher/... 或 /public/voucher/...） */
+function isLocalVoucherUrl(url) {
+  return /^\/(?:public\/)?voucher\//.test(url)
+}
 
 /**
  * 尝试从本地磁盘读取图片（URL 为本地 voucher 路径时走此通道，免 HTTP 401）。
@@ -98,6 +103,7 @@ function downloadImage(url) {
 
 /**
  * 以 body 模式发起 OCR 请求：签名参数在 query string，图片二进制在 POST body。
+ * 返回 { statusCode, body }；调用方按 statusCode 判定成功/失败。
  */
 function ocrRequest(imageBuffer) {
   return new Promise((resolve, reject) => {
@@ -130,14 +136,16 @@ function ocrRequest(imageBuffer) {
       headers: {
         'Content-Type': 'application/octet-stream',
         'Content-Length': imageBuffer.length
-      },
-      timeout: 15000
+      }
     }, res => {
-      let data = ''
-      res.on('data', chunk => data += chunk)
+      const chunks = []
+      res.on('data', chunk => chunks.push(chunk))
       res.on('end', () => {
-        try { resolve(JSON.parse(data)) }
-        catch { resolve(data) }
+        const raw = Buffer.concat(chunks).toString('utf8')
+        let body
+        try { body = JSON.parse(raw) }
+        catch { body = raw }
+        resolve({ statusCode: res.statusCode, body })
       })
     })
     req.on('error', reject)
@@ -151,17 +159,18 @@ function ocrRequest(imageBuffer) {
 
 /**
  * 从 RecognizeAllText 响应中提取所有文本行。
- * 响应结构: Data.SubImages[] → BlockInfo.BlockDetails[] → Text
+ * 响应结构: Data.SubImages[] → BlockInfo.BlockDetails[] → BlockContent
+ * 回落: Data.Content（全局文本，按空白分行）
  */
-function extractTextLines(result) {
+function extractTextLines(body) {
   const lines = []
-  const subImages = result?.Data?.SubImages
+  const subImages = body?.Data?.SubImages
   if (Array.isArray(subImages)) {
     for (const sub of subImages) {
       const blocks = sub?.BlockInfo?.BlockDetails
       if (Array.isArray(blocks)) {
         for (const block of blocks) {
-          if (block.Text) lines.push(block.Text)
+          if (block.BlockContent) lines.push(block.BlockContent)
         }
       }
       // 兼容: 部分单据类识别返回额外的结构化字段
@@ -173,6 +182,11 @@ function extractTextLines(result) {
         }
       }
     }
+  }
+  // 回落：当 SubImages 未提供或为空时，使用 Data.Content 全局文本
+  if (lines.length === 0 && typeof body?.Data?.Content === 'string' && body.Data.Content.trim()) {
+    const contentLines = body.Data.Content.split(/\s+/).filter(s => s.length >= 1)
+    lines.push(...contentLines)
   }
   return lines
 }
@@ -278,8 +292,9 @@ router.post('/parse', requireAuth, async (req, res) => {
     return res.status(400).json({ error: '缺少 imageUrl 参数' })
   }
 
-  if (!/^https?:\/\//.test(imageUrl)) {
-    return res.status(400).json({ error: 'imageUrl 必须以 http:// 或 https:// 开头' })
+  // 允许 http/https 远程 URL 或本地 /voucher/* 路径
+  if (!/^https?:\/\//.test(imageUrl) && !isLocalVoucherUrl(imageUrl)) {
+    return res.status(400).json({ error: 'imageUrl 须为 http/https URL 或以 /voucher/ 开头的本地路径' })
   }
 
   try {
@@ -287,10 +302,24 @@ router.post('/parse', requireAuth, async (req, res) => {
     const imageBuffer = readLocalVoucher(imageUrl) || await downloadImage(imageUrl)
 
     // 2. 以 body 模式调用 OCR
-    const result = await ocrRequest(imageBuffer)
+    const { statusCode, body } = await ocrRequest(imageBuffer)
 
-    // 3. 解析 OCR 结果
-    const textLines = extractTextLines(result)
+    // 3. 检查 HTTP 状态码（阿里云 API 非 200 即为错误）
+    if (statusCode !== 200) {
+      const errMsg = body?.Message || body?.message || `HTTP ${statusCode}`
+      console.error('[OCR] 阿里云 API 返回错误:', statusCode, JSON.stringify(body))
+      return res.status(502).json({ error: 'OCR 服务返回错误: ' + errMsg })
+    }
+
+    // 4. 检查业务层错误（Code 字段存在表示失败）
+    if (body?.Code) {
+      const errMsg = body.Message || body.message || body.Code
+      console.error('[OCR] 阿里云业务错误:', JSON.stringify(body))
+      return res.status(502).json({ error: 'OCR 识别失败: ' + errMsg })
+    }
+
+    // 5. 解析 OCR 结果
+    const textLines = extractTextLines(body)
     if (textLines.length > 0) {
       const parsed = parseOcrResult(textLines)
       const allText = textLines.join(' ')
@@ -304,9 +333,8 @@ router.post('/parse', requireAuth, async (req, res) => {
         date: parsed.date
       })
     } else {
-      const errMsg = result.Message || result.message || '图片未识别到文字'
-      console.error('[OCR] 识别失败:', JSON.stringify(result))
-      res.status(422).json({ error: 'OCR 识别失败: ' + errMsg })
+      console.error('[OCR] 未提取到文字:', JSON.stringify(body))
+      res.status(422).json({ error: 'OCR 识别失败: 图片未识别到文字' })
     }
   } catch (e) {
     console.error('[OCR] 处理异常:', e.message)

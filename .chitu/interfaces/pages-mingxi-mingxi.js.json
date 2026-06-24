@@ -11,6 +11,6 @@
       "from": "../../utils/xlsx"
     }
   ],
-  "capability": "语音识别从前端 WeChatSI 插件切换为后端阿里云 ASR（wx.getRecorderManager PCM 录音→api.asrRecognize 上传→后端 NLS 识别），凭证 OCR 从随机 mock 切换为真实后端阿里云 OCR（拍照→uploadVoucher→ocrParse→自动填充记账表单），中心 Tab 按钮改为 touchstart/touchend 250ms 长按判定（短按切记账页、长按开 AI 对话+录音），遮罩层松手即停录音",
-  "updatedAt": "2026-06-24T07:03:41.131Z"
+  "capability": "OCR 凭证识别修复字段名 Bug（BlockContent 替代 Text）并增强健壮性（Data.Content 回落、HTTP/业务错误分层）；AI 对话从硬编码 mock 升级为关键词驱动 7 字段弹性解析（时间/金额/收支/主体/分类/备注/追问）；明细列表按日期分组展示；凭证本地路径静默降级不阻塞记账",
+  "updatedAt": "2026-06-24T10:55:35.638Z"
 }

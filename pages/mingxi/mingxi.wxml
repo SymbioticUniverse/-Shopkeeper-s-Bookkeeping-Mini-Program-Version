@@ -447,30 +447,34 @@
             </view>
           </view>
           <scroll-view class="detail-list" scroll-y enhanced show-scrollbar="{{false}}">
-            <view wx:for="{{detailItems}}" wx:key="id" class="bill-row">
-              <view class="bill-actions">
-                <view wx:if="{{item.typeLabel === '应付' && item.settleStatus !== 'settled'}}" class="bill-act-btn bill-act-settle" catchtap="onBillSettle" data-id="{{item.id}}" data-from="detail">结清</view>
-                <view wx:elif="{{item.typeLabel === '垫付' && item.settleStatus === 'company_settled'}}" class="bill-act-btn bill-act-confirm" catchtap="onBillSettle" data-id="{{item.id}}" data-from="detail">确认到账</view>
-                <view wx:if="{{!item._autoSettle && item.typeLabel !== '垫付' && item.settleStatus !== 'settled'}}" class="bill-act-btn bill-act-delete" catchtap="onBillDelete" data-id="{{item.id}}" data-from="detail">删除</view>
-                <view wx:if="{{!item._autoSettle && !item._voided && item.settleStatus !== 'settled'}}" class="bill-act-btn bill-act-void" catchtap="onBillVoid" data-id="{{item.id}}" data-from="detail">作废</view>
-                <view wx:elif="{{!item._autoSettle && item._voided}}" class="bill-act-btn bill-act-unvoid" catchtap="onBillUnvoid" data-id="{{item.id}}" data-from="detail">恢复</view>
+            <block wx:for="{{detailGroups}}" wx:key="dateLabel" wx:for-item="group">
+              <view class="date-group-header">
+                <text class="date-group-label">{{group.dateLabel}}</text>
               </view>
-              <view class="bill-item {{item.typeLabel === '垫付' ? 'bill-item--advance' : ''}} {{item.typeLabel === '应付' ? 'bill-item--payable' : ''}} {{(item._voided || item.settleStatus === 'settled') ? 'bill-item--voided' : ''}} {{item.settleStatus === 'company_settled' ? 'bill-item--pending-confirm' : ''}}"
-                    bindtouchstart="onBillTouchStart"
-                    bindtouchmove="onBillTouchMove"
-                    bindtouchend="onBillTouchEnd"
-                    bindtap="onBillTap"
-                    data-id="{{item.id}}"
-                    data-from="detail">
-                <text class="bill-icon">{{item._icon}}</text>
-                <text class="bill-type">{{item.typeLabel}}</text>
-                <text wx:if="{{item.settleStatus === 'company_settled'}}" class="bill-settle-tag bill-settle-tag--pending">待确认</text>
-                <text wx:elif="{{item.settleStatus === 'settled'}}" class="bill-settle-tag bill-settle-tag--auto">结清</text>
-                <text class="bill-note-inline">{{item.note || '-'}}</text>
-                <text class="bill-amount {{item.type === 'in' ? 'bill-amount--in' : 'bill-amount--out'}}">¥{{item.amount}}</text>
-                <text class="bill-date">{{item.date}}</text>
+              <view wx:for="{{group.items}}" wx:key="id" wx:for-item="item" class="bill-row">
+                <view class="bill-actions">
+                  <view wx:if="{{item.typeLabel === '应付' && item.settleStatus !== 'settled'}}" class="bill-act-btn bill-act-settle" catchtap="onBillSettle" data-id="{{item.id}}" data-from="detail">结清</view>
+                  <view wx:elif="{{item.typeLabel === '垫付' && item.settleStatus === 'company_settled'}}" class="bill-act-btn bill-act-confirm" catchtap="onBillSettle" data-id="{{item.id}}" data-from="detail">确认到账</view>
+                  <view wx:if="{{!item._autoSettle && item.typeLabel !== '垫付' && item.settleStatus !== 'settled'}}" class="bill-act-btn bill-act-delete" catchtap="onBillDelete" data-id="{{item.id}}" data-from="detail">删除</view>
+                  <view wx:if="{{!item._autoSettle && !item._voided && item.settleStatus !== 'settled'}}" class="bill-act-btn bill-act-void" catchtap="onBillVoid" data-id="{{item.id}}" data-from="detail">作废</view>
+                  <view wx:elif="{{!item._autoSettle && item._voided}}" class="bill-act-btn bill-act-unvoid" catchtap="onBillUnvoid" data-id="{{item.id}}" data-from="detail">恢复</view>
+                </view>
+                <view class="bill-item {{item.typeLabel === '垫付' ? 'bill-item--advance' : ''}} {{item.typeLabel === '应付' ? 'bill-item--payable' : ''}} {{(item._voided || item.settleStatus === 'settled') ? 'bill-item--voided' : ''}} {{item.settleStatus === 'company_settled' ? 'bill-item--pending-confirm' : ''}}"
+                      bindtouchstart="onBillTouchStart"
+                      bindtouchmove="onBillTouchMove"
+                      bindtouchend="onBillTouchEnd"
+                      bindtap="onBillTap"
+                      data-id="{{item.id}}"
+                      data-from="detail">
+                  <text class="bill-icon">{{item._icon}}</text>
+                  <text class="bill-type">{{item.typeLabel}}</text>
+                  <text wx:if="{{item.settleStatus === 'company_settled'}}" class="bill-settle-tag bill-settle-tag--pending">待确认</text>
+                  <text wx:elif="{{item.settleStatus === 'settled'}}" class="bill-settle-tag bill-settle-tag--auto">结清</text>
+                  <text class="bill-note-inline">{{item.note || '-'}}</text>
+                  <text class="bill-amount {{item.type === 'in' ? 'bill-amount--in' : 'bill-amount--out'}}">¥{{item.amount}}</text>
+                </view>
               </view>
-            </view>
+            </block>
           </scroll-view>
         </view>
       </view>
@@ -564,7 +568,8 @@
               </view>
             </view>
           </view>
-          <!-- 报表筛选汇总：移到图表下方，随图表区滚动；分类拆解 proUnlocked 预留鉴权 -->
+          <!-- 报表筛选汇总：图表下方独立滚动区；分类拆解 proUnlocked 预留鉴权 -->
+          <scroll-view class="report-summary-scroll" scroll-y enhanced show-scrollbar="{{false}}">
           <view class="report-summary">
             <view class="rsum-totals">
               <view class="rsum-tot">
@@ -616,6 +621,7 @@
               <view class="rsum-export-btn" bindtap="onExportBillEntry">导出账单</view>
             </view>
           </view>
+        </scroll-view>
         </view>
       </view>
     </block>

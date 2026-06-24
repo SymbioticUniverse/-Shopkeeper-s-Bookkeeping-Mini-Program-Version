@@ -29,6 +29,6 @@
       "from": "../middleware/auth"
     }
   ],
-  "capability": "API.md 文档同步至最新代码状态（7.1-7.6全部标记完成，补数据模型/安全加固/约束章节）；后端修复 linkedId 成对互指校验死锁与 settle 自动记录 ID 碰撞两个 bug",
-  "updatedAt": "2026-06-22T12:01:45.898Z"
+  "capability": "OCR 凭证识别修复字段名 Bug（BlockContent 替代 Text）并增强健壮性（Data.Content 回落、HTTP/业务错误分层）；AI 对话从硬编码 mock 升级为关键词驱动 7 字段弹性解析（时间/金额/收支/主体/分类/备注/追问）；明细列表按日期分组展示；凭证本地路径静默降级不阻塞记账",
+  "updatedAt": "2026-06-24T10:55:35.636Z"
 }

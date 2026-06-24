@@ -176,12 +176,14 @@ router.post('/', requireAuth, (req, res) => {
   }
 
   // 校验 voucher 归属
+  // API.md 7.8: 本地路径（如 wxfile://）静默降级为空，不拒绝整条记录
   if (item.voucher) {
     const valid = validateVoucher(item.voucher, req.userId)
     if (valid === null) {
-      return res.status(400).json({ error: 'voucher 凭证路径不合法' })
+      item.voucher = ''
+    } else {
+      item.voucher = valid
     }
-    item.voucher = valid
   }
 
   // 校验 amount 类型（拒绝 NaN、非数字、负数）
@@ -252,13 +254,15 @@ router.put('/:id', requireAuth, (req, res) => {
   }
 
   // 校验 voucher 归属
+  // API.md 7.8: 本地路径静默降级为空
   if (data.voucher !== undefined) {
     if (data.voucher) {
       const valid = validateVoucher(data.voucher, req.userId)
       if (valid === null) {
-        return res.status(400).json({ error: 'voucher 凭证路径不合法' })
+        data.voucher = ''
+      } else {
+        data.voucher = valid
       }
-      data.voucher = valid
     }
     // 允许清空（data.voucher === ''）
   }
@@ -496,19 +500,22 @@ router.post('/linked', requireAuth, (req, res) => {
   }
 
   // 校验 voucher 归属
+  // API.md 7.8: 本地路径静默降级为空
   if (item.voucher) {
     const valid = validateVoucher(item.voucher, req.userId)
     if (valid === null) {
-      return res.status(400).json({ error: 'voucher 凭证路径不合法' })
+      item.voucher = ''
+    } else {
+      item.voucher = valid
     }
-    item.voucher = valid
   }
   if (mirrorItem.voucher) {
     const valid = validateVoucher(mirrorItem.voucher, req.userId)
     if (valid === null) {
-      return res.status(400).json({ error: 'mirrorItem voucher 凭证路径不合法' })
+      mirrorItem.voucher = ''
+    } else {
+      mirrorItem.voucher = valid
     }
-    mirrorItem.voucher = valid
   }
 
   // 校验 amount

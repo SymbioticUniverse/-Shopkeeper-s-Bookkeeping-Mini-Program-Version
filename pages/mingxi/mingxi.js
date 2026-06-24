@@ -214,6 +214,7 @@ Page({
     maxDate: (function () { var d = new Date(); return d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2) })(), // 图表/明细日期选择器上限：今天，禁止选未来
     detailDateText: '2026年06月',
     detailItems: [],
+    detailGroups: [],
     // 弹窗 & 滑动
     modalItem: null,
     modalFrom: '',
@@ -2493,7 +2494,8 @@ Page({
       api.addItem(scope, newItem)
     }
 
-    this.setData({ detailItems: this._buildDetailList(scope, api.getItems(scope)), showBookPopup: false, bookPhoto: '' })
+    var _items2497 = this._buildDetailList(scope, api.getItems(scope))
+this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_items2497), showBookPopup: false, bookPhoto: '' })
     this._calcOverviewData()
     wx.showToast({ title: '记账成功', icon: 'success' })
     this._redrawReportCharts()
@@ -2776,6 +2778,25 @@ Page({
       })
   },
 
+  _buildDetailGroups(items) {
+    var groups = []
+    var currentDate = ''
+    var currentGroup = null
+    for (var i = 0; i < items.length; i++) {
+      var item = items[i]
+      var dateStr = (item.date || '').slice(0, 10)
+      if (dateStr !== currentDate) {
+        currentDate = dateStr
+        var parts = dateStr.split('-')
+        var label = parseInt(parts[1]) + '月' + parseInt(parts[2]) + '日'
+        currentGroup = { dateLabel: label, items: [] }
+        groups.push(currentGroup)
+      }
+      currentGroup.items.push(item)
+    }
+    return groups
+  },
+
   // 详情弹窗用的完整时间（到秒）：前端记账 id=Date.now()，直接取其时分秒；后端自动结清记录从 settleInfo 解析到分钟；都没有则只显示日期
   _billTimeText(it) {
     if (!it) return ''
@@ -2795,7 +2816,8 @@ Page({
     const scope = this.data.detailType === 1 ? 'company' : 'personal'
     // 明细只展示原始记账：隐藏后端结清生成的自动对账记录（_autoSettle）；统计口径不受影响（仍用 api.getItems 全量）
     const list = api.getItems(scope).filter(it => !it._autoSettle)
-    this.setData({ detailItems: this._buildDetailList(scope, list) })
+    var items = this._buildDetailList(scope, list)
+    this.setData({ detailItems: items, detailGroups: this._buildDetailGroups(items) })
   },
 
   initSettleItems() {
@@ -4350,6 +4372,7 @@ Page({
               isLoggedIn: false,
               userInfo: null,
               detailItems: [],
+              detailGroups: [],
               settleItems: [],
             })
             // 清除全部本地数据，防止换号残留
@@ -4879,11 +4902,13 @@ Page({
         if (items[i].id === msg.card.itemId) { found = items[i]; break }
       }
     }
+    var _aiItems = this._buildDetailList(scope, items)
     this.setData({
       showAiChat: false,
       currentTab: 0,
       showOverview: false,
-      detailItems: this._buildDetailList(scope, items),
+      detailItems: _aiItems,
+      detailGroups: this._buildDetailGroups(_aiItems),
       modalItem: found ? { ...found, _settleText: this._formatSettleText(found), _timeText: this._billTimeText(found), _readonly: !!(found._autoSettle || found.settleStatus === 'settled') } : null,
     })
   },
@@ -4920,26 +4945,140 @@ Page({
     }, 800)
   },
 
+  // 关键词驱动弹性解析：7 字段任意语序，缺省智能填充
   _mockAiReply(input) {
-    const time = this._formatChatTime(new Date())
-    const now = new Date()
-    const date = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0')
-    const match = input.match(/(.+?)\s+(\d+(?:\.\d{1,2})?)/)
-    if (match) {
-      const desc = match[1].trim()
-      const amount = parseFloat(match[2]).toFixed(2)
-      const catMap = { '午餐': '餐饮', '晚餐': '餐饮', '早餐': '餐饮', '外卖': '餐饮', '吃饭': '餐饮', '打车': '交通', '出租': '交通', '地铁': '交通', '公交': '交通', '加油': '交通', '咖啡': '饮品', '奶茶': '饮品', '水果': '食品', '零食': '食品', '买菜': '食品', '工资': '工资', '薪资': '工资', '奖金': '奖金' }
-      const incomeKeys = ['工资', '薪资', '奖金', '收到', '收入', '转入']
-      const isIncome = incomeKeys.some(function(k) { return desc.indexOf(k) >= 0 })
-      const category = catMap[desc] || desc
-      return {
-        role: 'ai',
-        text: '好的，已帮你记录：',
-        card: { category: category, amount: amount, typeLabel: isIncome ? '收入' : '支出', type: isIncome ? 'in' : 'out', date: date, note: desc },
-        time: time
+    var time = this._formatChatTime(new Date())
+    var now = new Date()
+    var dateStr = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0')
+
+    var text = input
+
+    // ---- 时间词自动匹配 ----
+    var timeMap = { '今天': 0, '昨天': -1, '前天': -2, '明天': 1, '后天': 2 }
+    for (var tk in timeMap) {
+      if (text.indexOf(tk) >= 0) {
+        var d = new Date(now)
+        d.setDate(d.getDate() + timeMap[tk])
+        dateStr = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0')
+        text = text.replace(tk, '')
+        break
       }
     }
-    return { role: 'ai', text: '收到！AI 记账功能正在开发中，敬请期待\n\n目前你可以用格式 "描述 金额" 来快速记一笔。', time: time }
+
+    // ---- 1. 提取金额（必须） ----
+    var amountMatch = text.match(/(\d+(?:\.\d{1,2})?)/)
+    if (!amountMatch) {
+      // 尝试中文数字
+      var cnNumMap = { '一':1,'二':2,'三':3,'四':4,'五':5,'六':6,'七':7,'八':8,'九':9,'十':10,'百':100,'千':1000,'万':10000,'零':0,'两':2 }
+      var cnMatch = text.match(/[一二三四五六七八九十百千万零两]+/)
+      if (!cnMatch) {
+        return { role: 'ai', text: '请问金额是多少？', time: time }
+      }
+      // 简单中文数字转换
+      var cnStr = cnMatch[0]
+      var cnVal = 0; var tmp = 0
+      for (var ci = 0; ci < cnStr.length; ci++) {
+        var ch = cnStr[ci]; var v = cnNumMap[ch]
+        if (v === 10) { tmp = (tmp || 1) * 10; cnVal += tmp; tmp = 0 }
+        else if (v === 100) { tmp = (tmp || 1) * 100; cnVal += tmp; tmp = 0 }
+        else if (v === 1000) { tmp = (tmp || 1) * 1000; cnVal += tmp; tmp = 0 }
+        else if (v === 10000) { cnVal = (cnVal + (tmp || 0)) * 10000; tmp = 0 }
+        else { tmp = v }
+      }
+      cnVal += tmp
+      var amount = cnVal.toFixed(2)
+      text = text.replace(cnMatch[0], '')
+    } else {
+      var amount = parseFloat(amountMatch[1]).toFixed(2)
+      text = text.replace(amountMatch[0], '')
+    }
+
+    // ---- 2. 收支词（缺省=支出） ----
+    var incomeKeys = ['收到', '收入', '赚了', '捡了', '发了', '转入', '报销', '退款', '到账', '转账', '酬劳', '补贴', '津贴', '工资', '薪资', '奖金']
+    var isIncome = false
+    for (var ii = 0; ii < incomeKeys.length; ii++) {
+      if (text.indexOf(incomeKeys[ii]) >= 0) { isIncome = true; break }
+    }
+    // 动词辅助判定
+    if (!isIncome && /发了|收了|报销|到账/.test(text)) isIncome = true
+    // 红包：看上下文，"发红包"=支出，"收到红包"=收入
+    if (text.indexOf('红包') >= 0) {
+      if (/收到.*红包|红包.*收到|给.*我.*红包/.test(text)) isIncome = true
+      else if (/发.*红包/.test(text) && !/收到/.test(text)) isIncome = false
+    }
+
+    // ---- 3. 主体词（缺省=个人） ----
+    var companyKeys = ['公司', '垫付', '应付', '办公', '报销']
+    var isCompany = false
+    for (var ci2 = 0; ci2 < companyKeys.length; ci2++) {
+      if (text.indexOf(companyKeys[ci2]) >= 0) { isCompany = true; break }
+    }
+
+    // ---- 4. 分类词 → 预设分类 ----
+    var catList = [
+      { keys: ['咖啡', '奶茶', '柠檬茶', '可乐', '饮料', '牛奶', '豆浆', '果汁', '奶昔'], cat: '饮品' },
+      { keys: ['午餐', '晚餐', '早餐', '外卖', '吃饭', '火锅', '烧烤', '米粉', '面条','面','饺子','盒饭','快餐','麻辣烫','麻辣拌','米线','盖饭','盖浇饭','小吃'], cat: '餐饮' },
+      { keys: ['打车', '滴滴', '出租', '地铁', '公交', '加油', '高铁', '火车票', '机票', '停车', '高铁票', '火车','差旅费','交通费'], cat: '交通' },
+      { keys: ['水果', '零食', '买菜', '菜', '西瓜', '榴莲', '水果篮', '超市', '购物券','采购'], cat: '购物' },
+      { keys: ['话费', '充值', '流量', '宽带'], cat: '通讯' },
+      { keys: ['感冒药', '药品', '药', '医院', '诊所', '口罩', '体温计'], cat: '医疗' },
+      { keys: ['房租', '租房', '房贷', '物业', '水电费','电费','水费','煤气'], cat: '住房' },
+      { keys: ['工资', '薪资', '奖金'], cat: '工资' },
+      { keys: ['红包'], cat: '人情' },
+      { keys: ['打印纸', '办公用品', '快递费', '快递', '文具','墨盒','硒鼓'], cat: '办公' },
+      { keys: ['信用卡还款', '还信用卡', '还款'], cat: '金融' },
+      { keys: ['衣服', '裤子', '鞋子', '袜子', '帽子'], cat: '服饰' },
+      { keys: ['电影', 'KTV', '唱歌', '旅游', '酒店', '门票'], cat: '娱乐' }
+    ]
+    var category = ''
+    var note = ''
+    for (var ci3 = 0; ci3 < catList.length; ci3++) {
+      for (var ki = 0; ki < catList[ci3].keys.length; ki++) {
+        var kw = catList[ci3].keys[ki]
+        var idx = text.indexOf(kw)
+        if (idx >= 0) {
+          category = catList[ci3].cat
+          // 命中的关键词作为备注基础，从文本中移除
+          note = kw
+          text = text.substring(0, idx) + text.substring(idx + kw.length)
+          break
+        }
+      }
+      if (category) break
+    }
+
+    // ---- 5. 剩余文本清洗 → 最终备注 ----
+    var noiseWords = ['我妈', '我爸', '我', '了个', '给我', '一下', '去了', '然后', '并且', '还有', '对了', '另外', '接着', '再', '今天', '昨天', '明天', '的', '了', '去', '和', '个', '块', '毛', '元']
+    var cleanText = text
+    for (var ni = 0; ni < noiseWords.length; ni++) {
+      cleanText = cleanText.split(noiseWords[ni]).join('')
+    }
+    // 去掉动词/量词残留
+    cleanText = cleanText.replace(/^(记一笔|记|买|花了|付|充|发了|收了|还|报销|给|转)\s*/g, '')
+    cleanText = cleanText.trim()
+
+    // 备注优先用分类关键词命中结果，其次用清洗后的剩余文本
+    if (!note && cleanText) note = cleanText
+    if (note && cleanText && cleanText !== note) note = cleanText || note
+
+    // 无分类且无备注 → 用原始输入的关键部分
+    if (!category) category = note || '其他'
+
+    // ---- 6. 组装返回 ----
+    return {
+      role: 'ai',
+      text: '好的，已帮你记录：',
+      card: {
+        category: category,
+        amount: amount,
+        typeLabel: isIncome ? '收入' : '支出',
+        type: isIncome ? 'in' : 'out',
+        date: dateStr,
+        note: note || input.trim(),
+        scope: isCompany ? 'company' : 'personal'
+      },
+      time: time
+    }
   },
 
   _saveAiRecord(reply) {
@@ -4960,7 +5099,8 @@ Page({
     }
     api.addItem(scope, newItem)
     reply.card.itemId = newItem.id
-    this.setData({ detailItems: this._buildDetailList(scope, api.getItems(scope)) })
+    var _savedItems = this._buildDetailList(scope, api.getItems(scope))
+    this.setData({ detailItems: _savedItems, detailGroups: this._buildDetailGroups(_savedItems) })
     this._calcOverviewData()
   },
 
