@@ -968,7 +968,12 @@ Page({
     const personalItems = api.getItems('personal').filter(it => !it._voided && inMonth(it))
     const companyItems = api.getItems('company').filter(it => !it._voided && inMonth(it))
     const sum = (items, fn) => items.filter(fn).reduce((s, it) => s + parseFloat(it.amount || 0), 0)
-    const fmt = (n) => n.toFixed(2)
+    // 金额缩写：千用 k、万用 W，最多 3 位小数
+    const fmt = (n) => {
+      if (n >= 10000) return +(n / 10000).toFixed(3) + 'W'
+      if (n >= 1000) return +(n / 1000).toFixed(3) + 'k'
+      return n.toFixed(2)
+    }
 
     const incomeOf = (arr) => sum(arr, it => it.typeLabel === '收入')
     const expenseOf = (arr) => sum(arr, it => it.typeLabel === '支出' || it.typeLabel === '垫付')   // 个人口径：垫付算支出
