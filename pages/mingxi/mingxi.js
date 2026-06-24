@@ -605,6 +605,11 @@ Page({
 	      { id: 'p_42', name: '欠款', emoji: '📝', inOut: 'payable' },
 	      { id: 'p_43', name: '分期', emoji: '🔄', inOut: 'payable' },
 	      { id: 'p_44', name: '赊账', emoji: '🧾', inOut: 'payable' },
+	      { id: 'p_45', name: '饮品', emoji: '🧋', inOut: 'out' },
+	      { id: 'p_46', name: '住房', emoji: '🏠', inOut: 'out' },
+	      { id: 'p_47', name: '人情', emoji: '🧧', inOut: 'out' },
+	      { id: 'p_48', name: '办公', emoji: '🖊', inOut: 'out' },
+	      { id: 'p_49', name: '金融', emoji: '🏦', inOut: 'out' },
     ],
     companyCategories: [
       { id: 'c_1', name: '采购', emoji: '📋', inOut: 'out' },
@@ -4831,7 +4836,6 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
     })
     setTimeout(() => {
       const reply = this._mockAiReply(text)
-      this._saveAiRecord(reply)
       const updated = this.data.aiMessages.slice()
       updated.push(reply)
       this.setData({
@@ -4905,7 +4909,7 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
     const idx = e.currentTarget.dataset.idx
     const msg = this.data.aiMessages[idx]
     if (!msg || !msg.card) return
-    var scope = this.data.bookScope || 'personal'
+    var scope = msg.card.scope || this.data.bookScope || 'personal'
     var items = api.getItems(scope)
     var found = null
     if (msg.card.itemId) {
@@ -4945,7 +4949,6 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
 
     setTimeout(() => {
       const reply = this._mockAiReply(text)
-      this._saveAiRecord(reply)
       const updated = this.data.aiMessages.slice()
       updated.push(reply)
       this.setData({
@@ -5075,10 +5078,29 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
     // 无分类且无备注 → 用原始输入的关键部分
     if (!category) category = note || '其他'
 
+    // ---- 动词提取 ----
+    var verb = '-'
+    var verbList = ['买了', '吃了', '喝了', '付了', '花了', '充了', '打了', '发了', '收了', '给了', '转了', '交了', '缴了',
+                    '买', '吃', '喝', '付', '花', '充', '打', '发', '收', '给', '转', '交', '缴',
+                    '充值', '报销', '到账', '记一笔', '还了', '还',
+                    '买了点', '吃了碗', '喝了杯', '打了辆', '发了封', '收了笔']
+    for (var vi = 0; vi < verbList.length; vi++) {
+      if (text.indexOf(verbList[vi]) >= 0) { verb = verbList[vi]; break }
+    }
+
     // ---- 6. 组装返回 ----
     return {
       role: 'ai',
-      text: '好的，已帮你记录：',
+      text: '请确认以下记账信息：',
+      fields: {
+        verb: verb,
+        measure: '元',
+        subject: isCompany ? '公司' : '个人',
+        project: note || input.trim(),
+        category: category,
+        amount: amount,
+        direction: isIncome ? '收入' : '支出'
+      },
       card: {
         category: category,
         amount: amount,
@@ -5088,6 +5110,7 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
         note: note || input.trim(),
         scope: isCompany ? 'company' : 'personal'
       },
+      confirmed: undefined, // undefined=待确认, true=已确认, false=已取消
       time: time
     }
   },
@@ -5095,7 +5118,7 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
   _saveAiRecord(reply) {
     if (!reply.card) return
     var c = reply.card
-    var scope = this.data.bookScope || 'personal'
+    var scope = c.scope || this.data.bookScope || 'personal'
     var newItem = {
       id: Date.now(),
       category: c.category,
@@ -5115,6 +5138,27 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
     this._calcOverviewData()
   },
 
+
+	  onAiConfirm(e) {
+	    const idx = e.currentTarget.dataset.idx
+	    const reply = this.data.aiMessages[idx]
+	    if (!reply || !reply.card) return
+	    this._saveAiRecord(reply)
+	    reply.confirmed = true
+	    const updated = this.data.aiMessages.slice()
+	    updated[idx] = reply
+	    this.setData({ aiMessages: updated })
+	  },
+
+	  onAiReject(e) {
+	    const idx = e.currentTarget.dataset.idx
+	    const reply = this.data.aiMessages[idx]
+	    if (!reply) return
+	    reply.confirmed = false
+	    const updated = this.data.aiMessages.slice()
+	    updated[idx] = reply
+	    this.setData({ aiMessages: updated })
+	  },
   _formatChatTime(d) {
     return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0')
   },

@@ -1785,7 +1785,45 @@
         <view class="ai-msg" wx:for="{{aiMessages}}" wx:key="index" id="ai-msg-{{index}}">
           <view class="ai-msg-bubble ai-msg-bubble--{{item.role}}">
             <text class="ai-msg-text">{{item.text}}</text>
-            <view wx:if="{{item.card}}" class="ai-bill-card ai-bill-card--{{item.card.type}}" catchtap="onAiBillTap" data-idx="{{index}}">
+            <!-- 待确认：7字段确认卡片 -->
+            <view wx:if="{{item.fields && item.confirmed === undefined}}" class="ai-confirm-card">
+              <view class="ai-confirm-grid">
+                <view class="ai-confirm-item">
+                  <text class="ai-confirm-label">动词</text>
+                  <text class="ai-confirm-value">{{item.fields.verb}}</text>
+                </view>
+                <view class="ai-confirm-item">
+                  <text class="ai-confirm-label">量词</text>
+                  <text class="ai-confirm-value">{{item.fields.measure}}</text>
+                </view>
+                <view class="ai-confirm-item">
+                  <text class="ai-confirm-label">主体</text>
+                  <text class="ai-confirm-value">{{item.fields.subject}}</text>
+                </view>
+                <view class="ai-confirm-item">
+                  <text class="ai-confirm-label">分类</text>
+                  <text class="ai-confirm-value">{{item.fields.category}}</text>
+                </view>
+                <view class="ai-confirm-item">
+                  <text class="ai-confirm-label">金额</text>
+                  <text class="ai-confirm-value">{{item.fields.amount}}</text>
+                </view>
+                <view class="ai-confirm-item">
+                  <text class="ai-confirm-label">收支</text>
+                  <text class="ai-confirm-value">{{item.fields.direction}}</text>
+                </view>
+              </view>
+              <view class="ai-confirm-proj">
+                <text class="ai-confirm-label">项目词</text>
+                <text class="ai-confirm-value">{{item.fields.project}}</text>
+              </view>
+              <view class="ai-confirm-btns">
+                <view class="ai-confirm-btn ai-confirm-btn--reject" catchtap="onAiReject" data-idx="{{index}}">错误</view>
+                <view class="ai-confirm-btn ai-confirm-btn--confirm" catchtap="onAiConfirm" data-idx="{{index}}">确认</view>
+              </view>
+            </view>
+            <!-- 已确认：原卡片样式 -->
+            <view wx:elif="{{item.card && item.confirmed === true}}" class="ai-bill-card ai-bill-card--{{item.card.type}}" catchtap="onAiBillTap" data-idx="{{index}}">
               <view class="ai-bill-row">
                 <view class="ai-bill-dot"></view>
                 <text class="ai-bill-cat">{{item.card.category}}</text>
@@ -1795,6 +1833,18 @@
               <view class="ai-bill-row ai-bill-row--bottom">
                 <text class="ai-bill-amount">¥{{item.card.amount}}</text>
                 <text class="ai-bill-date">{{item.card.date}}</text>
+              </view>
+            </view>
+            <!-- 已取消：灰色 -->
+            <view wx:elif="{{item.card && item.confirmed === false}}" class="ai-bill-card ai-bill-card--rejected">
+              <view class="ai-bill-row">
+                <view class="ai-bill-dot"></view>
+                <text class="ai-bill-cat">{{item.card.category}}</text>
+                <text class="ai-bill-type">{{item.card.typeLabel}}</text>
+              </view>
+              <view class="ai-bill-row ai-bill-row--bottom">
+                <text class="ai-bill-amount">¥{{item.card.amount}}</text>
+                <text class="ai-bill-date">已取消</text>
               </view>
             </view>
           </view>
