@@ -9163,6 +9163,13 @@ page {
 .ai-bill-card--rejected .ai-bill-amount {
   text-decoration: line-through;
 }
+.ai-cancel-hint {
+  display: block;
+  font-size: 22rpx;
+  color: rgba(255,255,255,0.45);
+  margin-top: 10rpx;
+  padding-left: 4rpx;
+}
 
 .ai-msg-time {
   font-size: 20rpx;
@@ -9308,6 +9315,7 @@ page {
 .page--dark .ai-voice-text { color: #aaa; }
 .page--dark .ai-bill-btn--reject { background: #555; color: #ddd; }
 .page--dark .ai-bill-btn--confirm { background: #34c759; }
+.page--dark .ai-cancel-hint { color: rgba(255,255,255,0.3); }
 
 /* 暗色模式 - 拓展菜单 */
 .page--dark .header-expand-btn {

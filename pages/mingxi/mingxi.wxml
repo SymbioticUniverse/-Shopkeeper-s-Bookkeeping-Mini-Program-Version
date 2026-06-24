@@ -1810,7 +1810,7 @@
                 <text class="ai-bill-date">{{item.card.date}}</text>
               </view>
             </view>
-            <!-- 已取消：灰色 -->
+            <!-- 已取消：灰色 + 重新输入提示 -->
             <view wx:elif="{{item.card && item.confirmed === false}}" class="ai-bill-card ai-bill-card--rejected">
               <view class="ai-bill-row">
                 <view class="ai-bill-dot"></view>
@@ -1822,6 +1822,7 @@
                 <text class="ai-bill-date">已取消</text>
               </view>
             </view>
+            <text wx:if="{{item.card && item.confirmed === false}}" class="ai-cancel-hint">识别有误？换个说法再试一次吧</text>
           </view>
           <text class="ai-msg-time ai-msg-time--{{item.role}}">{{item.time}}</text>
         </view>
