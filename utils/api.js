@@ -615,6 +615,55 @@ function ocrParse(imageUrl) {
   })
 }
 
+// 上传标注数据集（内部使用，不面向用户）
+// 方式一：JSON 上传
+function learnUpload(type, records) {
+  return _request('POST', '/learn/upload', { type: type, records: records }).then(function (data) {
+    if (data && data.ok) {
+      return {
+        totalRows: data.totalRows || 0,
+        correctionsAdded: data.correctionsAdded || 0,
+        itemCategoryMappingsAdded: data.itemCategoryMappingsAdded || 0,
+        patternsLearned: data.patternsLearned || 0
+      }
+    }
+    throw data
+  })
+}
+
+// 方式二：CSV 文件上传（推荐）
+function learnUploadCsv(filePath) {
+  var token = _getToken()
+  return new Promise(function (resolve, reject) {
+    wx.uploadFile({
+      url: BASE_URL + '/learn/upload-csv',
+      filePath: filePath,
+      name: 'file',
+      header: { 'Authorization': 'Bearer ' + token },
+      formData: { type: 'asr_structured' },
+      success: function (res) {
+        try {
+          var data = JSON.parse(res.data)
+          if (data && data.ok) {
+            resolve({
+              totalRows: data.totalRows || 0,
+              correctionsAdded: data.correctionsAdded || 0,
+              itemCategoryMappingsAdded: data.itemCategoryMappingsAdded || 0,
+              patternsLearned: data.patternsLearned || 0
+            })
+          } else {
+            reject(data)
+          }
+        } catch (e) { reject(res) }
+      },
+      fail: function (err) {
+        console.error('[API] learnUploadCsv 失败', err)
+        reject(err)
+      }
+    })
+  })
+}
+
 // ==================== 导出 ====================
 
 module.exports = {
@@ -675,4 +724,8 @@ module.exports = {
 
   // OCR 凭证识别
   ocrParse,
+
+  // 标注数据集上传（内部）
+  learnUpload,
+  learnUploadCsv,
 }
