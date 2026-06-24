@@ -50,6 +50,65 @@ function _handleAuthExpired() {
   }, 800)
 }
 
+// ==================== 离线队列 ====================
+
+const OFFLINE_QUEUE_KEY = 'offlineQueue'
+
+function _getQueue() {
+  return wx.getStorageSync(OFFLINE_QUEUE_KEY) || []
+}
+
+function _saveQueue(queue) {
+  _save(OFFLINE_QUEUE_KEY, queue)
+}
+
+/** 将一次失败的操作加入离线队列，待网络恢复后重放 */
+function _enqueue(action, path, data) {
+  const queue = _getQueue()
+  queue.push({ id: Date.now(), action, path, data, timestamp: Date.now() })
+  _saveQueue(queue)
+}
+
+let _networkListenerInited = false
+
+function _initNetworkListener() {
+  if (_networkListenerInited) return
+  _networkListenerInited = true
+  wx.onNetworkStatusChange(function (res) {
+    if (res.isConnected) {
+      console.log('[API] 网络恢复，开始重放离线队列')
+      _replayQueue()
+    }
+  })
+}
+
+/** 重放离线队列：逐条推送到后端，成功的移除，失败的保留等下次 */
+async function _replayQueue() {
+  const queue = _getQueue()
+  if (!queue.length) return
+  console.log('[API] 离线队列重放中，共 ' + queue.length + ' 条')
+  const remaining = []
+  for (let i = 0; i < queue.length; i++) {
+    const op = queue[i]
+    try {
+      await _request(op.action, op.path, op.data)
+    } catch (e) {
+      remaining.push(op)
+    }
+  }
+  _saveQueue(remaining)
+  if (remaining.length === 0) {
+    console.log('[API] 离线队列全部重放成功')
+  } else {
+    console.warn('[API] 离线队列 ' + remaining.length + ' 条重试失败，等待下次网络恢复')
+  }
+}
+
+/** 标记队列中有待推送的变更，供 syncFromCloud 调用前保护本地数据 */
+function _hasPendingQueue() {
+  return _getQueue().length > 0
+}
+
 // ==================== 网络请求 ====================
 
 /**
@@ -90,12 +149,19 @@ function _request(method, path, data) {
 
 /**
  * 后台推送 — 异步写入后端，不阻塞调用方
- * 无 token 时直接跳过（离线模式）
+ * 网络失败时自动入离线队列，等恢复后重放
  */
 function _pushBackend(method, path, data) {
-  if (!_getToken()) return // 未登录，仅用本地存储
+  if (!_getToken()) return
+  _initNetworkListener()
   return _request(method, path, data).catch(err => {
-    console.warn('[API] 后台推送失败', path, err)
+    // 仅网络错误入队列（业务错误如 400/401 不入队，避免反复失败）
+    if (err && (err.errMsg && err.errMsg.indexOf('fail') >= 0 || err.errno)) {
+      console.warn('[API] 离线：操作已入队列', method, path)
+      _enqueue(method, path, data)
+    } else {
+      console.warn('[API] 后台推送失败（非网络原因，不入队）', path, err)
+    }
   })
 }
 
@@ -118,20 +184,20 @@ function _addItemLocal(scope, item) {
 }
 
 function addItem(scope, item) {
-  const result = _addItemLocal(scope, item)
-  // 异步推送到后端
-  _pushBackend('POST', '/items', { scope, item })
-  return result
+  const stamped = { ...item, _updatedAt: Date.now() }
+  _addItemLocal(scope, stamped)
+  _pushBackend('POST', '/items', { scope, item: stamped })
+  return stamped
 }
 
 function updateItem(id, data) {
   const scope = _findScope(id)
   const key = scope === 'company' ? 'companyItems' : 'personalItems'
   const items = wx.getStorageSync(key) || []
-  const updated = items.map(it => it.id === id ? { ...it, ...data } : it)
+  const patched = { ...data, _updatedAt: Date.now() }
+  const updated = items.map(it => it.id === id ? { ...it, ...patched } : it)
   _save(key, updated)
-  // 异步推送到后端
-  _pushBackend('PUT', '/items/' + id, data)
+  _pushBackend('PUT', '/items/' + id, patched)
 }
 
 function removeItem(id) {
@@ -139,8 +205,7 @@ function removeItem(id) {
   const key = scope === 'company' ? 'companyItems' : 'personalItems'
   const items = (wx.getStorageSync(key) || []).filter(it => it.id !== id)
   _save(key, items)
-  // 异步推送到后端
-  _pushBackend('DELETE', '/items/' + id)
+  _pushBackend('DELETE', '/items/' + id, { _deletedAt: Date.now() })
 }
 
 function addLinkedItems(scope, item, mirrorScope, mirrorItem) {
@@ -370,15 +435,20 @@ function saveOverviewCards(cards) {
 // ==================== 数据同步 ====================
 
 /**
- * 从后端拉取全量数据到本地 Storage
- * 应在登录成功后调用，或 App.onLaunch 时调用
+ * 从后端拉取全量数据到本地 Storage。
+ * 1. 先重放离线队列（推送本地变更到服务端）
+ * 2. 再拉取服务端数据，与本地合并（本地优先，ID 相同的保留本地版本）
+ * 应在登录成功后调用，或 App.onLaunch 时调用。
  * @returns {Promise<{synced: boolean}>}
  */
 async function syncFromCloud() {
   if (!_getToken()) return { synced: false }
 
+  // Step 1: 先推送本地离线变更到服务端
+  await _replayQueue()
+
   try {
-    // 并行拉取所有数据
+    // Step 2: 拉取服务端全量数据
     const results = await Promise.allSettled([
       _request('GET', '/items?scope=personal'),
       _request('GET', '/items?scope=company'),
@@ -397,12 +467,15 @@ async function syncFromCloud() {
       companyInfo, auditList, notifyList, feedbackList, userInfo, overviewCards, settings
     ] = results
 
+    // Step 3: 合并 items — 本地优先（不覆盖本地已有的记录）
     if (personalItems.status === 'fulfilled' && personalItems.value) {
-      _save('personalItems', personalItems.value)
+      _mergeItems('personalItems', personalItems.value)
     }
     if (companyItems.status === 'fulfilled' && companyItems.value) {
-      _save('companyItems', companyItems.value)
+      _mergeItems('companyItems', companyItems.value)
     }
+
+    // 其他非事务性数据：云端权威（分类、公司、设置等）
     if (personalCats.status === 'fulfilled' && personalCats.value) {
       _save('personalCategories', personalCats.value)
     }
@@ -422,8 +495,6 @@ async function syncFromCloud() {
       _save('feedbackList', feedbackList.value)
     }
     if (userInfo.status === 'fulfilled' && userInfo.value) {
-      // last-write-wins 安全降级：仅当后端已返回 updatedAt(>0) 且本地更新时，
-      // 保留本地并反推后端；后端尚未支持时间戳时退回「云端权威」，不破坏跨端同步
       const localU = wx.getStorageSync('userInfo') || null
       const remoteU = userInfo.value
       const localTs = (localU && localU.updatedAt) || 0
@@ -448,6 +519,37 @@ async function syncFromCloud() {
     console.error('[API] 云端同步失败:', err)
     return { synced: false }
   }
+}
+
+/**
+ * 合并服务端数据到本地：以本地为准。
+ * - 本地已有的记录保留（包括离线修改的）
+ * - 仅在本地完全没有数据时才用服务端的（首次登录、换设备）
+ * - 服务端有而本地没有的记录（其他设备创建的）追加到本地
+ */
+function _mergeItems(key, remoteItems) {
+  const localItems = wx.getStorageSync(key) || []
+  if (localItems.length === 0) {
+    // 本地空 → 直接用服务端数据（冷启动/换设备）
+    _save(key, remoteItems)
+    return
+  }
+
+  // 本地为主：构建本地 ID 集合
+  const localIds = {}
+  for (const it of localItems) { localIds[it.id] = true }
+
+  // 服务端有而本地没有的记录 → 追加（可能是其他设备创建的）
+  const merged = localItems.slice()
+  for (const rit of remoteItems) {
+    if (!localIds[rit.id]) {
+      merged.push(rit)
+    }
+  }
+
+  // 按 _updatedAt 降序排列
+  merged.sort(function (a, b) { return (b._updatedAt || 0) - (a._updatedAt || 0) })
+  _save(key, merged)
 }
 
 // ==================== 迁移（一次性） ====================
@@ -728,4 +830,8 @@ module.exports = {
   // 标注数据集上传（内部）
   learnUpload,
   learnUploadCsv,
+
+  // 离线队列（内部使用，app.js 注册网络监听用）
+  _initNetworkListener,
+  _replayQueue,
 }

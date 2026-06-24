@@ -8,8 +8,10 @@ App({
   },
 
   onLaunch() {
-    // 冷启动时从云端同步数据（已登录用户）
+    // 冷启动：先重放离线队列，再同步云端数据
     this._syncFromCloud()
+    // 注册网络恢复监听：断网期间的操作会在联网后自动推送
+    api._initNetworkListener()
   },
 
   async _syncFromCloud() {
