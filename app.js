@@ -22,6 +22,8 @@ App({
       const result = await api.syncFromCloud()
       if (result && result.synced) {
         console.log('[Chitu] 云同步完成')
+      } else if (result && result.hasConflicts) {
+        console.log('[Chitu] 发现 ' + (result.conflicts ? result.conflicts.length : 0) + ' 个数据冲突，等待用户处理')
       }
     } catch (e) {
       console.warn('[Chitu] 云同步失败:', e.message)

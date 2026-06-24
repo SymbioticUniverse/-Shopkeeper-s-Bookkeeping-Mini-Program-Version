@@ -2003,4 +2003,116 @@
       </view>
     </view>
   </view>
+
+  <!-- 冲突解决面板 -->
+  <view class="conflict-panel-mask" wx:if="{{showConflictPanel}}" catchtap="">
+    <view class="conflict-panel" catchtap="">
+      <view class="conflict-panel-header">
+        <text class="conflict-panel-title">数据冲突 ({{conflicts.length}})</text>
+        <text class="conflict-panel-subtitle">以下账单在本地和云端有冲突，请选择保留哪个版本</text>
+      </view>
+
+      <view class="conflict-progress">
+        <text class="conflict-progress-text">{{conflictIndex + 1}} / {{conflicts.length}}</text>
+        <view class="conflict-progress-bar">
+          <view class="conflict-progress-fill" style="width: {{(conflictIndex + 1) / conflicts.length * 100}}%"></view>
+        </view>
+      </view>
+
+      <block wx:for="{{conflicts}}" wx:key="id">
+        <view class="conflict-card" wx:if="{{index === conflictIndex}}">
+          <view class="conflict-reason">
+            <view class="conflict-reason-icon"><text>!</text></view>
+            <text class="conflict-reason-text">{{item.reason}}</text>
+          </view>
+
+          <!-- 本地版本 -->
+          <view class="conflict-version" wx:if="{{item.localVersion}}">
+            <view class="conflict-version-header">
+              <text class="conflict-version-label conflict-version-label--local">本地版本</text>
+              <text wx:if="{{item.localVersion._dirty}}" class="conflict-version-badge">已修改</text>
+            </view>
+            <view class="conflict-item-row">
+              <text class="conflict-item-icon">&#x1F4CC;</text>
+              <text class="conflict-item-cat">{{item.localVersion.category}}</text>
+              <text class="conflict-item-type">{{item.localVersion.typeLabel}}</text>
+            </view>
+            <view class="conflict-item-row">
+              <text class="conflict-item-amount {{item.localVersion.type === 'in' ? 'conflict-amount--in' : 'conflict-amount--out'}}">&#165;{{item.localVersion.amount}}</text>
+              <text class="conflict-item-date">{{item.localVersion.date}}</text>
+            </view>
+            <view class="conflict-item-row" wx:if="{{item.localVersion.note}}">
+              <text class="conflict-item-note">{{item.localVersion.note}}</text>
+            </view>
+          </view>
+
+          <view class="conflict-version conflict-version--deleted" wx:if="{{!item.localVersion}}">
+            <view class="conflict-version-header">
+              <text class="conflict-version-label conflict-version-label--deleted">本地已删除</text>
+            </view>
+            <text class="conflict-deleted-hint">此账单已在本地删除</text>
+          </view>
+
+          <view class="conflict-vs">
+            <view class="conflict-vs-line"></view>
+            <text class="conflict-vs-text">VS</text>
+            <view class="conflict-vs-line"></view>
+          </view>
+
+          <!-- 云端版本 -->
+          <view class="conflict-version" wx:if="{{item.serverVersion}}">
+            <view class="conflict-version-header">
+              <text class="conflict-version-label conflict-version-label--server">云端版本</text>
+            </view>
+            <view class="conflict-item-row">
+              <text class="conflict-item-icon">&#x1F4CC;</text>
+              <text class="conflict-item-cat">{{item.serverVersion.category}}</text>
+              <text class="conflict-item-type">{{item.serverVersion.typeLabel}}</text>
+            </view>
+            <view class="conflict-item-row">
+              <text class="conflict-item-amount {{item.serverVersion.type === 'in' ? 'conflict-amount--in' : 'conflict-amount--out'}}">&#165;{{item.serverVersion.amount}}</text>
+              <text class="conflict-item-date">{{item.serverVersion.date}}</text>
+            </view>
+            <view class="conflict-item-row" wx:if="{{item.serverVersion.note}}">
+              <text class="conflict-item-note">{{item.serverVersion.note}}</text>
+            </view>
+          </view>
+
+          <view class="conflict-version conflict-version--deleted" wx:if="{{!item.serverVersion}}">
+            <view class="conflict-version-header">
+              <text class="conflict-version-label conflict-version-label--deleted">云端已删除</text>
+            </view>
+            <text class="conflict-deleted-hint">此账单在云端已不存在</text>
+          </view>
+
+          <view class="conflict-btns">
+            <block wx:if="{{item.type !== 'resurrection'}}">
+              <view class="conflict-btn conflict-btn--local {{item.resolution === 'local' ? 'conflict-btn--active' : ''}}" bindtap="onConflictResolve" data-id="{{item.id}}" data-scope="{{item.scope}}" data-resolution="local"><text>保留本地</text></view>
+              <view class="conflict-btn conflict-btn--server {{item.resolution === 'server' ? 'conflict-btn--active' : ''}}" bindtap="onConflictResolve" data-id="{{item.id}}" data-scope="{{item.scope}}" data-resolution="server"><text>保留云端</text></view>
+            </block>
+            <block wx:else>
+              <view class="conflict-btn conflict-btn--local {{item.resolution === 'keep_deleted' ? 'conflict-btn--active' : ''}}" bindtap="onConflictResolve" data-id="{{item.id}}" data-scope="{{item.scope}}" data-resolution="keep_deleted"><text>保持删除</text></view>
+              <view class="conflict-btn conflict-btn--server {{item.resolution === 'restore' ? 'conflict-btn--active' : ''}}" bindtap="onConflictResolve" data-id="{{item.id}}" data-scope="{{item.scope}}" data-resolution="restore"><text>恢复账单</text></view>
+            </block>
+          </view>
+
+          <view class="conflict-resolved-tag" wx:if="{{item.resolution}}">
+            <text>已选择: {{item.resolution === 'local' || item.resolution === 'keep_deleted' ? '本地版本' : '云端版本'}}</text>
+          </view>
+        </view>
+      </block>
+
+      <view class="conflict-nav">
+        <view class="conflict-nav-btn {{conflictIndex === 0 ? 'conflict-nav-btn--disabled' : ''}}" bindtap="onConflictPrev"><text>上一个</text></view>
+        <view class="conflict-nav-dots">
+          <view class="conflict-nav-dot {{idx === conflictIndex ? 'conflict-nav-dot--active' : ''}} {{conflicts[idx].resolution ? 'conflict-nav-dot--resolved' : ''}}" wx:for="{{conflicts}}" wx:key="id" wx:for-index="idx"></view>
+        </view>
+        <view class="conflict-nav-btn {{conflictIndex === conflicts.length - 1 ? 'conflict-nav-btn--disabled' : ''}}" bindtap="onConflictNext"><text>下一个</text></view>
+      </view>
+
+      <view class="conflict-apply {{conflictResolving ? 'conflict-apply--loading' : ''}}" bindtap="onConflictDismiss">
+        <text>应用所有选择</text>
+      </view>
+    </view>
+  </view>
 </view>

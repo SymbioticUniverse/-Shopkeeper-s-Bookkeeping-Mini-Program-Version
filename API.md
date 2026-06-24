@@ -2099,3 +2099,78 @@ voucher: this._uploadedVoucherUrl || ''  // 用云端 URL
 ```
 
 > 目前先由后端侧修复「收到本地路径不丢弃整条记录」即可止血，前端 URL 传递优化待后端凭证持久化就绪后跟进。
+
+---
+
+## 九、离线同步 & 冲突检测（2026-06-24）
+
+### 9.1 前端同步策略（脏标记增量模式）
+
+前端不再全量 POST 本地账单，改为脏标记增量推送：
+
+| 操作 | 本地标记 | 推送方式 |
+|------|---------|---------|
+| 新建账单 | `_dirty: true, _syncedAt: 0` | `POST /items` |
+| 修改账单 | `_dirty: true` | `PUT /items/:id` |
+| 删除账单 | 写入 `_deletedItems` 墓碑 | `DELETE /items/:id` |
+
+首次启动时全量推送一次兜底（保证服务端有数据），之后仅推送脏条目。
+
+同步流程：
+```
+1. 推送脏条目 / 重放离线队列
+2. 拉取服务端全量数据
+3. 合并时对比本地与服务端版本 → 检测冲突
+4. 有冲突 → 暂停合并，返回 {hasConflicts: true}，等用户裁决
+5. 无冲突 → 正常完成
+```
+
+### 9.2 冲突类型
+
+前端拉取合并时检测以下冲突场景：
+
+| 冲突类型 | 条件 | 含义 |
+|---------|------|------|
+| `modified_both` | 本地脏 + 服务端版本与本地 `_lastKnownHash` 不一致 | 双方都修改了同一条 |
+| `duplicate_id` | 本地新建（`_syncedAt=0`）但服务端已存在同 ID | 两台设备同时新建了相同 ID 的账单 |
+| `resurrection` | 本地已删除（墓碑命中）但服务端仍有该记录 | 本地删除未同步到云端 |
+| `local_only` | 本地脏但服务端无此 ID | 云端已删除但本地有修改 |
+
+### 9.3 前端冲突数据格式
+
+`getPendingConflicts()` 返回：
+```json
+[{
+  "id": 1234567890,
+  "scope": "personal",
+  "type": "modified_both",
+  "localVersion": { /* 完整的本地 Item 对象 */ },
+  "serverVersion": { /* 完整的服务端 Item 对象 */ },
+  "reason": "此项在本地和云端均被修改"
+}]
+```
+
+### 9.4 冲突裁决接口（前端调用）
+
+`resolveConflicts(resolutions)` — 参数：
+```json
+[{
+  "id": 1234567890,
+  "scope": "personal",
+  "resolution": "local" | "server" | "keep_deleted" | "restore",
+  "resolvedItem": { /* 选中的版本 */ }
+}]
+```
+
+裁决后前端自动推送结果到服务端。
+
+### 9.5 建议后端支持
+
+为更好地支持冲突检测，建议后端：
+
+1. **`GET /items?scope=`** 返回的每条 Item 增加 `updatedAt` 字段（服务端最后修改时间戳），前端可用于更精确的时间戳比对
+2. **`POST /items`** 重复 ID 时返回 `409` + 已有记录的副本（当前已返回 409 但仅有 error 消息）：
+   ```json
+   { "error": "账单 id 已存在", "conflictId": 1234567890, "serverVersion": { /* ... */ } }
+   ```
+3. **`PUT /items/:id`** 条目不存在时返回 `404`

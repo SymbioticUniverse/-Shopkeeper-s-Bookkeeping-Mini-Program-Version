@@ -40,9 +40,15 @@
     "// 新增：云端同步\n  syncFromCloud",
     "// ASR 语音识别\n  asrRecognize",
     "// OCR 凭证识别\n  ocrParse",
+    "// 标注数据集上传（内部）\n  learnUpload",
+    "learnUploadCsv",
+    "// 离线队列（内部使用，app.js 注册网络监听用）\n  _initNetworkListener",
+    "_replayQueue",
+    "// 冲突检测 & 裁决\n  getPendingConflicts",
+    "resolveConflicts",
     "api"
   ],
   "imports": [],
-  "capability": "语音识别从前端 WeChatSI 插件切换为后端阿里云 ASR（wx.getRecorderManager PCM 录音→api.asrRecognize 上传→后端 NLS 识别），凭证 OCR 从随机 mock 切换为真实后端阿里云 OCR（拍照→uploadVoucher→ocrParse→自动填充记账表单），中心 Tab 按钮改为 touchstart/touchend 250ms 长按判定（短按切记账页、长按开 AI 对话+录音），遮罩层松手即停录音",
-  "updatedAt": "2026-06-24T07:03:41.129Z"
+  "capability": "离线优先记账完整闭环：脏标记增量推送、墓碑删除追踪、4种双向合并冲突检测（modified_both/duplicate_id/resurrection/local_only），冲突面板逐条对比本地与云端版本，用户裁决后自动推送到服务端",
+  "updatedAt": "2026-06-24T15:09:17.118Z"
 }

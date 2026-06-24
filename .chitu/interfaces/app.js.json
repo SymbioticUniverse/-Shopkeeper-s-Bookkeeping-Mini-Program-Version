@@ -7,6 +7,6 @@
       "from": "./utils/api"
     }
   ],
-  "capability": "小程序入口：冷启动云同步 + globalData 全局状态（lang/darkMode），通过 api.syncFromCloud() 拉取全量数据到本地 Storage",
-  "updatedAt": "2026-06-18T15:39:53.164Z"
+  "capability": "离线优先记账完整闭环：脏标记增量推送、墓碑删除追踪、4种双向合并冲突检测（modified_both/duplicate_id/resurrection/local_only），冲突面板逐条对比本地与云端版本，用户裁决后自动推送到服务端",
+  "updatedAt": "2026-06-24T15:09:17.119Z"
 }
