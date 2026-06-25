@@ -29,6 +29,6 @@
       "from": "../middleware/auth"
     }
   ],
-  "capability": "updatedAt 格式统一为毫秒时间戳，排序不再异常；POST 409 响应携带已有记录，前端 _pushDirtyItems 直接进入冲突裁决，省去一轮 pull 网络往返",
-  "updatedAt": "2026-06-24T15:23:26.161Z"
+  "capability": "DELETE /api/items/:id 幂等：记录不存在时返回 200 而非 404，前端 _pushDirtyItems 容错 404 直接清理墓碑，登录后同步不再因墓碑重复推送而报错",
+  "updatedAt": "2026-06-25T12:00:19.544Z"
 }

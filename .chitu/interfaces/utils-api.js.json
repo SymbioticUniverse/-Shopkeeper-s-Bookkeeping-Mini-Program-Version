@@ -56,6 +56,6 @@
     "api"
   ],
   "imports": [],
-  "capability": "BASE_URL 已切换为公网部署地址 http://8.134.250.114:8080/api，小程序可正常对接线上后端",
-  "updatedAt": "2026-06-25T11:01:44.141Z"
+  "capability": "DELETE /api/items/:id 幂等：记录不存在时返回 200 而非 404，前端 _pushDirtyItems 容错 404 直接清理墓碑，登录后同步不再因墓碑重复推送而报错",
+  "updatedAt": "2026-06-25T12:00:19.544Z"
 }

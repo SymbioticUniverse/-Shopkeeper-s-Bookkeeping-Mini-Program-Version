@@ -600,8 +600,12 @@ async function _pushDirtyItems() {
     var entry = deletedItems[d]
     try {
       await _request('DELETE', '/items/' + entry.id, { _deletedAt: entry._deletedAt })
-      // 成功 → 不移入 remaining
+      // 成功 → 不移入 remaining（含幂等场景 deleted=false）
     } catch (e) {
+      // 404 视为已删除，不再重试
+      if (e && e.error === '账单不存在') {
+        continue
+      }
       remainingDeleted.push(entry)
     }
   }
