@@ -10,7 +10,7 @@
 
 <p align="center">
   <img src="https://img.shields.io/badge/platform-WeChat%20Mini%20Program-07C160?logo=wechat" />
-  <img src="https://img.shields.io/badge/license-MIT-green" />
+  <img src="https://img.shields.io/badge/license-AGPL%20v3-blue" />
   <img src="https://img.shields.io/badge/Skyline-3.0%2B-blue" />
 </p>
 
