@@ -1,35 +1,17 @@
-# 自审报告 — 修复 updatedAt 格式不一致 + 409 带 serverVersion
+# 自审 — Docker + Nginx 部署配置
 
-## 变更文件
+## 检查项
 
-### 1. `backend/src/routes/items.js` — rowToItem（行 53）
+1. **Dockerfile** — node:18-alpine，非 root 用户，`npm ci --omit=dev`，镜像精简 ✓
+2. **.dockerignore** — 排除了 node_modules / data / logs / test 文件 / PM2 配置 ✓
+3. **docker-compose.yml** — api + nginx 双容器，volume 持久化 SQLite 和上传文件，env 从宿主机 .env 注入 ✓
+4. **nginx/default.conf** — 反代到 api:3000，透传 X-Forwarded-Proto，HTTPS server 块写好注释 ✓
+5. **backend/.env.example** — 覆盖全部 8 个 process.env 变量 ✓
+6. **DEPLOY.md** — 覆盖买服务器→装 Docker→部署→域名→HTTPS→续期→维护完整流程 ✓
 
-- `updatedAt: row.updated_at ? new Date(row.updated_at + 'Z').getTime() : null`
-- SQLite datetime 字符串 "2026-06-24 12:30:00" → 毫秒时间戳
-- `updated_at` 为 NULL → 返回 null（守卫正确）
-- SQLite 内置格式稳定，不会有 NaN 风险
+## 边缘情况
 
-### 2. `backend/src/routes/items.js` — POST 409（行 237）
-
-- `SQLITE_CONSTRAINT_PRIMARYKEY` 时 SELECT 已有记录 → `rowToItem(existing)` → 返回 `{ error, existingItem }`
-- `existing` 非空断言：INSERT 因主键冲突失败，行必然存在；SQLite 单写锁保证无 TOCTOU 竞态
-- rowToItem 会走同样的 updatedAt 毫秒转换 ✅
-
-### 3. `utils/api.js` — _pushDirtyItems（行 572）
-
-- `e.existingItem` 存在时构建 duplicate_id 冲突（与 `_detectConflicts` 同格式）
-- 追加到 `PENDING_CONFLICTS_KEY`，不清脏标记
-- 边界：
-  - 同一 ID 重复冲突：同一周期内不会重复推（顺序循环），跨周期有重复也安全
-  - `_save` 是同步 wx.setStorageSync，不会失败
-  - `e` 非 409（网络错误等）跳过 if 块，行为不变 ✅
-
-### 4. `utils/api.js` — _mergeItems（行 769）
-
-- `_updatedAt: rIt.updatedAt || 0` — 服务端条目继承后端毫秒时间戳
-- Pass 1 本地条目已有 `_updatedAt`（addItem/updateItem 时写入）
-- 老数据无 `_updatedAt` 降为 0：已有行为，非本次引入
-- 排序 `(b._updatedAt || 0) - (a._updatedAt || 0)` 现在两端都正常工作 ✅
-
-## 结论
-✅ 通过，可提交。
+- 无 HTTPS 时 VOUCHER_BASE_URL 为空不会崩（upload.js 有 fallback 到 req.protocol）
+- SQLite WAL 模式 + mmap 在 Docker volume 中正常工作
+- nginx client_max_body_size 10m 与 Express body limit 一致
+- 容器重启策略 unless-stopped，无需 PM2
