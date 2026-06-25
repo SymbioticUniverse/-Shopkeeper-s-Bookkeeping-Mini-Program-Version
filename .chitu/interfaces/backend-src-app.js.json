@@ -89,6 +89,10 @@
       "from": "./routes/vip"
     },
     {
+      "symbol": "admin: adminRouter",
+      "from": "./routes/admin"
+    },
+    {
       "symbol": "(require)",
       "from": "dotenv"
     },
@@ -97,6 +101,6 @@
       "from": "./middleware/auth"
     }
   ],
-  "capability": "用户可通过小程序调用 6 个 VIP 函数（getVipStatus/subscribeVip/activateTrial/checkUsage/isVip/incrementUsage），后端对应 /api/vip/* 接口已上线运行",
-  "updatedAt": "2026-06-25T07:55:01.326Z"
+  "capability": "用户访问 http://8.134.250.114:8080/admin 即可看到最近 50 条验证码的专用网页，3 秒自动刷新，区分有效/过期/锁定状态，无需再看假验证码。",
+  "updatedAt": "2026-06-25T11:00:37.512Z"
 }
