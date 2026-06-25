@@ -233,6 +233,10 @@ Page({
     bookCatPanelData: [],
     // VIP 升级页
     showVipPage: false,
+    showTrialBanner: false,      // 试用领取横幅
+    trialOfferDays: 92,          // 距试用截止天数
+    vipTrialDays: 0,             // 试用剩余天数（已激活）
+    vipStatus: null,             // { vipLevel, vipExpiresAt, usage, limits, isTrial }
     // 登录状态
     isLoggedIn: false,
     userInfo: null,
@@ -469,97 +473,40 @@ Page({
     ],
     vipDetailId: -1,
     vipSelected: -1,
+    vipEnterpriseSeats: 4,
     vipCards: [
       {
-        id: 0, name: '免费版', tagline: '入门体验 · 基础功能', price: '0', unit: '', discount: '', monthly: '', theme: 'free',
+        id: 1, name: '个人版 PRO', tagline: '单人 · 月付', price: '12', unit: '/月', theme: 'personal',
         features: [
-          [{ text: '每月至少3次AI调用' }],
-          [{ text: '所有模块开放' }],
-          [{ text: '可自定义任何模块' }],
-          [{ text: '无限的垫付计数次数' }],
-          [{ text: '有限的导出次数\n（1次/月）' }],
+          '无限语音调用',
+          '无限凭证扫描上传',
+          '云端存储空间',
+          '无限导出账单',
+          '数据云端保障',
         ],
-        isContact: false,
+        isContact: false, isEnterprise: false,
       },
       {
-        id: 1, name: '个人版 · Pro', tagline: '月度 · 无限次数', price: '12', unit: '/月', discount: '', monthly: '',
+        id: 2, name: '企业版 PRO', tagline: '团队 · 专属可分享 UID', price: '30', unit: '/月起', theme: 'enterprise',
         features: [
-          [{ text: '每月近乎无限的AI调用' }],
-          [{ text: '所有模块开放' }],
-          [{ text: '可自定义任何模块' }],
-          [{ text: '无限的垫付计数次数' }],
-          [{ text: '无限的导出次数（不含报表）' }],
-          [{ text: '首月限免' }],
+          '包含个人版 PRO 全部权益',
+          '唯一专属可分享 UID',
+          '席位更便宜 · 4 人起步',
+          '每增 1 席位 +8 元/月',
+          '10 人以上仅提供年费（8.8 折）',
         ],
-        isContact: false,
+        enterpriseSeats: { min: 4, max: 20, basePrice: 30, pricePerSeat: 8, annualDiscount: 0.88, annualOnlyAbove: 10 },
+        isContact: false, isEnterprise: true,
       },
       {
-        id: 2, name: '个人版 · Ultra', tagline: '年度 · 黄金权益', price: '50', decimal: '.00/年', unit: '', discount: '3.5折', monthly: '折合￥4.2每月', theme: 'ultra',
+        id: 3, name: '企业版定制', tagline: '超大团队 · 专属服务', price: '', unit: '', theme: 'custom',
         features: [
-          [{ text: '每年近乎' }, { text: '无限的', strong: true }, { text: 'AI调用' }],
-          [{ text: '所有模块开放' }],
-          [{ text: '无限的', strong: true }, { text: '垫付计数次数' }],
-          [{ text: '无限的', strong: true }, { text: '导出次数\n（不含报表）' }],
-          [{ text: '可自定义任何模块' }],
+          '20 人以上超大团队',
+          '专属财务客服',
+          '企业税务服务',
+          '定制化功能开发',
         ],
-        isContact: false,
-      },
-      {
-        id: 3, name: '企业版 · Pro', tagline: '月度 · 团队协作', price: '30', decimal: '.00/月', unit: '', discount: '', monthly: '', theme: 'ultra',
-        features: [
-          [{ text: '企业图表无限次生成导出' }],
-          [{ text: '兼具个人版和企业版独有' }],
-          [{ text: '企业' }, { text: '报表专属分析', strong: true }],
-          [{ text: '提供创建企业' }, { text: '专属码', strong: true }],
-          [{ text: '同时对接' }, { text: '至多3名', strong: true }, { text: '员工+1名\nBoss使用' }],
-        ],
-        isContact: false,
-      },
-      {
-        id: 4, name: '企业版 · Ultra', tagline: '年度 · 黄金权益', price: '288', decimal: '.00/年', unit: '', discount: '8折', monthly: '', theme: 'ultra',
-        features: [
-          [{ text: '企业图表无限次生成导出' }],
-          [{ text: '兼具个人版和企业版独有' }],
-          [{ text: '企业' }, { text: '报表专属分析', strong: true }],
-          [{ text: '提供创建企业' }, { text: '专属码', strong: true }],
-          [{ text: '同时对接' }, { text: '至多3名', strong: true }, { text: '员工+1名\nBoss使用' }],
-        ],
-        isContact: false,
-      },
-      {
-        id: 5, name: '企业 · 定制版', tagline: '年度 · 小微团队', price: '600', decimal: '.00/年', unit: '', discount: '5折', monthly: '', theme: 'ultra',
-        features: [
-          [{ text: '企业图表无限次生成导出' }],
-          [{ text: '兼具个人版和企业版独有' }],
-          [{ text: '企业' }, { text: '报表专属分析', strong: true }],
-          [{ text: '提供创建企业' }, { text: '专属码', strong: true }],
-          [{ text: '同时对接' }, { text: '小微型公司所有', strong: true }, { text: '\n' }, { text: '员工+Boss（20人以内）', strong: true }],
-        ],
-        isContact: false,
-      },
-      {
-        id: 6, name: '企业 · 定制Plus版', tagline: '年度 · 不限人次', price: '3600', decimal: '.00/年', unit: '', discount: '', monthly: '', theme: 'ultra',
-        features: [
-          [{ text: '企业图表无限次生成导出' }],
-          [{ text: '兼具个人版和企业版独有' }],
-          [{ text: '企业' }, { text: '报表专属分析', strong: true }],
-          [{ text: '提供创建企业' }, { text: '专属码', strong: true }],
-          [{ text: '同时对接' }, { text: '几乎不限人次的', strong: true }, { text: '\n' }, { text: '员工+Boss', strong: true }],
-        ],
-        isContact: false,
-      },
-      {
-        id: 7, name: '企业 · 代账', tagline: '定制服务 · 专属客服', price: '', decimal: '', unit: '', discount: '', monthly: '', theme: 'ultra',
-        features: [
-          [{ text: '企业图表无限次生成导出' }],
-          [{ text: '兼具个人版和企业版独有' }],
-          [{ text: '企业' }, { text: '报表专属分析', strong: true }],
-          [{ text: '提供创建企业' }, { text: '专属码', strong: true }],
-          [{ text: '根据企业规模提供定制化\n服务（最简最省）' }],
-          [{ text: '专属财务客服' }],
-          [{ text: '企业税务服务' }],
-        ],
-        isContact: true,
+        isContact: true, isEnterprise: false,
       },
     ],
     // === 自定义分类 ===
@@ -749,6 +696,8 @@ Page({
     const su = api.getUserInfo()
     if (su) this.setData({ userInfo: su })
     this._refreshAvatarDisplay(su)
+    // 静默刷新 VIP 状态
+    api.getVipStatus().then(function (s) { this.setData({ vipStatus: s, vipTrialDays: this._computeTrialDays(s) }) }.bind(this)).catch(function () {})
     // 公司可见性可能因云端同步到的 companyInfo 改变 → 仅变化时重建简览卡（避免每次重绘图表）
     const ci = api.getCompanyInfo()
     const canSeeCompany = !!(ci && ci.companyRole === 'boss' && ci.companyUid)
@@ -1681,7 +1630,7 @@ Page({
   // 预留鉴权接口：分类拆解后期可做成 VIP 能力。现返回 true 表示全部解锁；
   // 接入登录态 / 会员后改为真实判断即可，例如 return !!(api.isVip && api.isVip())
   _canUseProSummary() {
-    return true
+    return api.isVip()
   },
 
   // 当前报表筛选范围判定：月(YYYY-MM)/年(YYYY)/日(YYYY-MM-DD)看 reportPickerDate；季看 reportSelectedYear + reportQuarterMultiIndex[1]
@@ -3181,8 +3130,14 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
       wx.showToast({ title: 'PDF 即将支持，请先选 .EXCEL', icon: 'none' })
       return
     }
+    var usage = api.checkUsage('export')
+    if (!usage.allowed) {
+      wx.showToast({ title: '本月导出次数已用完（' + usage.used + '/' + usage.limit + '），请升级 VIP', icon: 'none' })
+      return
+    }
     const nick = (this.data.userInfo && this.data.userInfo.nickName) || '个人'
     this._exportBillXlsx('personal', nick, false, '账本')
+    api.incrementUsage('export')
   },
 
   onExportCompany() {
@@ -3190,8 +3145,14 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
       wx.showToast({ title: 'PDF 即将支持，请先选 .EXCEL', icon: 'none' })
       return
     }
+    var usage = api.checkUsage('export')
+    if (!usage.allowed) {
+      wx.showToast({ title: '本月导出次数已用完（' + usage.used + '/' + usage.limit + '），请升级 VIP', icon: 'none' })
+      return
+    }
     const name = (api.getCompanyInfo && (api.getCompanyInfo() || {}).companyName) || '公司'
     this._exportBillXlsx('company', name, true, '账单表')
+    api.incrementUsage('export')
   },
 
   // 导出范围判定：口径同 _inReportRange，用导出页自己的时间状态
@@ -4449,6 +4410,8 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
         const su = api.getUserInfo()
         if (su) this.setData({ userInfo: su })
         this._refreshAvatarDisplay(su)
+        // 登录后拉取 VIP 状态
+        api.getVipStatus().then(function (s) { this.setData({ vipStatus: s, vipTrialDays: this._computeTrialDays(s) }) }.bind(this)).catch(function () {})
       })
     }).catch(() => {
       wx.showToast({ title: '登录失败', icon: 'none' })
@@ -4476,6 +4439,8 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
           const su = api.getUserInfo()
           if (su) this.setData({ userInfo: su })
           this._refreshAvatarDisplay(su)
+          // 登录后拉取 VIP 状态
+          api.getVipStatus().then(function (s) { this.setData({ vipStatus: s, vipTrialDays: this._computeTrialDays(s) }) }.bind(this)).catch(function () {})
         })
       }).catch(() => {
         wx.showToast({ title: '登录失败', icon: 'none' })
@@ -5297,21 +5262,61 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
   },
 
   // ---- VIP 升级 ----
+  _computeTrialDays: function (status) {
+    if (!status || !status.vipLevel || !status.vipExpiresAt) return 0
+    var days = Math.ceil((new Date(status.vipExpiresAt) - new Date()) / 86400000)
+    return days > 0 ? days : 0
+  },
+
   onVipEntry() {
-    this.setData({ showVipPage: true, vipDetailId: -1, vipSelected: -1 })
+    var that = this
+    api.getVipStatus().then(function (status) {
+      var isFree = !status || status.vipLevel === 0
+      var trialDays = that._computeTrialDays(status)
+      var offerDays = Math.ceil((new Date('2026-09-25T23:59:59+08:00') - new Date()) / 86400000)
+      if (offerDays < 0) offerDays = 0
+      that.setData({ showVipPage: true, vipDetailId: -1, vipSelected: -1, vipEnterpriseSeats: 4, vipStatus: status, showTrialBanner: isFree, vipTrialDays: trialDays, trialOfferDays: offerDays })
+    }).catch(function () {
+      var offerDays = Math.ceil((new Date('2026-09-25T23:59:59+08:00') - new Date()) / 86400000)
+      if (offerDays < 0) offerDays = 0
+      that.setData({ showVipPage: true, vipDetailId: -1, vipSelected: -1, vipEnterpriseSeats: 4, showTrialBanner: true, vipTrialDays: 0, trialOfferDays: offerDays })
+    })
+  },
+
+  onActivateTrial() {
+    var that = this
+    wx.showModal({
+      title: '领取免费试用',
+      content: '确认领取 3 个月企业版 PRO 试用？到期日 2026-09-25，试用期间导出账单和凭证扫描仍有广告。',
+      success: function (res) {
+        if (!res.confirm) return
+        wx.showLoading({ title: '领取中...' })
+        api.activateTrial().then(function (data) {
+          wx.hideLoading()
+          wx.showToast({ title: data.alreadyVip ? '已是付费会员' : '领取成功！', icon: 'success' })
+          // 刷新状态
+          api.getVipStatus().then(function (status) {
+            that.setData({ vipStatus: status, showTrialBanner: false, vipTrialDays: that._computeTrialDays(status) })
+          }).catch(function () {})
+        }).catch(function (err) {
+          wx.hideLoading()
+          wx.showToast({ title: (err && err.error) || '领取失败', icon: 'none' })
+        })
+      }
+    })
   },
 
   onVipBack() {
     if (this.data.vipDetailId >= 0) {
-      this.setData({ vipDetailId: -1, vipSelected: -1 })
+      this.setData({ vipDetailId: -1, vipSelected: -1, vipEnterpriseSeats: 4 })
     } else {
-      this.setData({ showVipPage: false, vipDetailId: -1, vipSelected: -1 })
+      this.setData({ showVipPage: false, vipDetailId: -1, vipSelected: -1, vipEnterpriseSeats: 4 })
     }
   },
 
   onVipThumbTap(e) {
     const id = e.currentTarget.dataset.id
-    this.setData({ vipDetailId: id, vipSelected: id })
+    this.setData({ vipDetailId: id, vipSelected: id, vipEnterpriseSeats: 4 })
   },
 
   onVipSelect(e) {
@@ -5319,23 +5324,75 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
     this.setData({ vipSelected: this.data.vipSelected === id ? -1 : id })
   },
 
+  // 企业版席位调节
+  onVipSeatsMinus() {
+    var s = this.data.vipEnterpriseSeats
+    if (s <= 4) return
+    this.setData({ vipEnterpriseSeats: s - 1 })
+  },
+  onVipSeatsPlus() {
+    var s = this.data.vipEnterpriseSeats
+    if (s >= 20) return
+    this.setData({ vipEnterpriseSeats: s + 1 })
+  },
+
+  // 企业版价格计算
+  _calcEnterprisePrice() {
+    var s = this.data.vipEnterpriseSeats
+    var card = this.data.vipCards[1] // enterprise
+    if (!card || !card.enterpriseSeats) return { monthly: 0, annual: 0, isAnnual: false }
+    var es = card.enterpriseSeats
+    var monthly = es.basePrice + (s - es.min) * es.pricePerSeat
+    var isAnnual = s > es.annualOnlyAbove
+    var annual = Math.round(monthly * 12 * es.annualDiscount)
+    return { monthly: monthly, annual: annual, isAnnual: isAnnual }
+  },
+
   onVipConfirm() {
     if (this.data.vipSelected < 0) {
       wx.showToast({ title: '请先选择一个套餐', icon: 'none' })
       return
     }
-    const card = this.data.vipCards[this.data.vipSelected]
+    var card = this.data.vipCards[this.data.vipSelected]
+    if (!card) return
     if (card.isContact) {
       wx.showToast({ title: '请联系客服', icon: 'none' })
       return
     }
+    var that = this
+    var body = { planId: card.id }
+    if (card.isEnterprise) {
+      body.seats = this.data.vipEnterpriseSeats
+      var p = this._calcEnterprisePrice()
+      body.isAnnual = p.isAnnual
+      body.amount = p.isAnnual ? p.annual : p.monthly
+    }
+    var content = '确定订阅「' + card.name + '」吗？'
+    if (card.isEnterprise) {
+      var ep = this._calcEnterprisePrice()
+      content = ep.isAnnual
+        ? '确定订阅「' + card.name + '」' + this.data.vipEnterpriseSeats + '人 · 年费 ¥' + ep.annual + '（8.8折）吗？'
+        : '确定订阅「' + card.name + '」' + this.data.vipEnterpriseSeats + '人 · ¥' + ep.monthly + '/月 吗？'
+    }
     wx.showModal({
       title: '确认订阅',
-      content: `确定订阅「${card.name}」吗？`,
-      success: (res) => {
+      content: content,
+      success: function (res) {
         if (res.confirm) {
-          wx.showToast({ title: '订阅成功', icon: 'success' })
-          this.setData({ showVipPage: false, vipDetailId: -1, vipSelected: -1 })
+          wx.showLoading({ title: '处理中...' })
+          api.subscribeVip(body.planId).then(function () {
+            wx.hideLoading()
+            wx.showToast({ title: '订阅成功', icon: 'success' })
+            // 刷新页面级 VIP 状态
+            api.getVipStatus().then(function (s) {
+              that.setData({ showVipPage: false, vipDetailId: -1, vipSelected: -1, vipEnterpriseSeats: 4, vipStatus: s, vipTrialDays: that._computeTrialDays(s) })
+            }).catch(function () {
+              that.setData({ showVipPage: false, vipDetailId: -1, vipSelected: -1, vipEnterpriseSeats: 4 })
+            })
+          }).catch(function (err) {
+            wx.hideLoading()
+            wx.showToast({ title: (err && err.error) || '订阅失败', icon: 'none' })
+          })
         }
       },
     })

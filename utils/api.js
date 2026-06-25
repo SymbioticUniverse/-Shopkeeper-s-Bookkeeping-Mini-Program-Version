@@ -1150,6 +1150,10 @@ function downloadAuthedImage(url) {
  * @returns {Promise<string>} — 识别出的文本
  */
 function asrRecognize(tempFilePath) {
+  var usage = checkUsage('asr')
+  if (!usage.allowed) {
+    return Promise.reject({ error: 'usage_limit', type: 'asr', limit: usage.limit, used: usage.used })
+  }
   const token = _getToken()
   return new Promise((resolve, reject) => {
     wx.uploadFile({
@@ -1185,6 +1189,10 @@ function asrRecognize(tempFilePath) {
  * @returns {Promise<{ amount: string, category: string, note: string, date: string }>}
  */
 function ocrParse(imageUrl) {
+  var usage = checkUsage('ocr')
+  if (!usage.allowed) {
+    return Promise.reject({ error: 'usage_limit', type: 'ocr', limit: usage.limit, used: usage.used })
+  }
   return _request('POST', '/ocr/parse', { imageUrl }).then(function (data) {
     if (data && data.ok) {
       return { amount: data.amount || '', category: data.category || '', note: data.note || '', date: data.date || '' }
@@ -1240,6 +1248,89 @@ function learnUploadCsv(filePath) {
       }
     })
   })
+}
+
+// ==================== VIP 订阅与用量 ====================
+
+/** 本地缓存键 */
+const VIP_STATUS_KEY = 'vipStatus'
+
+/**
+ * 获取 VIP 状态（含用量），结果缓存到本地
+ * @returns {Promise<{ vipLevel, vipExpiresAt, usage, limits }>}
+ */
+function getVipStatus() {
+  return _request('GET', '/vip/status').then(function (data) {
+    wx.setStorageSync(VIP_STATUS_KEY, data)
+    return data
+  })
+}
+
+/**
+ * 订阅 VIP 套餐
+ * @param {number} planId — 套餐 ID（0-7）
+ * @returns {Promise<{ ok, vipLevel, vipExpiresAt }>}
+ */
+function subscribeVip(planId) {
+  return _request('POST', '/vip/subscribe', { planId }).then(function (data) {
+    // 订阅成功后刷新缓存
+    getVipStatus().catch(function () {})
+    return data
+  })
+}
+
+/**
+ * 激活全民免费试用（企业版 PRO 3 个月）
+ * @returns {Promise<{ ok, vipLevel, vipExpiresAt, isTrial, alreadyVip }>}
+ */
+function activateTrial() {
+  return _request('POST', '/vip/activate-trial').then(function (data) {
+    getVipStatus().catch(function () {})
+    return data
+  })
+}
+
+/**
+ * 同步检查用量是否超限（从本地缓存读取，无网络请求）
+ * @param {'asr'|'ocr'|'export'} type
+ * @returns {{ allowed: boolean, used: number, limit: number }}
+ */
+function checkUsage(type) {
+  var status = wx.getStorageSync(VIP_STATUS_KEY)
+  if (!status || !status.usage || !status.limits) {
+    return { allowed: true, used: 0, limit: -1 }
+  }
+  var limit = status.limits[type]
+  if (limit === -1) return { allowed: true, used: status.usage[type] || 0, limit: -1 }
+  var used = status.usage[type] || 0
+  return { allowed: used < limit, used: used, limit: limit }
+}
+
+/** 当前是否为付费 VIP（未过期） */
+function isVip() {
+  var status = wx.getStorageSync(VIP_STATUS_KEY)
+  return !!(status && status.vipLevel > 0)
+}
+
+/** 获取当前 VIP 等级 */
+function getVipLevel() {
+  var status = wx.getStorageSync(VIP_STATUS_KEY)
+  return status ? status.vipLevel : 0
+}
+
+/**
+ * 记录一次用量（用于纯前端操作如导出，需主动上报）
+ * @param {'asr'|'ocr'|'export'} type
+ */
+function incrementUsage(type) {
+  return _request('POST', '/vip/usage', { type }).then(function () {
+    // 更新本地缓存
+    var status = wx.getStorageSync(VIP_STATUS_KEY)
+    if (status && status.usage && typeof status.usage[type] === 'number') {
+      status.usage[type]++
+      wx.setStorageSync(VIP_STATUS_KEY, status)
+    }
+  }).catch(function () {})
 }
 
 // ==================== 导出 ====================
@@ -1314,4 +1405,13 @@ module.exports = {
   // 冲突检测 & 裁决
   getPendingConflicts,
   resolveConflicts,
+
+  // VIP 订阅与用量
+  getVipStatus,
+  subscribeVip,
+  activateTrial,
+  checkUsage,
+  isVip,
+  getVipLevel,
+  incrementUsage,
 }

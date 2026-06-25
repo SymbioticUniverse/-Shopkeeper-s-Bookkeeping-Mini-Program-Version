@@ -701,63 +701,82 @@
           </view>
           <view class="custom-cat-right"><image class="custom-cat-icon" src="/assets/icons/VIP.png" mode="aspectFit"/><text class="custom-cat-title">{{t.vip_subscribe}}</text></view>
         </view>
-        <!-- 缩略图视图 -->
-        <view class="vip-thumb-scroll" wx:if="{{vipDetailId < 0}}">
-          <view class="vip-thumb-grid">
-            <view class="vip-thumb-item vip-thumb--{{item.theme || 'default'}}" wx:for="{{vipCards}}" wx:key="id" bindtap="onVipThumbTap" data-id="{{item.id}}">
-              <text class="vip-thumb-name">{{item.name}}</text>
-              <text class="vip-thumb-tagline" wx:if="{{item.tagline}}">{{item.tagline}}</text>
-              <text class="vip-thumb-discount" wx:if="{{item.discount}}">{{item.discount}}</text>
-              <view class="vip-thumb-contact" wx:if="{{item.isContact}}">
-                <text class="vip-thumb-contact-text">联系我们</text>
-              </view>
+        <!-- 试用激活横幅 -->
+        <view class="vip-trial-banner" wx:if="{{showTrialBanner}}">
+          <view class="vip-trial-banner-bg">
+            <text class="vip-trial-banner-title">新用户限时福利</text>
+            <text class="vip-trial-banner-desc">领取 3 个月企业版 PRO 免费试用</text>
+            <view class="vip-trial-banner-countdown">
+              <text class="vip-trial-banner-countdown-num">{{trialOfferDays}}</text>
+              <text class="vip-trial-banner-countdown-label">天后截止</text>
             </view>
+            <text class="vip-trial-banner-date">截止日期 2026-09-25</text>
+            <view class="vip-trial-banner-btn" bindtap="onActivateTrial"><text class="vip-trial-banner-btn-text">立即领取</text></view>
+            <text class="vip-trial-banner-note">试用期间导出账单和凭证扫描仍有广告</text>
           </view>
         </view>
-        <!-- 详情视图 -->
-        <view class="vip-detail-body" wx:else>
-          <view class="vip-detail-backdrop" bindtap="onVipBack"></view>
-          <scroll-view class="vip-detail-scroll" scroll-x enhanced show-scrollbar="{{false}}">
-            <view class="vip-card-row">
-              <view class="vip-card-single {{item.theme === 'free' ? 'vip-card-single--free' : ''}} {{item.theme === 'ultra' ? 'vip-card-single--ultra' : ''}} {{vipSelected === item.id ? 'vip-card-single--selected' : ''}}" wx:for="{{vipCards}}" wx:key="id" bindtap="onVipSelect" data-id="{{item.id}}">
-                <text class="vip-card-single-name">{{item.name}}</text>
-                <view class="vip-card-single-features">
-                  <view class="vip-feature-row" wx:for="{{item.features}}" wx:key="index" wx:for-item="feature">
-                    <text class="vip-feature-dot">·</text>
-                    <view class="vip-feature-text">
-                      <block wx:for="{{feature}}" wx:key="text" wx:for-item="seg">
-                        <text class="{{seg.strong ? 'vip-feature-text--strong' : ''}}">{{seg.text}}</text>
-                      </block>
-                    </view>
-                  </view>
-                </view>
-                <view class="vip-card-single-bottom">
-                  <view class="vip-price-sep"></view>
-                  <view class="vip-contact-btn" wx:if="{{item.isContact}}">
-                    <text class="vip-contact-text">联系我们</text>
-                  </view>
-                  <block wx:else>
-                    <view class="vip-price-row">
-                      <text class="vip-price-yen">￥</text>
-                      <text class="vip-price-int">{{item.price}}</text>
-                      <text class="vip-price-decimal" wx:if="{{item.decimal}}">{{item.decimal}}</text>
-                      <text class="vip-price-unit" wx:if="{{!item.decimal && item.unit}}">{{item.unit}}</text>
-                    </view>
-                    <view class="vip-discount-row" wx:if="{{item.discount || item.monthly}}">
-                      <text class="vip-discount-badge" wx:if="{{item.discount}}">{{item.discount}}</text>
-                      <text class="vip-discount-monthly" wx:if="{{item.monthly}}">{{item.monthly}}</text>
-                    </view>
-                    <view class="vip-price-sep vip-price-sep--thin" wx:if="{{!item.discount}}"></view>
-                  </block>
-                </view>
+        <scroll-view class="vip-plan-list" scroll-y enhanced show-scrollbar="{{false}}">
+          <!-- 三张卡垂直排列 -->
+          <view class="vip-plan-card vip-plan--{{item.theme}} {{vipSelected === index ? 'vip-plan--selected' : ''}}" wx:for="{{vipCards}}" wx:key="id" wx:for-index="index" bindtap="onVipSelect" data-id="{{index}}">
+            <!-- 卡片头部 -->
+            <view class="vip-plan-hd">
+              <view class="vip-plan-name-row">
+                <text class="vip-plan-name">{{item.name}}</text>
+                <text class="vip-plan-tagline">{{item.tagline}}</text>
               </view>
             </view>
-          </scroll-view>
-        </view>
-        <view class="vip-confirm-wrap" wx:if="{{vipDetailId >= 0}}">
-          <view class="vip-confirm-btn" bindtap="onVipConfirm">
-            <text class="vip-confirm-text">确认订阅</text>
+            <!-- 功能列表 -->
+            <view class="vip-plan-features">
+              <view class="vip-plan-feat" wx:for="{{item.features}}" wx:key="*this" wx:for-item="f">
+                <view class="vip-plan-feat-dot"></view>
+                <text class="vip-plan-feat-text">{{f}}</text>
+              </view>
+            </view>
+            <!-- 企业版席位选择器 -->
+            <view class="vip-seats-row" wx:if="{{item.isEnterprise}}">
+              <text class="vip-seats-label">席位人数</text>
+              <view class="vip-seats-ctrl">
+                <view class="vip-seats-btn {{vipEnterpriseSeats <= item.enterpriseSeats.min ? 'vip-seats-btn--disabled' : ''}}" catchtap="onVipSeatsMinus"><text class="vip-seats-btn-text">−</text></view>
+                <text class="vip-seats-num">{{vipEnterpriseSeats}}</text>
+                <view class="vip-seats-btn {{vipEnterpriseSeats >= 20 ? 'vip-seats-btn--disabled' : ''}}" catchtap="onVipSeatsPlus"><text class="vip-seats-btn-text">+</text></view>
+              </view>
+              <text class="vip-seats-hint">4-20人</text>
+            </view>
+            <!-- 价格区域 -->
+            <view class="vip-plan-price">
+              <block wx:if="{{item.isContact}}">
+                <view class="vip-contact-btn"><text class="vip-contact-text">联系我们</text></view>
+              </block>
+              <block wx:elif="{{item.isEnterprise}}">
+                <!-- 企业版动态价格 -->
+                <view class="vip-price-row" wx:if="{{vipEnterpriseSeats <= item.enterpriseSeats.annualOnlyAbove}}">
+                  <text class="vip-price-yen">￥</text>
+                  <text class="vip-price-int">{{item.enterpriseSeats.basePrice + (vipEnterpriseSeats - item.enterpriseSeats.min) * item.enterpriseSeats.pricePerSeat}}</text>
+                  <text class="vip-price-unit">/月</text>
+                </view>
+                <view class="vip-price-row" wx:else>
+                  <text class="vip-price-yen">￥</text>
+                  <text class="vip-price-int">{{(item.enterpriseSeats.basePrice + (vipEnterpriseSeats - item.enterpriseSeats.min) * item.enterpriseSeats.pricePerSeat) * 12 * item.enterpriseSeats.annualDiscount}}</text>
+                  <text class="vip-price-unit">/年</text>
+                  <view class="vip-annual-badge"><text class="vip-annual-badge-text">8.8折</text></view>
+                </view>
+                <text class="vip-price-hint" wx:if="{{vipEnterpriseSeats > item.enterpriseSeats.annualOnlyAbove}}">超过10人仅提供年费</text>
+                <text class="vip-per-seat-hint" wx:else>每增加1席位 +8元/月</text>
+              </block>
+              <block wx:else>
+                <!-- 个人版固定价格 -->
+                <view class="vip-price-row">
+                  <text class="vip-price-yen">￥</text>
+                  <text class="vip-price-int">{{item.price}}</text>
+                  <text class="vip-price-unit">{{item.unit}}</text>
+                </view>
+              </block>
+            </view>
           </view>
+        </scroll-view>
+        <!-- 底部确认按钮 -->
+        <view class="vip-confirm-wrap" wx:if="{{vipSelected >= 0 && !vipCards[vipSelected].isContact}}">
+          <view class="vip-confirm-btn" bindtap="onVipConfirm"><text class="vip-confirm-text">确认订阅</text></view>
         </view>
       </view>
       <!-- 自定义分类页 -->
@@ -1466,13 +1485,23 @@
           <view class="my-avatar" wx:else></view>
         </view>
         <view class="my-group">
-          <view class="my-item" bindtap="onVipEntry">
-            <image class="my-item-icon" src="/assets/icons/VIP.png" mode="aspectFit"/>
-            <view class="my-item-body">
-              <text class="my-item-title">{{t.vip_title}}</text>
-              <text class="my-item-sub">{{t.vip_sub}}</text>
+          <view class="my-item {{vipStatus && vipStatus.vipLevel > 0 ? 'my-item--vip' : 'my-item--vip-free'}}" bindtap="onVipEntry">
+            <view class="my-item-icon-wrap">
+              <image class="my-item-icon" src="/assets/icons/VIP.png" mode="aspectFit"/>
+              <view class="my-item-vip-badge" wx:if="{{vipStatus && vipStatus.vipLevel > 0}}"><text class="my-item-vip-badge-text">PRO</text></view>
             </view>
-            <text class="my-item-arrow">〉</text>
+            <view class="my-item-body">
+              <text class="my-item-title {{vipStatus && vipStatus.vipLevel > 0 ? 'my-item-title--vip' : ''}}">{{vipStatus && vipStatus.vipLevel > 0 ? vipCards[vipStatus.vipLevel - 1].name : t.vip_title}}</text>
+              <text class="my-item-sub" wx:if="{{!vipStatus || vipStatus.vipLevel === 0}}">{{vipStatus ? 'AI ' + vipStatus.usage.asr + '/' + vipStatus.limits.asr + ' · 导出 ' + vipStatus.usage.export + '/' + vipStatus.limits.export : t.vip_sub}}</text>
+              <view class="my-item-vip-expire" wx:else>
+                <text class="my-item-vip-expire-text">{{vipStatus.vipExpiresAt ? vipStatus.vipExpiresAt.slice(0, 10) + ' 到期' : '永久有效'}}</text>
+                <text class="my-item-vip-expire-days" wx:if="{{vipTrialDays > 0}}">剩 {{vipTrialDays}} 天</text>
+              </view>
+            </view>
+            <view class="my-item-arrow-wrap">
+              <text class="my-item-arrow my-item-arrow--vip" wx:if="{{vipStatus && vipStatus.vipLevel > 0}}">〉</text>
+              <text class="my-item-arrow" wx:else>〉</text>
+            </view>
           </view>
           <view class="my-icon-row">
             <view class="my-icon-item" bindtap="onGotoPersonalLedger"><image class="my-icon-circle" src="/assets/icons/gerenzhangben.png" mode="aspectFit"/><text class="my-icon-label">{{t.detail_personal_ledger}}</text></view>

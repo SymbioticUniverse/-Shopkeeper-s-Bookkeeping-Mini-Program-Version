@@ -46,9 +46,16 @@
     "_replayQueue",
     "// 冲突检测 & 裁决\n  getPendingConflicts",
     "resolveConflicts",
+    "// VIP 订阅与用量\n  getVipStatus",
+    "subscribeVip",
+    "activateTrial",
+    "checkUsage",
+    "isVip",
+    "getVipLevel",
+    "incrementUsage",
     "api"
   ],
   "imports": [],
-  "capability": "updatedAt 格式统一为毫秒时间戳，排序不再异常；POST 409 响应携带已有记录，前端 _pushDirtyItems 直接进入冲突裁决，省去一轮 pull 网络往返",
-  "updatedAt": "2026-06-24T15:23:26.162Z"
+  "capability": "用户可通过「我的」Tab 进入全新 VIP 订阅页：3 档套餐垂直展示（个人版 PRO/企业版 PRO/定制版），免费试用横幅倒计时一键领取，企业版席位人数可调（4-20 人）动态计价，ASR/OCR/导出均接入用量配额管控，已订阅用户在「我的」Tab 显示 PRO 徽章及到期信息",
+  "updatedAt": "2026-06-25T08:00:23.946Z"
 }

@@ -591,40 +591,6 @@ page {
   padding: 16rpx 20rpx;
   box-shadow: 0rpx 4rpx 4rpx 0rpx rgba(0,0,0,0.08);
 }
-.my-item-last {
-  padding: 20rpx;
-}
-.my-item-icon {
-  width: 68rpx;
-  height: 68rpx;
-  border-radius: 16rpx;
-  flex-shrink: 0;
-  margin-right: 20rpx;
-}
-.my-item-body {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-}
-.my-item-title {
-  font-size: 32rpx;
-  font-weight: 500;
-  color: #a0a0a0;
-}
-.my-item-sub {
-  font-size: 24rpx;
-  font-weight: 500;
-  color: #a0a0a0;
-  margin-top: 2rpx;
-}
-.my-item-arrow {
-  font-size: 28rpx;
-  font-weight: 500;
-  color: #d1d1d1;
-  flex-shrink: 0;
-}
-
 /* 图标行卡片 */
 .my-icon-row {
   display: flex;
@@ -1391,368 +1357,281 @@ page {
   overflow: hidden;
 }
 
-.vip-main-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 24rpx;
-  height: 80rpx;
-  flex-shrink: 0;
+/* ---- 试用激活横幅 ---- */
+.vip-trial-banner {
+  padding: 0 24rpx 16rpx;
 }
 
-.vip-back-btn {
+.vip-trial-banner-bg {
+  background: linear-gradient(135deg, #0d1d3e 0%, #1a2d5a 100%);
+  border-radius: 20rpx;
+  padding: 32rpx 28rpx 28rpx;
   display: flex;
+  flex-direction: column;
   align-items: center;
 }
 
-.vip-main-title {
+.vip-trial-banner-title {
   font-size: 34rpx;
-  font-weight: 500;
-  color: #000;
+  font-weight: 700;
+  color: #cf9f40;
+  letter-spacing: 2rpx;
+  margin-bottom: 8rpx;
 }
 
-.vip-header-spacer {
-  width: 100rpx;
-}
-
-/* 缩略图滚动区 */
-.vip-thumb-scroll {
-  flex: 1;
-  min-height: 0;
-  overflow-y: auto;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-/* 缩略图网格 — 3列 */
-.vip-thumb-grid {
-  display: flex;
-  flex-wrap: wrap;
-  padding: 8rpx 24rpx 12rpx;
-  gap: 20rpx;
-  width: 100%;
-}
-
-.vip-thumb-item {
-  width: calc((100% - 40rpx) / 3);
-  aspect-ratio: 0.82;
-  border-radius: 22rpx;
-  padding: 28rpx 10rpx 20rpx;
-  box-sizing: border-box;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 10rpx;
-  position: relative;
-  overflow: hidden;
-  animation: vipThumbIn 0.55s cubic-bezier(0.16, 1, 0.3, 1) both;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
-}
-
-.vip-thumb-item:active {
-  transform: scale(0.94);
-}
-
-@keyframes vipThumbIn {
-  from { opacity: 0; transform: translateY(80rpx) scale(0.85); }
-  to   { opacity: 1; transform: translateY(0) scale(1); }
-}
-
-/* 缩略图统一样式 — 纯白 50% 透明 */
-.vip-thumb--free,
-.vip-thumb--default,
-.vip-thumb--ultra {
-  background: rgba(255, 255, 255, 0.5);
-  box-shadow: 0 4rpx 16rpx rgba(0,0,0,0.05);
-}
-
-.vip-thumb-name {
+.vip-trial-banner-desc {
   font-size: 24rpx;
-  font-weight: 500;
-  color: #1a1a1a;
-  text-align: center;
-  letter-spacing: 1rpx;
+  color: rgba(255,255,255,0.75);
+  margin-bottom: 4rpx;
 }
 
-.vip-thumb--free .vip-thumb-name { color: #a0a0a0; }
-.vip-thumb--ultra .vip-thumb-name { color: #8a7a5a; }
-
-.vip-thumb-tagline {
-  font-size: 20rpx;
-  font-weight: 500;
-  color: #888;
-  text-align: center;
-}
-
-.vip-thumb--free .vip-thumb-tagline { color: #b0b0b0; }
-.vip-thumb--ultra .vip-thumb-tagline { color: #b8a080; }
-
-.vip-thumb-discount {
-  font-size: 18rpx;
-  font-weight: 500;
-  color: #cf9f40;
-  background: rgba(207,159,64,0.1);
-  padding: 2rpx 10rpx;
-  border-radius: 6rpx;
-}
-
-.vip-thumb-contact {
-  background: #0d1d3e;
-  border-radius: 14rpx;
-  padding: 12rpx 28rpx;
-  margin-top: 4rpx;
-}
-
-.vip-thumb-contact-text {
-  font-size: 22rpx;
-  font-weight: 500;
-  color: #cf9f40;
-  letter-spacing: 3rpx;
-}
-
-/* 详情页过渡 */
-@keyframes vipDetailIn {
-  from { opacity: 0; transform: scale(0.88) translateY(30rpx); }
-  to   { opacity: 1; transform: scale(1) translateY(0); }
-}
-
-/* 详情页 — 点击空白区域返回缩略图 */
-.vip-detail-body {
-  flex: 1;
-  position: relative;
-  display: flex;
-  align-items: center;
-  overflow: hidden;
-  animation: vipDetailIn 0.45s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.vip-detail-backdrop {
-  position: absolute;
-  top: 0; left: 0; right: 0; bottom: 0;
-  z-index: 1;
-}
-
-.vip-detail-scroll {
-  position: relative;
-  z-index: 2;
-  width: 100%;
-  height: 768rpx;
-  white-space: nowrap;
-}
-
-.vip-card-row {
-  display: flex;
-  flex-direction: row;
-  height: 100%;
-  padding: 0 24rpx;
-  gap: 24rpx;
-  align-items: center;
-}
-
-.vip-card-row::after {
-  content: '';
-  flex-shrink: 0;
-  width: 24rpx;
-}
-
-/* ---- 单卡 ---- */
-.vip-card-single {
-  width: 552rpx;
-  height: 768rpx;
-  flex-shrink: 0;
-  background: rgba(255, 255, 255, 0.5);
-  border-radius: 28rpx;
-  padding: 28rpx 32rpx 24rpx;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  border: 2rpx solid transparent;
-  box-sizing: border-box;
-  box-shadow: 0 8rpx 32rpx rgba(0,0,0,0.08);
-}
-
-/* 选中态 — 彩虹流光呼吸 */
-.vip-card-single--selected {
-  border-width: 8rpx;
-  border-style: solid;
-  animation: vipRainbowFlow 3.6s linear infinite;
-}
-
-@keyframes vipRainbowFlow {
-  0%   {
-    border-color: #ff6b6b;
-    box-shadow: 0 0 6rpx rgba(255,107,107,0.5);
-    background: linear-gradient(180deg, rgba(255,107,107,0.1) 0%, rgba(255,255,255,0.5) 70%);
-  }
-  16%  {
-    border-color: #ffaa33;
-    box-shadow: 0 0 6rpx rgba(255,170,51,0.5);
-    background: linear-gradient(180deg, rgba(255,170,51,0.1) 0%, rgba(255,255,255,0.5) 70%);
-  }
-  33%  {
-    border-color: #ffe83d;
-    box-shadow: 0 0 6rpx rgba(255,232,61,0.5);
-    background: linear-gradient(180deg, rgba(255,232,61,0.1) 0%, rgba(255,255,255,0.5) 70%);
-  }
-  50%  {
-    border-color: #56d870;
-    box-shadow: 0 0 6rpx rgba(86,216,112,0.5);
-    background: linear-gradient(180deg, rgba(86,216,112,0.1) 0%, rgba(255,255,255,0.5) 70%);
-  }
-  66%  {
-    border-color: #4da6ff;
-    box-shadow: 0 0 6rpx rgba(77,166,255,0.5);
-    background: linear-gradient(180deg, rgba(77,166,255,0.1) 0%, rgba(255,255,255,0.5) 70%);
-  }
-  83%  {
-    border-color: #a855f7;
-    box-shadow: 0 0 6rpx rgba(168,85,247,0.5);
-    background: linear-gradient(180deg, rgba(168,85,247,0.1) 0%, rgba(255,255,255,0.5) 70%);
-  }
-  100% {
-    border-color: #ff6b6b;
-    box-shadow: 0 0 6rpx rgba(255,107,107,0.5);
-    background: linear-gradient(180deg, rgba(255,107,107,0.1) 0%, rgba(255,255,255,0.5) 70%);
-  }
-}
-
-/* 套餐名 */
-.vip-card-single-name {
-  font-size: 40rpx;
-  font-weight: 500;
-  color: #000;
-  text-align: center;
-  margin-bottom: 20rpx;
-}
-
-/* 功能列表 */
-.vip-card-single-features {
-  width: 100%;
-  display: flex;
-  flex-direction: column;
-  gap: 8rpx;
-  margin-bottom: 16rpx;
-}
-
-.vip-feature-row {
-  display: flex;
-  align-items: flex-start;
-}
-
-.vip-feature-dot {
-  font-size: 40rpx;
-  color: #a0a0a0;
-  margin-right: 16rpx;
-  flex-shrink: 0;
-  line-height: 1.5;
-}
-
-.vip-feature-text {
-  font-size: 40rpx;
-  color: #a0a0a0;
-  line-height: 1.5;
-}
-
-/* 底部价格区 */
-.vip-card-single-bottom {
-  width: 100%;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  margin-top: auto;
-}
-
-.vip-price-sep {
-  width: 70%;
-  height: 1rpx;
-  background: #d1d1d1;
-}
-
-.vip-price-sep--thin {
-  margin-top: 4rpx;
-}
-
-/* 价格行：￥0.00/月 单行 */
-.vip-price-row {
+.vip-trial-banner-countdown {
   display: flex;
   align-items: baseline;
-  margin-top: 12rpx;
+  gap: 6rpx;
+  margin-bottom: 4rpx;
 }
 
-.vip-price-yen {
-  font-size: 40rpx;
-  font-weight: 500;
-  color: #000;
-  margin-right: 4rpx;
-}
-
-.vip-price-int {
-  font-size: 140rpx;
-  font-weight: 500;
-  color: #000;
+.vip-trial-banner-countdown-num {
+  font-size: 56rpx;
+  font-weight: 800;
+  color: #cf9f40;
   line-height: 1;
 }
 
-/* 免费版卡片 — 灰度 */
-.vip-card-single--free .vip-card-single-name,
-.vip-card-single--free .vip-price-yen,
-.vip-card-single--free .vip-price-int,
-.vip-card-single--free .vip-price-decimal,
-.vip-card-single--free .vip-price-unit {
-  color: #a0a0a0;
+.vip-trial-banner-countdown-label {
+  font-size: 24rpx;
+  color: rgba(255,255,255,0.6);
 }
 
-.vip-price-decimal {
-  font-size: 40rpx;
+.vip-trial-banner-date {
+  font-size: 22rpx;
+  color: rgba(255,255,255,0.45);
+  margin-bottom: 20rpx;
+}
+
+.vip-trial-banner-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 280rpx;
+  height: 72rpx;
+  background: #cf9f40;
+  border-radius: 36rpx;
+  margin-bottom: 12rpx;
+}
+
+.vip-trial-banner-btn-text {
+  font-size: 28rpx;
+  font-weight: 700;
+  color: #0d1d3e;
+  letter-spacing: 2rpx;
+}
+
+.vip-trial-banner-note {
+  font-size: 20rpx;
+  color: rgba(255,255,255,0.35);
+}
+
+/* 三卡垂直列表 */
+.vip-plan-list {
+  flex: 1;
+  min-height: 0;
+  padding: 8rpx 24rpx 0;
+}
+
+/* ---- 单张套餐卡 ---- */
+.vip-plan-card {
+  background: #fff;
+  border-radius: 24rpx;
+  padding: 32rpx 28rpx 28rpx;
+  margin-bottom: 20rpx;
+  box-shadow: 0 2rpx 16rpx rgba(0,0,0,0.04);
+  border-left: 6rpx solid transparent;
+  transition: all 0.25s ease;
+}
+
+/* 三档主题色 */
+.vip-plan--personal { border-left-color: #4A6CF7; }
+.vip-plan--enterprise { border-left-color: #D4A853; }
+.vip-plan--custom { border-left-color: #1a1a2e; }
+
+/* 选中态：整体浮起 + 左侧色条保持 */
+.vip-plan--selected {
+  box-shadow: 0 6rpx 28rpx rgba(0,0,0,0.10);
+  transform: translateY(-2rpx);
+}
+.vip-plan--personal.vip-plan--selected { background: #f8f9ff; }
+.vip-plan--enterprise.vip-plan--selected { background: #fefaf3; }
+.vip-plan--custom.vip-plan--selected { background: #f5f5f7; }
+
+/* 卡片头部 */
+.vip-plan-hd {
+  margin-bottom: 16rpx;
+}
+
+.vip-plan-name-row {
+  display: flex;
+  align-items: baseline;
+  gap: 16rpx;
+}
+
+.vip-plan-name {
+  font-size: 34rpx;
+  font-weight: 700;
+  color: #1a1a1a;
+}
+
+.vip-plan-tagline {
+  font-size: 22rpx;
+  color: #999;
+}
+
+/* 功能列表 */
+.vip-plan-features {
+  display: flex;
+  flex-direction: column;
+  gap: 10rpx;
+  margin-bottom: 20rpx;
+}
+
+.vip-plan-feat {
+  display: flex;
+  align-items: center;
+}
+
+.vip-plan-feat-dot {
+  width: 10rpx;
+  height: 10rpx;
+  border-radius: 50%;
+  margin-right: 14rpx;
+  flex-shrink: 0;
+  background: #4A6CF7;
+}
+.vip-plan--enterprise .vip-plan-feat-dot { background: #D4A853; }
+.vip-plan--custom .vip-plan-feat-dot { background: #999; }
+
+.vip-plan-feat-text {
+  font-size: 26rpx;
+  color: #555;
+  line-height: 1.5;
+}
+
+/* ---- 席位选择器 ---- */
+.vip-seats-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20rpx 0;
+  margin-bottom: 16rpx;
+  border-top: 1rpx solid rgba(0,0,0,0.06);
+  border-bottom: 1rpx solid rgba(0,0,0,0.06);
+}
+
+.vip-seats-label {
+  font-size: 26rpx;
+  color: #555;
   font-weight: 500;
-  color: #000;
+}
+
+.vip-seats-ctrl {
+  display: flex;
+  align-items: center;
+  gap: 28rpx;
+}
+
+.vip-seats-btn {
+  width: 60rpx;
+  height: 60rpx;
+  border-radius: 50%;
+  background: #f5f5f5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2rpx solid #e8e8e8;
+}
+
+.vip-seats-btn--disabled {
+  opacity: 0.25;
+}
+
+.vip-seats-btn-text {
+  font-size: 36rpx;
+  color: #333;
+  font-weight: 500;
+  line-height: 1;
+}
+
+.vip-seats-num {
+  font-size: 44rpx;
+  font-weight: 700;
+  color: #1a1a1a;
+  min-width: 56rpx;
+  text-align: center;
+}
+
+.vip-seats-hint {
+  font-size: 22rpx;
+  color: #aaa;
+}
+
+/* ---- 价格区 ---- */
+.vip-plan-price {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding-top: 8rpx;
+}
+
+.vip-price-row {
+  display: flex;
+  align-items: baseline;
+}
+
+.vip-price-yen {
+  font-size: 30rpx;
+  font-weight: 600;
+  color: #1a1a1a;
+  margin-right: 2rpx;
+}
+
+.vip-price-int {
+  font-size: 60rpx;
+  font-weight: 700;
+  color: #1a1a1a;
+  line-height: 1;
+  letter-spacing: -2rpx;
 }
 
 .vip-price-unit {
-  font-size: 40rpx;
-  font-weight: 500;
-  color: #000;
+  font-size: 26rpx;
+  color: #999;
+  margin-left: 4rpx;
 }
 
-/* 功能文字关键词高亮 */
-.vip-feature-text--strong {
-  color: #000;
+.vip-annual-badge {
+  background: #D4A853;
+  border-radius: 6rpx;
+  padding: 2rpx 10rpx;
+  margin-left: 8rpx;
 }
 
-/* 折扣行 */
-.vip-discount-row {
-  display: flex;
-  align-items: baseline;
-  gap: 8rpx;
-  margin-top: 8rpx;
+.vip-annual-badge-text {
+  font-size: 20rpx;
+  color: #fff;
+  font-weight: 600;
 }
 
-.vip-discount-badge {
+.vip-price-hint {
   font-size: 22rpx;
-  font-weight: 500;
-  color: #cf9f40;
+  color: #D4A853;
+  margin-top: 6rpx;
 }
 
-.vip-discount-monthly {
+.vip-per-seat-hint {
   font-size: 22rpx;
-  font-weight: 500;
-  color: #d1d1d1;
-}
-
-/* ---- Ultra 卡片 ---- */
-.vip-card-single--ultra .vip-card-single-name,
-.vip-card-single--ultra .vip-feature-dot,
-.vip-card-single--ultra .vip-feature-text {
-  color: #929292;
-}
-
-.vip-card-single--ultra .vip-price-yen,
-.vip-card-single--ultra .vip-price-int,
-.vip-card-single--ultra .vip-price-decimal,
-.vip-card-single--ultra .vip-price-unit {
-  color: #cf9f40;
+  color: #bbb;
+  margin-top: 6rpx;
 }
 
 /* 联系我们按钮 */
@@ -1760,39 +1639,37 @@ page {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 85%;
-  height: 120rpx;
+  width: 100%;
+  height: 80rpx;
   background: #0d1d3e;
-  border-radius: 34rpx;
-  margin-top: 8rpx;
+  border-radius: 16rpx;
 }
 
 .vip-contact-text {
-  font-size: 44rpx;
-  font-weight: 500;
+  font-size: 30rpx;
+  font-weight: 600;
   color: #cf9f40;
   letter-spacing: 4rpx;
 }
 
 /* ---- 确认开通按钮 ---- */
 .vip-confirm-wrap {
-  padding: 8rpx 0 0;
-  width: 552rpx;
-  margin: 0 auto;
+  padding: 12rpx 0 0;
+  width: 100%;
 }
 
 .vip-confirm-btn {
   display: flex;
   align-items: center;
   justify-content: center;
-  height: 72rpx;
-  background: #000;
-  border-radius: 12rpx;
+  height: 84rpx;
+  background: #1a1a1a;
+  border-radius: 16rpx;
 }
 
 .vip-confirm-text {
-  font-size: 28rpx;
-  font-weight: 500;
+  font-size: 30rpx;
+  font-weight: 600;
   color: #fff;
   letter-spacing: 2rpx;
 }
@@ -2324,7 +2201,6 @@ page {
 .export-bill-section-label--on {
   border-width: 8rpx;
   border-style: solid;
-  animation: vipRainbowFlow 3.6s linear infinite;
 }
 
 /* 网格项目 */
@@ -2351,7 +2227,6 @@ page {
 .export-bill-grid-item--on {
   border-width: 8rpx;
   border-style: solid;
-  animation: vipRainbowFlow 3.6s linear infinite;
 }
 
 .export-bill-grid-text {
@@ -3651,6 +3526,67 @@ page {
   flex-shrink: 0;
 }
 
+/* ---- 我的 Tab VIP 入口特殊样式 ---- */
+.my-item--vip-free {
+  background: #fff;
+  border: 2rpx dashed #e0e0e0;
+}
+
+.my-item--vip {
+  background: linear-gradient(135deg, #fef9f0 0%, #fdf3e0 100%);
+  border: 2rpx solid rgba(212, 168, 83, 0.35);
+  box-shadow: 0 4rpx 20rpx rgba(212, 168, 83, 0.12);
+}
+
+.my-item-icon-wrap {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.my-item-vip-badge {
+  position: absolute;
+  top: -6rpx;
+  right: -6rpx;
+  background: #cf9f40;
+  border-radius: 8rpx;
+  padding: 2rpx 8rpx;
+  box-shadow: 0 2rpx 8rpx rgba(207, 159, 64, 0.4);
+}
+
+.my-item-vip-badge-text {
+  font-size: 18rpx;
+  font-weight: 700;
+  color: #0d1d3e;
+  letter-spacing: 1rpx;
+}
+
+.my-item-title--vip {
+  color: #1a1a1a !important;
+  font-weight: 700 !important;
+  font-size: 34rpx !important;
+}
+
+.my-item-vip-expire {
+  display: flex;
+  align-items: baseline;
+  gap: 12rpx;
+}
+
+.my-item-vip-expire-text {
+  font-size: 22rpx;
+  color: #999;
+}
+
+.my-item-vip-expire-days {
+  font-size: 24rpx;
+  color: #cf9f40;
+  font-weight: 600;
+}
+
+.my-item-arrow--vip {
+  color: #cf9f40 !important;
+}
+
 /* 图标行卡片 */
 .my-icon-row {
   display: flex;
@@ -4417,368 +4353,281 @@ page {
   overflow: hidden;
 }
 
-.vip-main-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 24rpx;
-  height: 80rpx;
-  flex-shrink: 0;
+/* ---- 试用激活横幅 ---- */
+.vip-trial-banner {
+  padding: 0 24rpx 16rpx;
 }
 
-.vip-back-btn {
+.vip-trial-banner-bg {
+  background: linear-gradient(135deg, #0d1d3e 0%, #1a2d5a 100%);
+  border-radius: 20rpx;
+  padding: 32rpx 28rpx 28rpx;
   display: flex;
+  flex-direction: column;
   align-items: center;
 }
 
-.vip-main-title {
+.vip-trial-banner-title {
   font-size: 34rpx;
-  font-weight: 500;
-  color: #000;
+  font-weight: 700;
+  color: #cf9f40;
+  letter-spacing: 2rpx;
+  margin-bottom: 8rpx;
 }
 
-.vip-header-spacer {
-  width: 100rpx;
-}
-
-/* 缩略图滚动区 */
-.vip-thumb-scroll {
-  flex: 1;
-  min-height: 0;
-  overflow-y: auto;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-/* 缩略图网格 — 3列 */
-.vip-thumb-grid {
-  display: flex;
-  flex-wrap: wrap;
-  padding: 8rpx 24rpx 12rpx;
-  gap: 20rpx;
-  width: 100%;
-}
-
-.vip-thumb-item {
-  width: calc((100% - 40rpx) / 3);
-  aspect-ratio: 0.82;
-  border-radius: 22rpx;
-  padding: 28rpx 10rpx 20rpx;
-  box-sizing: border-box;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 10rpx;
-  position: relative;
-  overflow: hidden;
-  animation: vipThumbIn 0.55s cubic-bezier(0.16, 1, 0.3, 1) both;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
-}
-
-.vip-thumb-item:active {
-  transform: scale(0.94);
-}
-
-@keyframes vipThumbIn {
-  from { opacity: 0; transform: translateY(80rpx) scale(0.85); }
-  to   { opacity: 1; transform: translateY(0) scale(1); }
-}
-
-/* 缩略图统一样式 — 纯白 50% 透明 */
-.vip-thumb--free,
-.vip-thumb--default,
-.vip-thumb--ultra {
-  background: rgba(255, 255, 255, 0.5);
-  box-shadow: 0 4rpx 16rpx rgba(0,0,0,0.05);
-}
-
-.vip-thumb-name {
+.vip-trial-banner-desc {
   font-size: 24rpx;
-  font-weight: 500;
-  color: #1a1a1a;
-  text-align: center;
-  letter-spacing: 1rpx;
+  color: rgba(255,255,255,0.75);
+  margin-bottom: 4rpx;
 }
 
-.vip-thumb--free .vip-thumb-name { color: #a0a0a0; }
-.vip-thumb--ultra .vip-thumb-name { color: #8a7a5a; }
-
-.vip-thumb-tagline {
-  font-size: 20rpx;
-  font-weight: 500;
-  color: #888;
-  text-align: center;
-}
-
-.vip-thumb--free .vip-thumb-tagline { color: #b0b0b0; }
-.vip-thumb--ultra .vip-thumb-tagline { color: #b8a080; }
-
-.vip-thumb-discount {
-  font-size: 18rpx;
-  font-weight: 500;
-  color: #cf9f40;
-  background: rgba(207,159,64,0.1);
-  padding: 2rpx 10rpx;
-  border-radius: 6rpx;
-}
-
-.vip-thumb-contact {
-  background: #0d1d3e;
-  border-radius: 14rpx;
-  padding: 12rpx 28rpx;
-  margin-top: 4rpx;
-}
-
-.vip-thumb-contact-text {
-  font-size: 22rpx;
-  font-weight: 500;
-  color: #cf9f40;
-  letter-spacing: 3rpx;
-}
-
-/* 详情页过渡 */
-@keyframes vipDetailIn {
-  from { opacity: 0; transform: scale(0.88) translateY(30rpx); }
-  to   { opacity: 1; transform: scale(1) translateY(0); }
-}
-
-/* 详情页 — 点击空白区域返回缩略图 */
-.vip-detail-body {
-  flex: 1;
-  position: relative;
-  display: flex;
-  align-items: center;
-  overflow: hidden;
-  animation: vipDetailIn 0.45s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.vip-detail-backdrop {
-  position: absolute;
-  top: 0; left: 0; right: 0; bottom: 0;
-  z-index: 1;
-}
-
-.vip-detail-scroll {
-  position: relative;
-  z-index: 2;
-  width: 100%;
-  height: 768rpx;
-  white-space: nowrap;
-}
-
-.vip-card-row {
-  display: flex;
-  flex-direction: row;
-  height: 100%;
-  padding: 0 24rpx;
-  gap: 24rpx;
-  align-items: center;
-}
-
-.vip-card-row::after {
-  content: '';
-  flex-shrink: 0;
-  width: 24rpx;
-}
-
-/* ---- 单卡 ---- */
-.vip-card-single {
-  width: 552rpx;
-  height: 768rpx;
-  flex-shrink: 0;
-  background: rgba(255, 255, 255, 0.5);
-  border-radius: 28rpx;
-  padding: 28rpx 32rpx 24rpx;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  border: 2rpx solid transparent;
-  box-sizing: border-box;
-  box-shadow: 0 8rpx 32rpx rgba(0,0,0,0.08);
-}
-
-/* 选中态 — 彩虹流光呼吸 */
-.vip-card-single--selected {
-  border-width: 8rpx;
-  border-style: solid;
-  animation: vipRainbowFlow 3.6s linear infinite;
-}
-
-@keyframes vipRainbowFlow {
-  0%   {
-    border-color: #ff6b6b;
-    box-shadow: 0 0 6rpx rgba(255,107,107,0.5);
-    background: linear-gradient(180deg, rgba(255,107,107,0.1) 0%, rgba(255,255,255,0.5) 70%);
-  }
-  16%  {
-    border-color: #ffaa33;
-    box-shadow: 0 0 6rpx rgba(255,170,51,0.5);
-    background: linear-gradient(180deg, rgba(255,170,51,0.1) 0%, rgba(255,255,255,0.5) 70%);
-  }
-  33%  {
-    border-color: #ffe83d;
-    box-shadow: 0 0 6rpx rgba(255,232,61,0.5);
-    background: linear-gradient(180deg, rgba(255,232,61,0.1) 0%, rgba(255,255,255,0.5) 70%);
-  }
-  50%  {
-    border-color: #56d870;
-    box-shadow: 0 0 6rpx rgba(86,216,112,0.5);
-    background: linear-gradient(180deg, rgba(86,216,112,0.1) 0%, rgba(255,255,255,0.5) 70%);
-  }
-  66%  {
-    border-color: #4da6ff;
-    box-shadow: 0 0 6rpx rgba(77,166,255,0.5);
-    background: linear-gradient(180deg, rgba(77,166,255,0.1) 0%, rgba(255,255,255,0.5) 70%);
-  }
-  83%  {
-    border-color: #a855f7;
-    box-shadow: 0 0 6rpx rgba(168,85,247,0.5);
-    background: linear-gradient(180deg, rgba(168,85,247,0.1) 0%, rgba(255,255,255,0.5) 70%);
-  }
-  100% {
-    border-color: #ff6b6b;
-    box-shadow: 0 0 6rpx rgba(255,107,107,0.5);
-    background: linear-gradient(180deg, rgba(255,107,107,0.1) 0%, rgba(255,255,255,0.5) 70%);
-  }
-}
-
-/* 套餐名 */
-.vip-card-single-name {
-  font-size: 40rpx;
-  font-weight: 500;
-  color: #000;
-  text-align: center;
-  margin-bottom: 20rpx;
-}
-
-/* 功能列表 */
-.vip-card-single-features {
-  width: 100%;
-  display: flex;
-  flex-direction: column;
-  gap: 8rpx;
-  margin-bottom: 16rpx;
-}
-
-.vip-feature-row {
-  display: flex;
-  align-items: flex-start;
-}
-
-.vip-feature-dot {
-  font-size: 40rpx;
-  color: #a0a0a0;
-  margin-right: 16rpx;
-  flex-shrink: 0;
-  line-height: 1.5;
-}
-
-.vip-feature-text {
-  font-size: 40rpx;
-  color: #a0a0a0;
-  line-height: 1.5;
-}
-
-/* 底部价格区 */
-.vip-card-single-bottom {
-  width: 100%;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  margin-top: auto;
-}
-
-.vip-price-sep {
-  width: 70%;
-  height: 1rpx;
-  background: #d1d1d1;
-}
-
-.vip-price-sep--thin {
-  margin-top: 4rpx;
-}
-
-/* 价格行：￥0.00/月 单行 */
-.vip-price-row {
+.vip-trial-banner-countdown {
   display: flex;
   align-items: baseline;
-  margin-top: 12rpx;
+  gap: 6rpx;
+  margin-bottom: 4rpx;
 }
 
-.vip-price-yen {
-  font-size: 40rpx;
-  font-weight: 500;
-  color: #000;
-  margin-right: 4rpx;
-}
-
-.vip-price-int {
-  font-size: 140rpx;
-  font-weight: 500;
-  color: #000;
+.vip-trial-banner-countdown-num {
+  font-size: 56rpx;
+  font-weight: 800;
+  color: #cf9f40;
   line-height: 1;
 }
 
-/* 免费版卡片 — 灰度 */
-.vip-card-single--free .vip-card-single-name,
-.vip-card-single--free .vip-price-yen,
-.vip-card-single--free .vip-price-int,
-.vip-card-single--free .vip-price-decimal,
-.vip-card-single--free .vip-price-unit {
-  color: #a0a0a0;
+.vip-trial-banner-countdown-label {
+  font-size: 24rpx;
+  color: rgba(255,255,255,0.6);
 }
 
-.vip-price-decimal {
-  font-size: 40rpx;
+.vip-trial-banner-date {
+  font-size: 22rpx;
+  color: rgba(255,255,255,0.45);
+  margin-bottom: 20rpx;
+}
+
+.vip-trial-banner-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 280rpx;
+  height: 72rpx;
+  background: #cf9f40;
+  border-radius: 36rpx;
+  margin-bottom: 12rpx;
+}
+
+.vip-trial-banner-btn-text {
+  font-size: 28rpx;
+  font-weight: 700;
+  color: #0d1d3e;
+  letter-spacing: 2rpx;
+}
+
+.vip-trial-banner-note {
+  font-size: 20rpx;
+  color: rgba(255,255,255,0.35);
+}
+
+/* 三卡垂直列表 */
+.vip-plan-list {
+  flex: 1;
+  min-height: 0;
+  padding: 8rpx 24rpx 0;
+}
+
+/* ---- 单张套餐卡 ---- */
+.vip-plan-card {
+  background: #fff;
+  border-radius: 24rpx;
+  padding: 32rpx 28rpx 28rpx;
+  margin-bottom: 20rpx;
+  box-shadow: 0 2rpx 16rpx rgba(0,0,0,0.04);
+  border-left: 6rpx solid transparent;
+  transition: all 0.25s ease;
+}
+
+/* 三档主题色 */
+.vip-plan--personal { border-left-color: #4A6CF7; }
+.vip-plan--enterprise { border-left-color: #D4A853; }
+.vip-plan--custom { border-left-color: #1a1a2e; }
+
+/* 选中态：整体浮起 + 左侧色条保持 */
+.vip-plan--selected {
+  box-shadow: 0 6rpx 28rpx rgba(0,0,0,0.10);
+  transform: translateY(-2rpx);
+}
+.vip-plan--personal.vip-plan--selected { background: #f8f9ff; }
+.vip-plan--enterprise.vip-plan--selected { background: #fefaf3; }
+.vip-plan--custom.vip-plan--selected { background: #f5f5f7; }
+
+/* 卡片头部 */
+.vip-plan-hd {
+  margin-bottom: 16rpx;
+}
+
+.vip-plan-name-row {
+  display: flex;
+  align-items: baseline;
+  gap: 16rpx;
+}
+
+.vip-plan-name {
+  font-size: 34rpx;
+  font-weight: 700;
+  color: #1a1a1a;
+}
+
+.vip-plan-tagline {
+  font-size: 22rpx;
+  color: #999;
+}
+
+/* 功能列表 */
+.vip-plan-features {
+  display: flex;
+  flex-direction: column;
+  gap: 10rpx;
+  margin-bottom: 20rpx;
+}
+
+.vip-plan-feat {
+  display: flex;
+  align-items: center;
+}
+
+.vip-plan-feat-dot {
+  width: 10rpx;
+  height: 10rpx;
+  border-radius: 50%;
+  margin-right: 14rpx;
+  flex-shrink: 0;
+  background: #4A6CF7;
+}
+.vip-plan--enterprise .vip-plan-feat-dot { background: #D4A853; }
+.vip-plan--custom .vip-plan-feat-dot { background: #999; }
+
+.vip-plan-feat-text {
+  font-size: 26rpx;
+  color: #555;
+  line-height: 1.5;
+}
+
+/* ---- 席位选择器 ---- */
+.vip-seats-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20rpx 0;
+  margin-bottom: 16rpx;
+  border-top: 1rpx solid rgba(0,0,0,0.06);
+  border-bottom: 1rpx solid rgba(0,0,0,0.06);
+}
+
+.vip-seats-label {
+  font-size: 26rpx;
+  color: #555;
   font-weight: 500;
-  color: #000;
+}
+
+.vip-seats-ctrl {
+  display: flex;
+  align-items: center;
+  gap: 28rpx;
+}
+
+.vip-seats-btn {
+  width: 60rpx;
+  height: 60rpx;
+  border-radius: 50%;
+  background: #f5f5f5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2rpx solid #e8e8e8;
+}
+
+.vip-seats-btn--disabled {
+  opacity: 0.25;
+}
+
+.vip-seats-btn-text {
+  font-size: 36rpx;
+  color: #333;
+  font-weight: 500;
+  line-height: 1;
+}
+
+.vip-seats-num {
+  font-size: 44rpx;
+  font-weight: 700;
+  color: #1a1a1a;
+  min-width: 56rpx;
+  text-align: center;
+}
+
+.vip-seats-hint {
+  font-size: 22rpx;
+  color: #aaa;
+}
+
+/* ---- 价格区 ---- */
+.vip-plan-price {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding-top: 8rpx;
+}
+
+.vip-price-row {
+  display: flex;
+  align-items: baseline;
+}
+
+.vip-price-yen {
+  font-size: 30rpx;
+  font-weight: 600;
+  color: #1a1a1a;
+  margin-right: 2rpx;
+}
+
+.vip-price-int {
+  font-size: 60rpx;
+  font-weight: 700;
+  color: #1a1a1a;
+  line-height: 1;
+  letter-spacing: -2rpx;
 }
 
 .vip-price-unit {
-  font-size: 40rpx;
-  font-weight: 500;
-  color: #000;
+  font-size: 26rpx;
+  color: #999;
+  margin-left: 4rpx;
 }
 
-/* 功能文字关键词高亮 */
-.vip-feature-text--strong {
-  color: #000;
+.vip-annual-badge {
+  background: #D4A853;
+  border-radius: 6rpx;
+  padding: 2rpx 10rpx;
+  margin-left: 8rpx;
 }
 
-/* 折扣行 */
-.vip-discount-row {
-  display: flex;
-  align-items: baseline;
-  gap: 8rpx;
-  margin-top: 8rpx;
+.vip-annual-badge-text {
+  font-size: 20rpx;
+  color: #fff;
+  font-weight: 600;
 }
 
-.vip-discount-badge {
+.vip-price-hint {
   font-size: 22rpx;
-  font-weight: 500;
-  color: #cf9f40;
+  color: #D4A853;
+  margin-top: 6rpx;
 }
 
-.vip-discount-monthly {
+.vip-per-seat-hint {
   font-size: 22rpx;
-  font-weight: 500;
-  color: #d1d1d1;
-}
-
-/* ---- Ultra 卡片 ---- */
-.vip-card-single--ultra .vip-card-single-name,
-.vip-card-single--ultra .vip-feature-dot,
-.vip-card-single--ultra .vip-feature-text {
-  color: #929292;
-}
-
-.vip-card-single--ultra .vip-price-yen,
-.vip-card-single--ultra .vip-price-int,
-.vip-card-single--ultra .vip-price-decimal,
-.vip-card-single--ultra .vip-price-unit {
-  color: #cf9f40;
+  color: #bbb;
+  margin-top: 6rpx;
 }
 
 /* 联系我们按钮 */
@@ -4786,39 +4635,37 @@ page {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 85%;
-  height: 120rpx;
+  width: 100%;
+  height: 80rpx;
   background: #0d1d3e;
-  border-radius: 34rpx;
-  margin-top: 8rpx;
+  border-radius: 16rpx;
 }
 
 .vip-contact-text {
-  font-size: 44rpx;
-  font-weight: 500;
+  font-size: 30rpx;
+  font-weight: 600;
   color: #cf9f40;
   letter-spacing: 4rpx;
 }
 
 /* ---- 确认开通按钮 ---- */
 .vip-confirm-wrap {
-  padding: 8rpx 0 0;
-  width: 552rpx;
-  margin: 0 auto;
+  padding: 12rpx 0 0;
+  width: 100%;
 }
 
 .vip-confirm-btn {
   display: flex;
   align-items: center;
   justify-content: center;
-  height: 72rpx;
-  background: #000;
-  border-radius: 12rpx;
+  height: 84rpx;
+  background: #1a1a1a;
+  border-radius: 16rpx;
 }
 
 .vip-confirm-text {
-  font-size: 28rpx;
-  font-weight: 500;
+  font-size: 30rpx;
+  font-weight: 600;
   color: #fff;
   letter-spacing: 2rpx;
 }
@@ -5350,7 +5197,6 @@ page {
 .export-bill-section-label--on {
   border-width: 8rpx;
   border-style: solid;
-  animation: vipRainbowFlow 3.6s linear infinite;
 }
 
 /* 网格项目 */
@@ -5377,7 +5223,6 @@ page {
 .export-bill-grid-item--on {
   border-width: 8rpx;
   border-style: solid;
-  animation: vipRainbowFlow 3.6s linear infinite;
 }
 
 .export-bill-grid-text {
@@ -7539,8 +7384,6 @@ page {
 .page--dark .detail-date-text,
 .page--dark .bill-item-title,
 .page--dark .settle-item-title,
-.page--dark .vip-detail-name,
-.page--dark .vip-detail-price,
 .page--dark .company-boss-title,
 .page--dark .company-employee-success-title,
 .page--dark .export-bill-section-label,
@@ -7697,13 +7540,10 @@ page {
 .page--dark .detail-title,
 .page--dark .settle-title,
 .page--dark .report-type-text--active,
-.page--dark .vip-card-single-name,
-.page--dark .vip-main-title,
+	.page--dark .vip-plan-name,
 .page--dark .vip-price-int,
-.page--dark .vip-price-decimal,
 .page--dark .vip-price-unit,
 .page--dark .vip-price-yen,
-.page--dark .vip-feature-text--strong,
 .page--dark .company-boss-success-tip,
 .page--dark .company-success-val,
 .page--dark .company-employee-note-strong,
@@ -7930,9 +7770,7 @@ page {
 }
 
 /* VIP 卡片 */
-.page--dark .vip-card-single,
-.page--dark .vip-detail-body,
-.page--dark .vip-card-detail {
+.page--dark .vip-plan-card {
   background: #2a2a3a !important;
 }
 
