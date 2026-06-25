@@ -18,6 +18,6 @@
       "from": "fs"
     }
   ],
-  "capability": "items 表新增 updated_at 列，每次 PUT 更新账单时自动写入当前时间戳，返回值中包含 updatedAt 字段",
-  "updatedAt": "2026-06-24T15:05:49.686Z"
+  "capability": "用户可通过小程序调用 6 个 VIP 函数（getVipStatus/subscribeVip/activateTrial/checkUsage/isVip/incrementUsage），后端对应 /api/vip/* 接口已上线运行",
+  "updatedAt": "2026-06-25T07:55:01.325Z"
 }
