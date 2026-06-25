@@ -1,13 +1,24 @@
 {
   "pages": [
     "pages/mingxi/mingxi",
-    "pages/index/index",
     "pages/baobiao/baobiao",
     "pages/jizhang/jizhang",
     "pages/jieqing/jieqing",
-    "pages/wode/wode",
-    "pages/personal-ledger/personal-ledger",
-    "pages/company-ledger/company-ledger"
+    "pages/wode/wode"
+  ],
+  "subpackages": [
+    {
+      "root": "pages/index",
+      "pages": ["index"]
+    },
+    {
+      "root": "pages/personal-ledger",
+      "pages": ["personal-ledger"]
+    },
+    {
+      "root": "pages/company-ledger",
+      "pages": ["company-ledger"]
+    }
   ],
   "window": {
     "navigationBarTextStyle": "black",

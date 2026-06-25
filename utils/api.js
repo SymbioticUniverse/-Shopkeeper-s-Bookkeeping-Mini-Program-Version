@@ -1056,33 +1056,58 @@ function _rewriteHost(url) {
  */
 function uploadVoucher(filePath, type) {
   const token = _getToken()
-  // type==='avatar' → 走头像专用通道（后端存 avatar/ 目录、单份覆盖、返回免鉴权 URL）
   const query = type === 'avatar' ? '?type=avatar' : ''
-  return new Promise((resolve, reject) => {
-    wx.uploadFile({
-      url: BASE_URL + '/upload' + query,
-      filePath,
-      name: 'file',
-      header: {
-        ...(token ? { 'Authorization': 'Bearer ' + token } : {})
+  return new Promise(function (resolve, reject) {
+    wx.compressImage({
+      src: filePath,
+      quality: 60,
+      success: function (res) {
+        _checkAndUpload(res.tempFilePath)
       },
-      success(res) {
-        try {
-          const data = JSON.parse(res.data)
-          if (data.ok && data.url) {
-            resolve(data.url)
-          } else {
-            reject(data)
-          }
-        } catch (e) {
-          reject(res)
-        }
-      },
-      fail(err) {
-        console.error('[API] uploadVoucher 失败', err)
-        reject(err)
+      fail: function () {
+        _checkAndUpload(filePath)
       }
     })
+
+    function _checkAndUpload(path) {
+      wx.getFileSystemManager().getFileInfo({
+        filePath: path,
+        success: function (info) {
+          if (info.size >= 1800000) {
+            reject({ error: 'file_too_large', size: info.size })
+            return
+          }
+          _doUpload(path)
+        },
+        fail: function () {
+          _doUpload(path)
+        }
+      })
+    }
+
+    function _doUpload(path) {
+      wx.uploadFile({
+        url: BASE_URL + '/upload' + query,
+        filePath: path,
+        name: 'file',
+        header: { ...(token ? { 'Authorization': 'Bearer ' + token } : {}) },
+        success: function (res) {
+          try {
+            var data = JSON.parse(res.data)
+            if (data.ok && data.url) { resolve(data.url) }
+            else { reject(data) }
+          } catch (e) { reject(res) }
+        },
+        fail: function (err) {
+          var errMsg = (err && (err.errMsg || err.message)) || ''
+          if (errMsg.indexOf('80051') !== -1) {
+            reject({ error: 'file_too_large' })
+          } else {
+            reject(err)
+          }
+        }
+      })
+    }
   })
 }
 

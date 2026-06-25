@@ -16,7 +16,19 @@
   "compileType": "miniprogram",
   "simulatorPluginLibVersion": {},
   "packOptions": {
-    "ignore": [],
+    "ignore": [
+      { "type": "folder", "value": ".chitu" },
+      { "type": "folder", "value": ".claude" },
+      { "type": "folder", "value": ".horsewhip" },
+      { "type": "folder", "value": "backend" },
+      { "type": "folder", "value": "training" },
+      { "type": "folder", "value": "docs" },
+      { "type": "file", "value": "API.md" },
+      { "type": "file", "value": "CHANGELOG.md" },
+      { "type": "file", "value": "CLAUDE.md" },
+      { "type": "file", "value": ".mcp.json" },
+      { "type": "file", "value": ".gitignore" }
+    ],
     "include": []
   },
   "appid": "wx9f3f72f466b5cade",

@@ -1,5 +1,6 @@
 .horsewhip/
-backend/data/
-backend/node_modules/
+backend/
 .chitu/
 node_modules/
+Dockerfile
+docker-compose.yml

@@ -2336,10 +2336,23 @@ Page({
     const item = this.data[items].find(it => it.id === id)
     if (!item) return
     const isPersonal = from === 'settle' ? this.data.settleType === 0 : this.data.detailType === 0
-    this.setData({
-      modalItem: { ...item, _settleText: this._formatSettleText(item), _timeText: this._billTimeText(item), _readonly: !!(item._autoSettle || item.settleStatus === 'settled') }, modalFrom: from, modalIsPersonal: isPersonal,
-      modalEdit: { category: item.category, amount: item.amount, note: item.note || '' },
-    })
+    const _open = (voucherLocal) => {
+      this.setData({
+        modalItem: { ...item, voucher: voucherLocal || item.voucher, _settleText: this._formatSettleText(item), _timeText: this._billTimeText(item), _readonly: !!(item._autoSettle || item.settleStatus === 'settled') }, modalFrom: from, modalIsPersonal: isPersonal,
+        modalEdit: { category: item.category, amount: item.amount, note: item.note || '' },
+      })
+    }
+    var v = item.voucher
+    if (v && typeof v === 'string' && v.indexOf('http') === 0) {
+      var that = this
+      api.downloadAuthedImage(v).then(function (local) {
+        _open(local)
+      }).catch(function () {
+        _open(null)
+      })
+    } else {
+      _open(v || null)
+    }
   },
 
   onModalFieldEdit(e) {
