@@ -87,7 +87,8 @@
                   <view class="custom-glass-inner custom-glass-inner--s1">
                     <view class="custom-tpl-card custom-tpl-card--span1">
                       <view class="card-header">
-                        <view class="card-avatar" wx:if="{{item.hasAvatar}}"></view>
+                        <image class="card-avatar" wx:if="{{item.hasAvatar && avatarDisplay}}" src="{{avatarDisplay}}" mode="aspectFill"></image>
+              <view class="card-avatar card-avatar--empty" wx:elif="{{item.hasAvatar}}"></view>
                         <text class="card-title">{{item.name}}</text>
                         <text class="card-subtitle">{{item.subtitle}}</text>
                       </view>
@@ -321,7 +322,8 @@
     <block wx:if="{{!showCustomOverview && showOverview}}">
       <view class="card grid-span-{{item.span}}" wx:for="{{overviewCards}}" wx:key="id" bindtap="onOverviewCardTap" data-type="{{item.type}}">
         <view class="card-header {{item.span >= 2 ? 'compact' : ''}}">
-          <view class="card-avatar" wx:if="{{item.hasAvatar}}"></view>
+          <image class="card-avatar" wx:if="{{item.hasAvatar && avatarDisplay}}" src="{{avatarDisplay}}" mode="aspectFill"></image>
+              <view class="card-avatar card-avatar--empty" wx:elif="{{item.hasAvatar}}"></view>
           <text class="card-title">{{item.name}}</text>
           <text class="card-arrow">〉</text>
           <text class="card-subtitle">{{item.subtitle}}</text>
@@ -470,6 +472,7 @@
                   <text class="bill-type">{{item.typeLabel}}</text>
                   <text wx:if="{{item.settleStatus === 'company_settled'}}" class="bill-settle-tag bill-settle-tag--pending">待确认</text>
                   <text wx:elif="{{item.settleStatus === 'settled'}}" class="bill-settle-tag bill-settle-tag--auto">结清</text>
+                  <text wx:if="{{item.target}}" class="bill-target {{item.targetType === 'internal' ? 'bill-target--internal' : 'bill-target--external'}}">{{item.target}}</text>
                   <text class="bill-note-inline">{{item.note || '-'}}</text>
                   <text class="bill-amount {{item.type === 'in' ? 'bill-amount--in' : 'bill-amount--out'}}">¥{{item.amount}}</text>
                 </view>
@@ -678,6 +681,7 @@
               <text class="bill-cat">{{item.category}}</text>
               <text class="bill-type">{{item.typeLabel}}</text>
               <text wx:if="{{item.settleStatus === 'company_settled'}}" class="bill-settle-tag bill-settle-tag--pending">待确认</text>
+              <text wx:if="{{item.target}}" class="bill-target {{item.targetType === 'internal' ? 'bill-target--internal' : 'bill-target--external'}}">{{item.target}}</text>
               <text class="bill-note-inline">{{item.note || '-'}}</text>
               <text class="bill-amount {{item.type === 'in' ? 'bill-amount--in' : 'bill-amount--out'}}">¥{{item.amount}}</text>
               <text class="bill-date">{{item.date}}</text>
@@ -788,54 +792,59 @@
           <view class="custom-cat-right"><image class="custom-cat-icon" src="/assets/icons/fenlei.png" mode="aspectFit"/><text class="custom-cat-title">{{t.custom_cat_title}}</text></view>
         </view>
         <view class="custom-cat-divider"></view>
-        <scroll-view class="custom-cat-body" scroll-y enhanced show-scrollbar="{{false}}">
-          <view class="custom-cat-personal-block">
-            <view class="custom-cat-section-hd">
-              <text class="custom-cat-section-label">个人分类</text>
-              <view class="custom-cat-tabs">
-                <view class="custom-cat-tab {{catTabPersonal === 'out' ? 'custom-cat-tab--on' : ''}}" bindtap="onCatTabChange" data-scope="personal" data-tab="out">支出</view>
-                <view class="custom-cat-tab {{catTabPersonal === 'in' ? 'custom-cat-tab--on' : ''}}" bindtap="onCatTabChange" data-scope="personal" data-tab="in">收入</view>
-                <view class="custom-cat-tab {{catTabPersonal === 'payForward' ? 'custom-cat-tab--on' : ''}}" bindtap="onCatTabChange" data-scope="personal" data-tab="payForward">垫付</view>
-                <view class="custom-cat-tab {{catTabPersonal === 'payable' ? 'custom-cat-tab--on' : ''}}" bindtap="onCatTabChange" data-scope="personal" data-tab="payable">应付</view>
-              </view>
-            </view>
-            <view class="custom-cat-grid">
-              <view class="custom-cat-item" wx:for="{{personalCategories}}" wx:key="id" wx:if="{{item.inOut === catTabPersonal}}" bindlongtap="onDeleteCategory" data-id="{{item.id}}" data-scope="personal">
-                <view class="custom-cat-icon-wrap">
-                  <text class="custom-cat-emoji">{{item.emoji}}</text>
-                </view>
-                <text class="custom-cat-name">{{item.name}}</text>
-              </view>
-            </view>
-            <view class="custom-cat-add" bindtap="onAddCategory" data-scope="personal">
-              <view class="custom-cat-add-icon">+</view>
+        <view class="custom-cat-personal-block">
+          <view class="custom-cat-section-hd">
+            <text class="custom-cat-section-label">个人分类</text>
+            <view class="custom-cat-tabs">
+              <view class="custom-cat-tab {{catTabPersonal === 'out' ? 'custom-cat-tab--on' : ''}}" bindtap="onCatTabChange" data-scope="personal" data-tab="out">支出</view>
+              <view class="custom-cat-tab {{catTabPersonal === 'in' ? 'custom-cat-tab--on' : ''}}" bindtap="onCatTabChange" data-scope="personal" data-tab="in">收入</view>
+              <view class="custom-cat-tab {{catTabPersonal === 'payForward' ? 'custom-cat-tab--on' : ''}}" bindtap="onCatTabChange" data-scope="personal" data-tab="payForward">垫付</view>
+              <view class="custom-cat-tab {{catTabPersonal === 'payable' ? 'custom-cat-tab--on' : ''}}" bindtap="onCatTabChange" data-scope="personal" data-tab="payable">应付</view>
             </view>
           </view>
-          <view class="custom-cat-divider"></view>
-          <view class="custom-cat-company-block">
-            <view class="custom-cat-section-hd">
-              <text class="custom-cat-section-label">公司分类</text>
-              <view class="custom-cat-tabs">
-                <view class="custom-cat-tab {{catTabCompany === 'out' ? 'custom-cat-tab--on' : ''}}" bindtap="onCatTabChange" data-scope="company" data-tab="out">支出</view>
-                <view class="custom-cat-tab {{catTabCompany === 'in' ? 'custom-cat-tab--on' : ''}}" bindtap="onCatTabChange" data-scope="company" data-tab="in">收入</view>
-                <view class="custom-cat-tab {{catTabCompany === 'payForward' ? 'custom-cat-tab--on' : ''}}" bindtap="onCatTabChange" data-scope="company" data-tab="payForward">垫付</view>
-                <view class="custom-cat-tab {{catTabCompany === 'payable' ? 'custom-cat-tab--on' : ''}}" bindtap="onCatTabChange" data-scope="company" data-tab="payable">应付</view>
-              </view>
-            </view>
-            <view class="custom-cat-grid">
-              <view class="custom-cat-item" wx:for="{{companyCategories}}" wx:key="id" wx:if="{{item.inOut === catTabCompany}}" bindlongtap="onDeleteCategory" data-id="{{item.id}}" data-scope="company">
-                <view class="custom-cat-icon-wrap">
-                  <text class="custom-cat-emoji">{{item.emoji}}</text>
+          <view class="custom-cat-scroll-wrap">
+            <scroll-view class="custom-cat-grid-scroll" scroll-y enhanced show-scrollbar="{{false}}" enable-flex>
+              <view class="custom-cat-grid">
+                <view class="custom-cat-item" wx:for="{{personalCategories}}" wx:key="id" wx:if="{{item.inOut === catTabPersonal}}" bindlongtap="onDeleteCategory" data-id="{{item.id}}" data-scope="personal">
+                  <view class="custom-cat-icon-wrap">
+                    <text class="custom-cat-emoji">{{item.emoji}}</text>
+                  </view>
+                  <text class="custom-cat-name">{{item.name}}</text>
                 </view>
-                <text class="custom-cat-name">{{item.name}}</text>
               </view>
-            </view>
-            <view class="custom-cat-add" bindtap="onAddCategory" data-scope="company">
-              <view class="custom-cat-add-icon">+</view>
+              <view class="custom-cat-add" bindtap="onAddCategory" data-scope="personal">
+                <view class="custom-cat-add-icon">+</view>
+              </view>
+            </scroll-view>
+          </view>
+        </view>
+        <view class="custom-cat-divider"></view>
+        <view class="custom-cat-company-block">
+          <view class="custom-cat-section-hd">
+            <text class="custom-cat-section-label">公司分类</text>
+            <view class="custom-cat-tabs">
+              <view class="custom-cat-tab {{catTabCompany === 'out' ? 'custom-cat-tab--on' : ''}}" bindtap="onCatTabChange" data-scope="company" data-tab="out">支出</view>
+              <view class="custom-cat-tab {{catTabCompany === 'in' ? 'custom-cat-tab--on' : ''}}" bindtap="onCatTabChange" data-scope="company" data-tab="in">收入</view>
+              <view class="custom-cat-tab {{catTabCompany === 'payForward' ? 'custom-cat-tab--on' : ''}}" bindtap="onCatTabChange" data-scope="company" data-tab="payForward">垫付</view>
+              <view class="custom-cat-tab {{catTabCompany === 'payable' ? 'custom-cat-tab--on' : ''}}" bindtap="onCatTabChange" data-scope="company" data-tab="payable">应付</view>
             </view>
           </view>
-          <view class="custom-cat-bottom-spacer"></view>
-        </scroll-view>
+          <view class="custom-cat-scroll-wrap">
+            <scroll-view class="custom-cat-grid-scroll" scroll-y enhanced show-scrollbar="{{false}}" enable-flex>
+              <view class="custom-cat-grid">
+                <view class="custom-cat-item" wx:for="{{companyCategories}}" wx:key="id" wx:if="{{item.inOut === catTabCompany}}" bindlongtap="onDeleteCategory" data-id="{{item.id}}" data-scope="company">
+                  <view class="custom-cat-icon-wrap">
+                    <text class="custom-cat-emoji">{{item.emoji}}</text>
+                  </view>
+                  <text class="custom-cat-name">{{item.name}}</text>
+                </view>
+              </view>
+              <view class="custom-cat-add" bindtap="onAddCategory" data-scope="company">
+                <view class="custom-cat-add-icon">+</view>
+              </view>
+            </scroll-view>
+          </view>
+        </view>
         <!-- 添加分类弹窗 -->
         <view class="cat-modal-mask" wx:if="{{showCatModal}}" bindtap="onCatModalClose"></view>
         <view class="cat-modal" wx:if="{{showCatModal}}">
@@ -1359,6 +1368,7 @@
         </view>
         <view class="custom-cat-divider"></view>
         <scroll-view class="ledger-scroll" scroll-y enhanced show-scrollbar="{{false}}">
+          <view class="ledger-scroll-inner">
           <!-- 本月概览（个人账本） -->
           <view wx:if="{{ledgerScope === 'personal'}}" class="ledger-sec">
             <view class="ledger-sec-head">
@@ -1473,6 +1483,7 @@
               <view class="ledger-budget-save" bindtap="onLedgerBudgetSave">保存</view>
             </view>
           </view>
+          </view>
         </scroll-view>
       </view>
       <!-- 正常我的页面 -->
@@ -1494,7 +1505,7 @@
               <text class="my-item-title {{vipStatus && vipStatus.vipLevel > 0 ? 'my-item-title--vip' : ''}}">{{vipStatus && vipStatus.vipLevel > 0 ? vipCards[vipStatus.vipLevel - 1].name : t.vip_title}}</text>
               <text class="my-item-sub" wx:if="{{!vipStatus || vipStatus.vipLevel === 0}}">{{vipStatus ? 'AI ' + vipStatus.usage.asr + '/' + vipStatus.limits.asr + ' · 导出 ' + vipStatus.usage.export + '/' + vipStatus.limits.export : t.vip_sub}}</text>
               <view class="my-item-vip-expire" wx:else>
-                <text class="my-item-vip-expire-text">{{vipStatus.vipExpiresAt ? vipStatus.vipExpiresAt.slice(0, 10) + ' 到期' : '永久有效'}}</text>
+                <text class="my-item-vip-expire-text">{{vipExpiresText}}</text>
                 <text class="my-item-vip-expire-days" wx:if="{{vipTrialDays > 0}}">剩 {{vipTrialDays}} 天</text>
               </view>
             </view>
@@ -1700,7 +1711,7 @@
     </view>
     <text class="tab-center-label">{{tabs[2].text}}</text>
     <view class="tab-bar">
-      <view class="tab-item" wx:for="{{tabs}}" wx:key="index" data-index="{{index}}" bindtap="switchTab">
+      <view class="tab-item {{index === 1 ? 'tab-item--push-left' : ''}} {{index === 3 ? 'tab-item--push-right' : ''}}" wx:for="{{tabs}}" wx:key="index" data-index="{{index}}" bindtap="switchTab">
         <view wx:if="{{index !== 2}}" class="tab-icon"><image class="tab-icon-img" src="{{item.icon}}" mode="aspectFit"/></view>
         <text wx:if="{{index !== 2}}" class="tab-label {{index === currentTab && !showOverview ? 'tab-label-active' : ''}}">{{item.text}}</text>
       </view>
@@ -1808,22 +1819,52 @@
       </view>
       <scroll-view class="ai-chat-messages" scroll-y enhanced show-scrollbar="{{false}}" scroll-top="{{aiScrollTop}}" scroll-with-animation>
         <view class="ai-msg" wx:for="{{aiMessages}}" wx:key="index" id="ai-msg-{{index}}">
-          <view class="ai-msg-bubble ai-msg-bubble--{{item.role}}">
+          <view class="ai-msg-bubble ai-msg-bubble--{{item.role}} {{item.card ? 'ai-msg-bubble--ai-card' : ''}}">
             <text class="ai-msg-text">{{item.text}}</text>
-            <!-- 待确认：原卡片 + 确认/取消按钮 -->
+            <!-- 待确认：3行布局卡片 -->
             <view wx:if="{{item.card && item.confirmed === undefined}}" class="ai-bill-card ai-bill-card--{{item.card.type}}">
-              <view class="ai-bill-row">
-                <view class="ai-bill-dot"></view>
-                <text class="ai-bill-cat">{{item.card.category}}</text>
-                <text class="ai-bill-type">{{item.card.typeLabel}}</text>
+              <!-- Row 1: Amount (大) + Type -->
+              <view class="ai-bill-row ai-bill-row--main">
+                <view class="ai-bill-amount-wrap">
+                  <text class="ai-bill-currency">¥</text>
+                  <input class="ai-bill-amount-input" type="digit" value="{{item.card.amount}}" bindinput="onAiCardAmountInput" data-idx="{{index}}" placeholder="0.00"/>
+                </view>
+                <picker mode="selector" range="{{typeOptions}}" value="{{item._typeIdx}}" bindchange="onAiCardTypeChange" data-idx="{{index}}">
+                  <view class="ai-bill-tag-picker ai-bill-tag-picker--{{item.card.type}}">
+                    <text class="ai-bill-tag-text">{{item.card.typeLabel}}</text>
+                    <text class="ai-bill-arrow">▼</text>
+                  </view>
+                </picker>
               </view>
-              <view class="ai-bill-row ai-bill-row--bottom">
-                <text class="ai-bill-amount">¥{{item.card.amount}}</text>
-                <text class="ai-bill-date">{{item.card.date}}</text>
+              <!-- Row 2: Category + Date + Target -->
+              <view class="ai-bill-row ai-bill-row--fields">
+                <picker mode="selector" range="{{catOptions}}" value="{{item._catIdx}}" bindchange="onAiCardCatChange" data-idx="{{index}}">
+                  <view class="ai-bill-chip">
+                    <text class="ai-bill-chip-text">{{item.card.category}}</text>
+                    <text class="ai-bill-arrow">▼</text>
+                  </view>
+                </picker>
+                <picker mode="date" value="{{item.card.date}}" bindchange="onAiCardDateChange" data-idx="{{index}}">
+                  <view class="ai-bill-chip">
+                    <text class="ai-bill-chip-text">{{item.card.date}}</text>
+                    <text class="ai-bill-arrow">▼</text>
+                  </view>
+                </picker>
+                <picker mode="selector" range="{{targetOptions}}" value="{{item._targetIdx}}" bindchange="onAiCardTargetChange" data-idx="{{index}}">
+                  <view class="ai-bill-chip">
+                    <text class="ai-bill-chip-text">{{item.card.target || '对象'}}</text>
+                    <text class="ai-bill-arrow">▼</text>
+                  </view>
+                </picker>
               </view>
+              <!-- Row 3: Note -->
+              <view class="ai-bill-row ai-bill-row--note">
+                <input class="ai-bill-input" value="{{item.card.note}}" bindinput="onAiCardNoteInput" data-idx="{{index}}" placeholder="添加备注..."/>
+              </view>
+              <!-- Buttons -->
               <view class="ai-bill-btns">
                 <view class="ai-bill-btn ai-bill-btn--reject" catchtap="onAiReject" data-idx="{{index}}">取消</view>
-                <view class="ai-bill-btn ai-bill-btn--confirm" catchtap="onAiConfirm" data-idx="{{index}}">确认</view>
+                <view class="ai-bill-btn ai-bill-btn--confirm" catchtap="onAiConfirm" data-idx="{{index}}">确认记账</view>
               </view>
             </view>
             <!-- 已确认：原卡片 + 链接 -->
@@ -1836,6 +1877,7 @@
               </view>
               <view class="ai-bill-row ai-bill-row--bottom">
                 <text class="ai-bill-amount">¥{{item.card.amount}}</text>
+                <text wx:if="{{item.card.target}}" class="ai-bill-target-confirmed">{{item.card.target}}</text>
                 <text class="ai-bill-date">{{item.card.date}}</text>
               </view>
             </view>
@@ -1850,7 +1892,7 @@
                 <text class="ai-bill-amount">¥{{item.card.amount}}</text>
                 <text class="ai-bill-date">已取消</text>
               </view>
-              <text class="ai-cancel-hint">识别有误？换个说法再试一次吧</text>
+              <text class="ai-cancel-hint">{{item._ocrIndex !== undefined ? '此笔已跳过' : '识别有误？换个说法再试一次吧'}}</text>
             </view>
           </view>
           <text class="ai-msg-time ai-msg-time--{{item.role}}">{{item.time}}</text>
@@ -2115,18 +2157,18 @@
           </view>
 
           <view class="conflict-btns">
-            <block wx:if="{{item.type !== 'resurrection'}}">
+            <block wx:if="{{item.type !== 'server_voided'}}">
               <view class="conflict-btn conflict-btn--local {{item.resolution === 'local' ? 'conflict-btn--active' : ''}}" bindtap="onConflictResolve" data-id="{{item.id}}" data-scope="{{item.scope}}" data-resolution="local"><text>保留本地</text></view>
               <view class="conflict-btn conflict-btn--server {{item.resolution === 'server' ? 'conflict-btn--active' : ''}}" bindtap="onConflictResolve" data-id="{{item.id}}" data-scope="{{item.scope}}" data-resolution="server"><text>保留云端</text></view>
             </block>
             <block wx:else>
-              <view class="conflict-btn conflict-btn--local {{item.resolution === 'keep_deleted' ? 'conflict-btn--active' : ''}}" bindtap="onConflictResolve" data-id="{{item.id}}" data-scope="{{item.scope}}" data-resolution="keep_deleted"><text>保持删除</text></view>
-              <view class="conflict-btn conflict-btn--server {{item.resolution === 'restore' ? 'conflict-btn--active' : ''}}" bindtap="onConflictResolve" data-id="{{item.id}}" data-scope="{{item.scope}}" data-resolution="restore"><text>恢复账单</text></view>
+              <view class="conflict-btn conflict-btn--local {{item.resolution === 'server_voided_restore' ? 'conflict-btn--active' : ''}}" bindtap="onConflictResolve" data-id="{{item.id}}" data-scope="{{item.scope}}" data-resolution="server_voided_restore"><text>保留本地</text></view>
+              <view class="conflict-btn conflict-btn--server {{item.resolution === 'server_voided_accept' ? 'conflict-btn--active' : ''}}" bindtap="onConflictResolve" data-id="{{item.id}}" data-scope="{{item.scope}}" data-resolution="server_voided_accept"><text>接受删除</text></view>
             </block>
           </view>
 
           <view class="conflict-resolved-tag" wx:if="{{item.resolution}}">
-            <text>已选择: {{item.resolution === 'local' || item.resolution === 'keep_deleted' ? '本地版本' : '云端版本'}}</text>
+            <text>已选择: {{item.resolution === 'local' || item.resolution === 'server_voided_restore' ? '本地版本' : (item.resolution === 'server' || item.resolution === 'server_voided_accept' ? '云端版本' : '')}}</text>
           </view>
         </view>
       </block>

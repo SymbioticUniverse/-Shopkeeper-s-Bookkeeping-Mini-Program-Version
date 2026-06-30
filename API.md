@@ -1236,7 +1236,19 @@ user_settings: { user_id, key, value, updated_at }
 |------|------|------|
 | `imageUrl` | `string` | 图片 URL（可先通过 `POST /api/upload` 上传后获得） |
 
-**响应：** `{ "ok": true, "amount": "25.00", "category": "餐饮", "note": "午餐", "date": "2026-06-23" }`
+**响应（单条，兼容旧版）：** `{ "ok": true, "amount": "25.00", "category": "餐饮", "note": "午餐", "date": "2026-06-23" }`
+
+**响应（多条，NEW）：** 当 OCR 识别到多笔交易（如微信账单截图含 N 条流水）时，返回 `items` 数组：
+
+```json
+{
+  "ok": true,
+  "items": [
+    { "amount": "35.00", "category": "餐饮", "note": "美团外卖", "date": "2026-06-28" },
+    { "amount": "12.50", "category": "交通", "note": "滴滴出行", "date": "2026-06-28" }
+  ]
+}
+```
 
 | 字段 | 类型 | 说明 |
 |------|------|------|
@@ -1244,6 +1256,12 @@ user_settings: { user_id, key, value, updated_at }
 | `category` | `string` | 识别出的分类，应落在一级分类内（如无法匹配则返回 `''`，前端让用户手动选） |
 | `note` | `string` | 识别出的备注（商户名/商品名等） |
 | `date` | `string` | 识别出的日期，格式 `YYYY-MM-DD`（如未识别到则返回当天） |
+
+**后端实现要点：**
+- 从 OCR 文本行中按「描述行 + 金额行」分组识别多笔
+- 单条时可用旧格式 `amount/category/note/date` 或 `items[1]`，前端都兼容
+- 多条时用 `items` 数组，前端打开 AI 对话窗逐条卡片确认
+- 每条 note 传入现有 `guessCategory()` 做分类匹配
 
 **后端接入建议：**
 - ✅ 已接入：阿里云 OCR `RecognizeAllText` API（`ocr-api.cn-hangzhou.aliyuncs.com`）

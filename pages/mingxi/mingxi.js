@@ -237,6 +237,7 @@ Page({
     trialOfferDays: 92,          // 距试用截止天数
     vipTrialDays: 0,             // 试用剩余天数（已激活）
     vipStatus: null,             // { vipLevel, vipExpiresAt, usage, limits, isTrial }
+    vipExpiresText: '永久有效',   // 预计算：WXML 不支持 .slice() 调用，在 JS 侧格式化
     // 登录状态
     isLoggedIn: false,
     userInfo: null,
@@ -274,6 +275,10 @@ Page({
     aiScrollTop: 0,
     aiVoiceMode: true,
     aiRecording: false,
+    catOptions: ['餐饮', '交通', '购物', '饮品', '人情', '通讯', '医疗', '住房', '工资', '办公', '金融', '服饰', '娱乐', '数码', '其他'],
+    typeOptions: ['支出', '收入', '垫付', '应付'],
+    targetOptions: ['公司', '个人', '外部'],
+    _typeLabelToKey: { '支出': 'expense', '收入': 'income', '垫付': 'payForward', '应付': 'payable' },
     // 冲突解决
     showConflictPanel: false,
     conflicts: [],
@@ -562,6 +567,9 @@ Page({
 	      { id: 'p_47', name: '人情', emoji: '🧧', inOut: 'out' },
 	      { id: 'p_48', name: '办公', emoji: '🖊', inOut: 'out' },
 	      { id: 'p_49', name: '金融', emoji: '🏦', inOut: 'out' },
+	      { id: 'p_50', name: '水果', emoji: '🍇', inOut: 'out' },
+	      { id: 'p_51', name: '蔬菜', emoji: '🥬', inOut: 'out' },
+	      { id: 'p_52', name: '日用品', emoji: '🧹', inOut: 'out' },
     ],
     companyCategories: [
       { id: 'c_1', name: '采购', emoji: '📋', inOut: 'out' },
@@ -697,7 +705,7 @@ Page({
     if (su) this.setData({ userInfo: su })
     this._refreshAvatarDisplay(su)
     // 静默刷新 VIP 状态
-    api.getVipStatus().then(function (s) { this.setData({ vipStatus: s, vipTrialDays: this._computeTrialDays(s) }) }.bind(this)).catch(function () {})
+    api.getVipStatus().then(function (s) { this.setData({ vipStatus: s, vipTrialDays: this._computeTrialDays(s), vipExpiresText: this._formatVipExpiry(s) }) }.bind(this)).catch(function () {})
     // 公司可见性可能因云端同步到的 companyInfo 改变 → 仅变化时重建简览卡（避免每次重绘图表）
     const ci = api.getCompanyInfo()
     const canSeeCompany = !!(ci && ci.companyRole === 'boss' && ci.companyUid)
@@ -766,7 +774,7 @@ Page({
           id: c.id,
           scope: c.scope,
           resolution: c.resolution,
-          resolvedItem: c.resolution === 'server' || c.resolution === 'restore'
+          resolvedItem: c.resolution === 'server' || c.resolution === 'server_voided_accept'
             ? c.serverVersion
             : c.localVersion
         }
@@ -1006,8 +1014,8 @@ Page({
   _calcOverviewData() {
     const ym = this.data.overviewMonth || '' // 'YYYY-MM'，按所选月份过滤
     const inMonth = (it) => !ym || (typeof it.date === 'string' && it.date.slice(0, 7) === ym)
-    const personalItems = api.getItems('personal').filter(it => !it._voided && inMonth(it))
-    const companyItems = api.getItems('company').filter(it => !it._voided && inMonth(it))
+    const personalItems = api.getItems('personal').filter(inMonth)
+    const companyItems = api.getItems('company').filter(inMonth)
     const sum = (items, fn) => items.filter(fn).reduce((s, it) => s + parseFloat(it.amount || 0), 0)
     // 金额缩写：千用 k、万用 W，最多 3 位小数
     const fmt = (n) => {
@@ -1144,6 +1152,21 @@ Page({
     const index = e.currentTarget.dataset.index
     const prevTab = this.data.currentTab
     const wasOverview = this.data.showOverview
+
+    // 底部"明细"按钮双击返回简览页
+    if (index === 0 && prevTab === 0 && !wasOverview) {
+      var now = Date.now()
+      var last = this._tabDetailLastTap || 0
+      this._tabDetailLastTap = now
+      if (now - last < 350) {
+        this._tabDetailLastTap = 0
+        this.setData({ showOverview: true, tabSlideDir: 'slide-left' })
+        setTimeout(() => this.setData({ tabSlideDir: '' }), 400)
+        return
+      }
+      return
+    }
+
     let dir = ''
     if (index === 2) {
       // 报表 canvas 是原生组件，记账弹窗打开时已被 wx:if 移除、不再穿透盖住弹窗，故无需先跳明细页规避
@@ -1652,7 +1675,7 @@ Page({
   // 口径同简览(_calcOverviewData)：收入=收入；支出=支出+垫付；结余=收入-支出；排除作废
   _updateReportSummary() {
     const scope = this.data.reportType === 1 ? 'company' : 'personal'
-    const ranged = (api.getItems(scope) || []).filter(it => !it._voided && this._inReportRange(it))
+    const ranged = (api.getItems(scope) || []).filter(it => this._inReportRange(it))
     const pro = this._canUseProSummary()
 
     const isIncome = (it) => it.typeLabel === '收入'
@@ -4359,16 +4382,23 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
     this.setData({ loginCode: e.detail.value })
   },
 
-  onSendCode() {
+  async onSendCode() {
     if (this.data.loginCodeSending) return
     const phone = this.data.loginPhone
     if (!/^1[3-9]\d{9}$/.test(phone)) {
       wx.showToast({ title: '请输入正确的手机号', icon: 'none' })
       return
     }
-    api.sendVerifyCode(phone)
     this.setData({ loginCodeSending: true, loginCodeCountdown: 60 })
-    wx.showToast({ title: '验证码已发送', icon: 'success' })
+    try {
+      await api.sendVerifyCode(phone)
+      wx.showToast({ title: '验证码已发送', icon: 'success' })
+    } catch (err) {
+      this.setData({ loginCodeSending: false, loginCodeCountdown: 0 })
+      var msg = (err && err.error) || (err && err.errMsg) || '发送失败，请检查网络'
+      wx.showToast({ title: msg, icon: 'none', duration: 3000 })
+      return
+    }
     const timer = setInterval(() => {
       const count = this.data.loginCodeCountdown - 1
       if (count <= 0) {
@@ -4411,7 +4441,7 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
         if (su) this.setData({ userInfo: su })
         this._refreshAvatarDisplay(su)
         // 登录后拉取 VIP 状态
-        api.getVipStatus().then(function (s) { this.setData({ vipStatus: s, vipTrialDays: this._computeTrialDays(s) }) }.bind(this)).catch(function () {})
+        api.getVipStatus().then(function (s) { this.setData({ vipStatus: s, vipTrialDays: this._computeTrialDays(s), vipExpiresText: this._formatVipExpiry(s) }) }.bind(this)).catch(function () {})
       })
     }).catch(() => {
       wx.showToast({ title: '登录失败', icon: 'none' })
@@ -4440,7 +4470,7 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
           if (su) this.setData({ userInfo: su })
           this._refreshAvatarDisplay(su)
           // 登录后拉取 VIP 状态
-          api.getVipStatus().then(function (s) { this.setData({ vipStatus: s, vipTrialDays: this._computeTrialDays(s) }) }.bind(this)).catch(function () {})
+          api.getVipStatus().then(function (s) { this.setData({ vipStatus: s, vipTrialDays: this._computeTrialDays(s), vipExpiresText: this._formatVipExpiry(s) }) }.bind(this)).catch(function () {})
         })
       }).catch(() => {
         wx.showToast({ title: '登录失败', icon: 'none' })
@@ -4479,8 +4509,8 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
   },
 
   onGuideSkipLogin() {
-    this.setData({ loginPhone: '1031', loginCode: '1031' })
-    wx.showToast({ title: '已填入开发凭证', icon: 'none' })
+    // 移除开发后门
+    
   },
 
   onGuideBack() {
@@ -4499,13 +4529,6 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
   onGuidePhoneLogin() {
     const { loginPhone, loginCode } = this.data
 
-    if (loginPhone === '1031' && loginCode === '1031') {
-      const devUser = { nickName: '开发者', avatarUrl: '', phone: '1031' }
-      wx.setStorageSync('userInfo', devUser)
-      this.setData({ isLoggedIn: true, userInfo: devUser, guideStep: 2, loginPhone: '', loginCode: '' })
-      wx.showToast({ title: '开发登录成功', icon: 'success' })
-      return
-    }
 
     if (!/^1[3-9]\d{9}$/.test(loginPhone)) {
       wx.showToast({ title: '请输入正确的手机号', icon: 'none' })
@@ -4737,18 +4760,88 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
       return api.ocrParse(url)
     }).then((result) => {
       if (!result) throw { error: '识别结果为空' }
+      this.setData({ scanRecognizing: false })
+      // 多笔：打开 AI 对话窗，卡片队列逐条确认
+      if (result.items && result.items.length > 1) {
+        this._openOcrReview(result.items, photo)
+        return
+      }
+      // 单笔（兼容旧格式或 items[0]）：走原有弹窗流程
+      var item = result.items ? result.items[0] : result
       this.onBookEntry({ currentTarget: { dataset: { type: 'expense' } } })
       this.setData({
-        scanRecognizing: false,
         bookPhoto: photo,
-        'bookForm.amount': result.amount || '',
-        'bookForm.category': result.category || '',
-        'bookForm.note': result.note || ''
+        'bookForm.amount': item.amount || '',
+        'bookForm.category': item.category || '',
+        'bookForm.note': item.note || '',
+        'bookForm.date': item.date || this.data.bookForm.date
       })
     }).catch((err) => {
       this.setData({ scanRecognizing: false })
-      var msg = (err && err.error) || (err && err.message) || '识别失败'
+      var msg = (err && err.error) || (err && err.message) || (err && err.errMsg) || '识别失败'
       wx.showToast({ title: msg, icon: 'none' })
+    })
+  },
+
+  // OCR 多笔结果 → AI 卡片队列确认
+  _openOcrReview(items, photo) {
+    var that = this
+    var now = new Date()
+    var time = this._formatChatTime(now)
+    var scope = this.data.bookScope || 'personal'
+    var msgs = []
+
+    // 欢迎语
+    msgs.push({
+      role: 'ai',
+      text: '识别到 ' + items.length + ' 笔账单，请逐笔确认：',
+      time: time
+    })
+
+    // 每笔 OCR 结果构造为一张待确认卡片
+    for (var i = 0; i < items.length; i++) {
+      var it = items[i]
+      var absAmt = parseFloat(it.amount).toFixed(2) || '0.00'
+      var isIncome = it.type === 'income'
+      var cat = it.category || '其他'
+      var catIdx = this.data.catOptions.indexOf(cat)
+      if (catIdx < 0) catIdx = this.data.catOptions.length - 1
+      var typeLabel = isIncome ? '收入' : '支出'
+      var typeIdx = this._typeIdxFromLabel(typeLabel)
+      var typeKey = this.data._typeLabelToKey[typeLabel] || 'expense'
+      var td = this._getBookTargetDefaults(scope, typeKey)
+      var targetIdx = td.target ? this.data.targetOptions.indexOf(td.target) : 2
+      if (targetIdx < 0) targetIdx = 2
+      msgs.push({
+        role: 'ai',
+        text: '第 ' + (i + 1) + ' 笔',
+        card: {
+          category: cat,
+          amount: absAmt,
+          typeLabel: typeLabel,
+          type: isIncome ? 'in' : 'out',
+          date: it.date || (now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0')),
+          note: it.note || '',
+          scope: scope,
+          target: td.target,
+          targetType: td.targetType
+        },
+        confirmed: undefined,
+        _ocrIndex: i,
+        _catIdx: catIdx,
+        _typeIdx: typeIdx,
+        _targetIdx: targetIdx,
+        time: time
+      })
+    }
+
+    this.setData({
+      showAiChat: true,
+      aiMessages: msgs,
+      aiInputText: '',
+      aiThinking: false,
+      aiVoiceMode: false,
+      aiScrollTop: 999999
     })
   },
 
@@ -4774,18 +4867,30 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
     // 注意：WeChat API 是方法调用 .onStop(fn)，不是属性赋值 .onStop = fn
     recorder.onStart(function () {
       console.log('[ASR] 录音已开始')
+      that._recorderBusy = true
     })
     recorder.onStop(function (res) {
-      console.log('[ASR] 录音已停止 tempFilePath=' + (res.tempFilePath || '空') + ' duration=' + (res.duration || 0))
+      that._recorderBusy = false
       that._onRecorderStop(res.tempFilePath)
     })
     recorder.onError(function (err) {
       console.warn('[ASR] 录音错误', JSON.stringify(err))
+      that._recorderBusy = false
+      var errMsg = (err && err.errMsg) || ''
       that._aiRecognizeFor = ''
       clearTimeout(that._recordTimeout)
       that._recordTimeout = 0
       that.setData({ aiRecording: false })
-      wx.showToast({ title: '录音失败，请重试', icon: 'none' })
+      if (errMsg.indexOf('auth') >= 0 || errMsg.indexOf('permission') >= 0 || errMsg.indexOf('deny') >= 0) {
+        wx.showModal({
+          title: '麦克风未授权',
+          content: '请在设置中开启麦克风权限',
+          confirmText: '去设置',
+          success: function (m) { if (m.confirm) wx.openSetting() }
+        })
+      } else {
+        wx.showToast({ title: '录音失败，请重试', icon: 'none' })
+      }
     })
     // 注册音频帧回调（PCM 格式时需监听，触发静默检测）
     this._recorder = recorder
@@ -4810,14 +4915,13 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
     this._asrPending = true
     api.asrRecognize(tempFilePath).then(function (text) {
       that._asrPending = false
-      console.log('[ASR] 识别结果 text=' + (text || '空'))
       that._onRecognizeDone(text)
     }).catch(function (err) {
       that._asrPending = false
       console.warn('[ASR] 识别失败', err)
       that._aiRecognizeFor = ''
       that.setData({ aiRecording: false })
-      var msg = (err && err.error) || (err && err.message) || '识别失败'
+      var msg = (err && err.error) || (err && err.message) || (err && err.errMsg) || '识别失败'
       wx.showToast({ title: msg, icon: 'none' })
     })
   },
@@ -4825,9 +4929,45 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
   // forWho: 'tab'=底部长按入口(识别后开对话窗发送) / 'chat'=对话框语音键(识别后填输入框发送)
   _startRecognize(forWho) {
     var that = this
+    // 录音器忙保护：底层 stop 是异步的，onStop/onError 回调未返回前拒绝新录音
+    if (this._recorderBusy) {
+      console.log('[ASR] 录音器忙，拒绝重复启动 forWho=' + forWho)
+      wx.showToast({ title: '请稍后再试', icon: 'none' })
+      return
+    }
     var recorder = this._ensureRecorder()
     this._aiRecognizeFor = forWho
     this.setData({ aiRecording: true })
+    // 先检查录音权限，未授权则引导去设置页
+    wx.getSetting({
+      success: function (s) {
+        if (s.authSetting['scope.record'] === false) {
+          that._aiRecognizeFor = ''
+          that.setData({ aiRecording: false })
+          wx.showModal({
+            title: '需要录音权限',
+            content: '请在设置中开启麦克风权限，否则无法语音记账',
+            confirmText: '去设置',
+            success: function (m) {
+              if (m.confirm) wx.openSetting()
+            }
+          })
+          return
+        }
+        that._doStartRecord(recorder, forWho)
+      },
+      fail: function () {
+        that._doStartRecord(recorder, forWho)
+      }
+    })
+  },
+
+  _doStartRecord(recorder, forWho) {
+    var that = this
+    if (this._recorderBusy) {
+      console.log('[ASR] _doStartRecord 录音器忙，取消')
+      return false
+    }
     try {
       recorder.start({ format: 'PCM', sampleRate: 16000, numberOfChannels: 1, duration: 15000 })
       console.log('[ASR] recorder.start 已调用 forWho=' + forWho)
@@ -4865,12 +5005,12 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
         console.log('[ASR] onStop 未触发，残留清理')
         that._aiRecognizeFor = ''
       }
+      that._recorderBusy = false
     }, 500)
   },
 
   // 识别完成（onStop 异步回调）：按入口分发
   _onRecognizeDone(text) {
-    console.log('[ASR] _onRecognizeDone text=' + (text || '空'))
     var who = this._aiRecognizeFor
     this._aiRecognizeFor = ''
     this.setData({ aiRecording: false })
@@ -5042,6 +5182,29 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
 
     var text = input
 
+    // ---- ASR 同音词纠正（语音识别常见误差 → 正确语义） ----
+    var ASR_FIX = {
+      '流连': '榴莲', '水角': '水饺', '交通会': '交通费',
+      '水果蓝': '水果篮', '购物卷': '购物券',
+      '话会': '话费', '高贴': '高铁', '低贴': '地铁',
+      '火材': '火锅', '买菜药': '买药', '才够': '采购',
+    }
+    for (var ak in ASR_FIX) {
+      if (text.indexOf(ak) >= 0) text = text.replace(ak, ASR_FIX[ak])
+    }
+
+    // ---- 长文本断句：按连接词拆成短句，取第一个含金额/数字的短句 ----
+    var segments = [text]
+    var connectors = /然后|并且|还有|对了|接着|另外/
+    if (connectors.test(text)) {
+      segments = text.split(connectors).filter(function (s) { return s.trim().length >= 3 })
+    }
+    text = segments[0]
+    for (var si = 1; si < segments.length; si++) {
+      if (/\d/.test(text) || /[一二三四五六七八九十百千零两]/.test(text)) break
+      text = segments[si]
+    }
+
     // ---- 时间词自动匹配 ----
     var timeMap = { '今天': 0, '昨天': -1, '前天': -2, '明天': 1, '后天': 2 }
     for (var tk in timeMap) {
@@ -5054,32 +5217,99 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
       }
     }
 
+    // ---- 中文数字转换工具 ----
+    var CN_NUM = { '一':1,'二':2,'三':3,'四':4,'五':5,'六':6,'七':7,'八':8,'九':9,'十':10,'零':0,'两':2,'廿':20,'卅':30,'百':100,'千':1000,'万':10000,'亿':100000000 }
+    function cnToInt(s) {
+      if (!s) return 0
+      if (CN_NUM[s[0]] >= 20) {
+        var base = CN_NUM[s[0]]
+        return base + (s.length > 1 ? cnToInt(s.slice(1)) : 0)
+      }
+      var val = 0, seg = 0
+      for (var i = 0; i < s.length; i++) {
+        var v = CN_NUM[s[i]]
+        if (v === undefined) continue
+        if (v >= 10000) {
+          val = (val + (seg || (i === 0 ? 1 : 0))) * v
+          seg = 0
+        } else if (v >= 100) {
+          seg = (seg || (i === 0 ? 1 : 0)) * v
+          val += seg
+          seg = 0
+        } else if (v === 10) {
+          seg = (seg || (i === 0 ? 1 : 0)) * 10
+        } else {
+          seg += v
+        }
+      }
+      return val + seg
+    }
+
+    // ---- 中文日期解析（"五月二十六日" / "5月26号" / "2026年5月26日"） ----
+    var cnDatePatterns = [
+      /(\d{4})\s*年\s*(\d{1,2})\s*月\s*(\d{1,2})\s*日?/,
+      /(\d{1,2})\s*月\s*(\d{1,2})\s*[日号]?/,
+      /([一二三四五六七八九十]+)\s*月\s*([一二三四五六七八九十廿卅]+)\s*[日号]?/,
+      /([一二三四五六七八九])\s*[月·、]\s*([一二三四五六七八九十廿卅]+)\s*[日号]?/
+    ]
+    for (var pi = 0; pi < cnDatePatterns.length; pi++) {
+      var dm = text.match(cnDatePatterns[pi])
+      if (dm) {
+        var parsedMonth, parsedDay
+        if (pi === 0) {
+          var parsedYear = parseInt(dm[1])
+          parsedMonth = parseInt(dm[2])
+          parsedDay = parseInt(dm[3])
+          dateStr = parsedYear + '-' + String(parsedMonth).padStart(2, '0') + '-' + String(parsedDay).padStart(2, '0')
+        } else if (pi === 1) {
+          parsedMonth = parseInt(dm[1])
+          parsedDay = parseInt(dm[2])
+        } else {
+          parsedMonth = cnToInt(dm[1])
+          parsedDay = cnToInt(dm[2])
+        }
+        if (parsedMonth >= 1 && parsedMonth <= 12 && parsedDay >= 1 && parsedDay <= 31) {
+          dateStr = now.getFullYear() + '-' + String(parsedMonth).padStart(2, '0') + '-' + String(parsedDay).padStart(2, '0')
+        }
+        text = text.replace(dm[0], '')
+        break
+      }
+    }
+
     // ---- 1. 提取金额（必须） ----
+    var amount
     var amountMatch = text.match(/(\d+(?:\.\d{1,2})?)/)
-    if (!amountMatch) {
-      // 尝试中文数字
-      var cnNumMap = { '一':1,'二':2,'三':3,'四':4,'五':5,'六':6,'七':7,'八':8,'九':9,'十':10,'百':100,'千':1000,'万':10000,'零':0,'两':2 }
-      var cnMatch = text.match(/[一二三四五六七八九十百千万零两]+/)
+    if (amountMatch) {
+      amount = parseFloat(amountMatch[1]).toFixed(2)
+      text = text.replace(amountMatch[0], '')
+    } else {
+      var cnMatch = text.match(/[一二三四五六七八九十百千万零两廿卅]+(?:点[一二三四五六七八九零两]+)?/)
       if (!cnMatch) {
         return { role: 'ai', text: '请问金额是多少？', time: time }
       }
-      // 简单中文数字转换
       var cnStr = cnMatch[0]
-      var cnVal = 0; var tmp = 0
-      for (var ci = 0; ci < cnStr.length; ci++) {
-        var ch = cnStr[ci]; var v = cnNumMap[ch]
-        if (v === 10) { tmp = (tmp || 1) * 10; cnVal += tmp; tmp = 0 }
-        else if (v === 100) { tmp = (tmp || 1) * 100; cnVal += tmp; tmp = 0 }
-        else if (v === 1000) { tmp = (tmp || 1) * 1000; cnVal += tmp; tmp = 0 }
-        else if (v === 10000) { cnVal = (cnVal + (tmp || 0)) * 10000; tmp = 0 }
-        else { tmp = v }
+      var dotIdx = cnStr.indexOf('点')
+      var intPart = dotIdx >= 0 ? cnStr.slice(0, dotIdx) : cnStr
+      var fracPart = dotIdx >= 0 ? cnStr.slice(dotIdx + 1) : ''
+      amount = cnToInt(intPart)
+      if (fracPart) {
+        var frac = 0
+        for (var fi = 0; fi < fracPart.length; fi++) {
+          var fv = CN_NUM[fracPart[fi]]
+          if (fv !== undefined) frac = frac * 10 + fv
+        }
+        amount += frac / Math.pow(10, fracPart.length)
       }
-      cnVal += tmp
-      var amount = cnVal.toFixed(2)
+      // 口语小数："十五块五" = 15.5, "三块二" = 3.2
+      var cnMatchEnd = cnMatch.index + cnStr.length
+      var afterAmount = text.substring(cnMatchEnd)
+      var jiaoMatch = afterAmount.match(/^[块元]([一二三四五六七八九])(?!\d|[一二三四五六七八九十百千])/)
+      if (jiaoMatch) {
+        amount += CN_NUM[jiaoMatch[1]] / 10
+        text = text.substring(0, cnMatchEnd) + afterAmount.substring(jiaoMatch[0].length)
+      }
+      amount = amount.toFixed(2)
       text = text.replace(cnMatch[0], '')
-    } else {
-      var amount = parseFloat(amountMatch[1]).toFixed(2)
-      text = text.replace(amountMatch[0], '')
     }
 
     // ---- 2. 收支词（缺省=支出） ----
@@ -5088,9 +5318,7 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
     for (var ii = 0; ii < incomeKeys.length; ii++) {
       if (text.indexOf(incomeKeys[ii]) >= 0) { isIncome = true; break }
     }
-    // 动词辅助判定
     if (!isIncome && /发了|收了|报销|到账/.test(text)) isIncome = true
-    // 红包：看上下文，"发红包"=支出，"收到红包"=收入
     if (text.indexOf('红包') >= 0) {
       if (/收到.*红包|红包.*收到|给.*我.*红包/.test(text)) isIncome = true
       else if (/发.*红包/.test(text) && !/收到/.test(text)) isIncome = false
@@ -5102,32 +5330,51 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
     for (var ci2 = 0; ci2 < companyKeys.length; ci2++) {
       if (text.indexOf(companyKeys[ci2]) >= 0) { isCompany = true; break }
     }
+    // "去公司/到公司" 是目的地而非付款方 → 个人
+    if (isCompany && /[去到]公司/.test(text) && !/公司[买报销聚餐付花发转交缴]/.test(text)) {
+      isCompany = false
+    }
 
-    // ---- 4. 分类词 → 预设分类 ----
+    // ---- 4. 外部主体识别（借给/垫付/代付/还款，须在分类匹配前） ----
+    var externalSubject = ''
+    var note = ''
+    var extPatterns = [
+      /借给(.+)/, /垫付(.+)/, /代付(.+)/, /还给(.+)/, /收到(.+)还款/
+    ]
+    for (var ei = 0; ei < extPatterns.length; ei++) {
+      var em = text.match(extPatterns[ei])
+      if (em) {
+        externalSubject = em[1].replace(/[元块毛个了]$/, '').trim()
+        if (!note) note = em[0].replace(/元|块/g, '')
+        break
+      }
+    }
+
+    var verbText = text  // 保存分类前文本，用于动词提取
+
+    // ---- 5. 分类词 → 预设分类 ----
     var catList = [
       { keys: ['咖啡', '奶茶', '柠檬茶', '可乐', '饮料', '牛奶', '豆浆', '果汁', '奶昔'], cat: '饮品' },
-      { keys: ['午餐', '晚餐', '早餐', '外卖', '吃饭', '火锅', '烧烤', '米粉', '面条','面','饺子','盒饭','快餐','麻辣烫','麻辣拌','米线','盖饭','盖浇饭','小吃'], cat: '餐饮' },
-      { keys: ['打车', '滴滴', '出租', '地铁', '公交', '加油', '高铁', '火车票', '机票', '停车', '高铁票', '火车','差旅费','交通费'], cat: '交通' },
-      { keys: ['水果', '零食', '买菜', '菜', '西瓜', '榴莲', '水果篮', '超市', '购物券','采购'], cat: '购物' },
+      { keys: ['红包', '借款', '借给', '垫付', '代付', '代购', '代垫', '垫资', '还给', '欠款', '应付'], cat: '人情' },
+      { keys: ['午餐', '晚餐', '早餐', '外卖', '吃饭', '聚餐', '火锅', '烧烤', '米粉', '面条','面','饺子','水饺','盒饭','快餐','麻辣烫','麻辣拌','米线','盖饭','盖浇饭','小吃','买菜','菜','榴莲'], cat: '餐饮' },
+      { keys: ['打车', '滴滴', '出租', '地铁', '公交', '加油', '高铁', '火车票', '机票', '停车', '高铁票', '火车','差旅费','交通费','打的','报销'], cat: '交通' },
+      { keys: ['水果', '零食', '西瓜', '榴莲', '水果篮', '超市', '购物券','采购','超市采购','礼物','口红','化妆品'], cat: '购物' },
       { keys: ['话费', '充值', '流量', '宽带'], cat: '通讯' },
-      { keys: ['感冒药', '药品', '药', '医院', '诊所', '口罩', '体温计'], cat: '医疗' },
+      { keys: ['感冒药', '药品', '药', '医院', '诊所', '口罩', '体温计','买药'], cat: '医疗' },
       { keys: ['房租', '租房', '房贷', '物业', '水电费','电费','水费','煤气'], cat: '住房' },
       { keys: ['工资', '薪资', '奖金'], cat: '工资' },
-      { keys: ['红包'], cat: '人情' },
       { keys: ['打印纸', '办公用品', '快递费', '快递', '文具','墨盒','硒鼓'], cat: '办公' },
       { keys: ['信用卡还款', '还信用卡', '还款'], cat: '金融' },
       { keys: ['衣服', '裤子', '鞋子', '袜子', '帽子'], cat: '服饰' },
       { keys: ['电影', 'KTV', '唱歌', '旅游', '酒店', '门票'], cat: '娱乐' }
     ]
     var category = ''
-    var note = ''
     for (var ci3 = 0; ci3 < catList.length; ci3++) {
       for (var ki = 0; ki < catList[ci3].keys.length; ki++) {
         var kw = catList[ci3].keys[ki]
         var idx = text.indexOf(kw)
         if (idx >= 0) {
           category = catList[ci3].cat
-          // 命中的关键词作为备注基础，从文本中移除
           note = kw
           text = text.substring(0, idx) + text.substring(idx + kw.length)
           break
@@ -5136,75 +5383,116 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
       if (category) break
     }
 
-    // ---- 5. 剩余文本清洗 → 最终备注 ----
-    var noiseWords = ['我妈', '我爸', '我', '了个', '给我', '一下', '去了', '然后', '并且', '还有', '对了', '另外', '接着', '再', '今天', '昨天', '明天', '的', '了', '去', '和', '个', '块', '毛', '元']
+    // 清理外部主体中残留的分类关键词（如 "同事聚餐" → "同事"）
+    if (externalSubject && note) {
+      externalSubject = externalSubject.replace(note, '').trim()
+    }
+    // 进一步剥除 externalSubject 中可能混入的其他分类关键词
+    if (externalSubject) {
+      var allCatKeys = []
+      for (var ai = 0; ai < catList.length; ai++) {
+        allCatKeys = allCatKeys.concat(catList[ai].keys)
+      }
+      for (var aki = 0; aki < allCatKeys.length; aki++) {
+        if (allCatKeys[aki].length >= 2) {
+          externalSubject = externalSubject.replace(allCatKeys[aki], '')
+        }
+      }
+      externalSubject = externalSubject.trim()
+    }
+
+    // ---- 6. 剩余文本清洗 → 最终备注 ----
+    var noiseWords = ['我妈', '我爸', '我', '了个', '给我', '一下', '去了', '然后', '并且', '还有', '对了', '另外', '接着', '再', '今天', '昨天', '明天', '的', '了', '去', '和', '个', '块', '毛', '元', '支出', '收入',
+      '中午', '上午', '下午', '晚上', '早上',
+      '上周一', '上周二', '上周三', '上周四', '上周五', '上周六', '上周日',
+      '这周一', '这周二', '这周三', '这周四', '这周五', '这周六', '这周日',
+      '下周一', '下周二', '下周三', '下周四', '下周五', '下周六', '下周日',
+      '周一', '周二', '周三', '周四', '周五', '周六', '周日',
+      '上周', '这周', '下周', '本周', '宴',
+      '在', '到', '从', '这', '那', '月']
     var cleanText = text
+    // 先清动词（多字优先），再清噪声词，避免 "了" 先拆散 "花了"
+    cleanText = cleanText.replace(/(记一笔|记|买了|买了点|买|吃了碗|吃了|吃|喝了杯|喝了|喝|花了|付了|付|充了|充|打了辆|打了|打|发了|发|收了|收|还了|还给|还|报销|给了|给|转了|转|请了|看了|交了|交|看|请|缴了|缴|充值|借给|垫付|代付|还给|打车|买菜)/g, '')
+    cleanText = cleanText.replace(/^[一二三四五六七八九十]/, '').replace(/[一二三四五六七八九十]$/, '')
     for (var ni = 0; ni < noiseWords.length; ni++) {
       cleanText = cleanText.split(noiseWords[ni]).join('')
     }
-    // 去掉动词/量词残留
-    cleanText = cleanText.replace(/^(记一笔|记|买|花了|付|充|发了|收了|还|报销|给|转)\s*/g, '')
     cleanText = cleanText.trim()
 
-    // 备注优先用分类关键词命中结果，其次用清洗后的剩余文本
     if (!note && cleanText) note = cleanText
-    if (note && cleanText && cleanText !== note) note = cleanText || note
-
-    // 无分类且无备注 → 用原始输入的关键部分
-    if (!category) category = note || '其他'
+    if (note && cleanText && cleanText !== note && cleanText !== '公司' && cleanText !== '个人') note = cleanText || note
+    if (!category) category = '其他'
 
     // ---- 动词提取 ----
     var verb = '-'
-    var verbList = ['买了', '吃了', '喝了', '付了', '花了', '充了', '打了', '发了', '收了', '给了', '转了', '交了', '缴了',
-                    '买', '吃', '喝', '付', '花', '充', '打', '发', '收', '给', '转', '交', '缴',
-                    '充值', '报销', '到账', '记一笔', '还了', '还',
-                    '买了点', '吃了碗', '喝了杯', '打了辆', '发了封', '收了笔']
+    var verbList = ['买了点', '吃了碗', '喝了杯', '打了辆', '发了封', '收了笔',
+                    '买了', '吃了', '喝了', '付了', '花了', '充了', '打了', '发了', '收了', '给了', '转了', '交了', '缴了', '还了', '扣了', '扣除了',
+                    '充值', '报销', '到账', '记一笔',
+                    '借给', '垫付', '代付', '还给', '打车', '买菜', '扣除',
+                    '买', '吃', '喝', '付', '花', '充', '打', '发', '收', '给', '转', '交', '缴', '还', '扣']
     for (var vi = 0; vi < verbList.length; vi++) {
-      if (text.indexOf(verbList[vi]) >= 0) { verb = verbList[vi]; break }
+      if (verbText.indexOf(verbList[vi]) >= 0) { verb = verbList[vi]; break }
     }
 
-    // ---- 6. 组装返回 ----
+    // ---- 7. 组装返回 ----
+    var catIdx = this.data.catOptions.indexOf(category)
+    if (catIdx < 0) catIdx = this.data.catOptions.length - 1
+    var typeLabel = isIncome ? '收入' : '支出'
+    var typeIdx = this._typeIdxFromLabel(typeLabel)
+    var typeKey = this.data._typeLabelToKey[typeLabel] || 'expense'
+    var td = this._getBookTargetDefaults(isCompany ? 'company' : 'personal', typeKey)
+    var targetIdx = td.target ? this.data.targetOptions.indexOf(td.target) : 2
+    if (targetIdx < 0) targetIdx = 2
     return {
       role: 'ai',
       text: '请确认以下记账信息：',
       fields: {
         verb: verb,
         measure: '元',
-        subject: isCompany ? '公司' : '个人',
+        subject: externalSubject || (isCompany ? '公司' : '个人'),
         project: note || input.trim(),
         category: category,
         amount: amount,
-        direction: isIncome ? '收入' : '支出'
+        direction: typeLabel
       },
       card: {
         category: category,
         amount: amount,
-        typeLabel: isIncome ? '收入' : '支出',
+        typeLabel: typeLabel,
         type: isIncome ? 'in' : 'out',
         date: dateStr,
         note: note || input.trim(),
-        scope: isCompany ? 'company' : 'personal'
+        scope: isCompany ? 'company' : 'personal',
+        target: td.target,
+        targetType: td.targetType
       },
-      confirmed: undefined, // undefined=待确认, true=已确认, false=已取消
+      confirmed: undefined,
+      _catIdx: catIdx,
+      _typeIdx: typeIdx,
+      _targetIdx: targetIdx,
       time: time
     }
   },
+
+  _itemIdSeq: 0,
 
   _saveAiRecord(reply) {
     if (!reply.card) return
     var c = reply.card
     var scope = c.scope || this.data.bookScope || 'personal'
+    var typeIsIn = c.typeLabel === '收入'
+    this._itemIdSeq++
     var newItem = {
-      id: Date.now(),
+      id: Date.now() + this._itemIdSeq,
       category: c.category,
-      type: c.type,
+      type: typeIsIn ? 'in' : 'out',
       typeLabel: c.typeLabel,
       scope: scope,
       amount: c.amount,
       date: c.date,
       note: c.note || '',
-      target: '',
-      targetType: 'external',
+      target: c.target || '',
+      targetType: c.targetType || 'external',
     }
     api.addItem(scope, newItem)
     reply.card.itemId = newItem.id
@@ -5243,6 +5531,84 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
 	      aiScrollTop: 999999 + lastIdx
 	    })
 	  },
+  // ---- AI 卡片四字段编辑 ----
+  onAiCardCatChange(e) {
+    const idx = e.currentTarget.dataset.idx
+    const selIdx = parseInt(e.detail.value)
+    const cat = this.data.catOptions[selIdx]
+    const updated = this.data.aiMessages.slice()
+    if (updated[idx] && updated[idx].card) {
+      updated[idx].card.category = cat
+      updated[idx]._catIdx = selIdx
+      this.setData({ aiMessages: updated })
+    }
+  },
+
+  onAiCardTypeChange(e) {
+    const idx = e.currentTarget.dataset.idx
+    const selIdx = parseInt(e.detail.value)
+    const label = this.data.typeOptions[selIdx]
+    var cssTypeMap = { '支出': 'out', '收入': 'in', '垫付': 'payForward', '应付': 'payable' }
+    const updated = this.data.aiMessages.slice()
+    if (updated[idx] && updated[idx].card) {
+      updated[idx].card.typeLabel = label
+      updated[idx].card.type = cssTypeMap[label] || 'out'
+      updated[idx]._typeIdx = selIdx
+      // 类型变更后重算默认对象
+      var scope = updated[idx].card.scope || 'personal'
+      var typeKey = this.data._typeLabelToKey[label] || 'expense'
+      var td = this._getBookTargetDefaults(scope, typeKey)
+      var targetIdx = td.target ? this.data.targetOptions.indexOf(td.target) : 2
+      if (targetIdx < 0) targetIdx = 2
+      updated[idx].card.target = td.target
+      updated[idx].card.targetType = td.targetType
+      updated[idx]._targetIdx = targetIdx
+      this.setData({ aiMessages: updated })
+    }
+  },
+
+  onAiCardTargetChange(e) {
+    const idx = e.currentTarget.dataset.idx
+    const selIdx = parseInt(e.detail.value)
+    const label = this.data.targetOptions[selIdx]
+    const updated = this.data.aiMessages.slice()
+    if (updated[idx] && updated[idx].card) {
+      var isInternal = label === '公司' || label === '个人'
+      updated[idx].card.target = isInternal ? label : ''
+      updated[idx].card.targetType = isInternal ? 'internal' : 'external'
+      updated[idx]._targetIdx = selIdx
+      this.setData({ aiMessages: updated })
+    }
+  },
+
+  onAiCardAmountInput(e) {
+    const idx = e.currentTarget.dataset.idx
+    const val = e.detail.value
+    const updated = this.data.aiMessages.slice()
+    if (updated[idx] && updated[idx].card) {
+      updated[idx].card.amount = val
+      this.setData({ aiMessages: updated })
+    }
+  },
+  onAiCardDateChange(e) {
+    const idx = e.currentTarget.dataset.idx
+    const val = e.detail.value
+    const updated = this.data.aiMessages.slice()
+    if (updated[idx] && updated[idx].card) {
+      updated[idx].card.date = val
+      this.setData({ aiMessages: updated })
+    }
+  },
+  onAiCardNoteInput(e) {
+    const idx = e.currentTarget.dataset.idx
+    const val = e.detail.value
+    const updated = this.data.aiMessages.slice()
+    if (updated[idx] && updated[idx].card) {
+      updated[idx].card.note = val
+      this.setData({ aiMessages: updated })
+    }
+  },
+
   _formatChatTime(d) {
     return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0')
   },
@@ -5268,6 +5634,18 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
     return days > 0 ? days : 0
   },
 
+  _formatVipExpiry: function (status) {
+    if (!status || !status.vipExpiresAt) return '永久有效'
+    var s = status.vipExpiresAt
+    if (typeof s === 'string' && s.length >= 10) return s.slice(0, 10) + ' 到期'
+    return '永久有效'
+  },
+
+  _typeIdxFromLabel: function (label) {
+    var idx = this.data.typeOptions.indexOf(label)
+    return idx >= 0 ? idx : 0
+  },
+
   onVipEntry() {
     var that = this
     api.getVipStatus().then(function (status) {
@@ -5275,7 +5653,7 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
       var trialDays = that._computeTrialDays(status)
       var offerDays = Math.ceil((new Date('2026-09-25T23:59:59+08:00') - new Date()) / 86400000)
       if (offerDays < 0) offerDays = 0
-      that.setData({ showVipPage: true, vipDetailId: -1, vipSelected: -1, vipEnterpriseSeats: 4, vipStatus: status, showTrialBanner: isFree, vipTrialDays: trialDays, trialOfferDays: offerDays })
+      that.setData({ showVipPage: true, vipDetailId: -1, vipSelected: -1, vipEnterpriseSeats: 4, vipStatus: status, showTrialBanner: isFree, vipTrialDays: trialDays, trialOfferDays: offerDays, vipExpiresText: that._formatVipExpiry(status) })
     }).catch(function () {
       var offerDays = Math.ceil((new Date('2026-09-25T23:59:59+08:00') - new Date()) / 86400000)
       if (offerDays < 0) offerDays = 0
@@ -5296,7 +5674,7 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
           wx.showToast({ title: data.alreadyVip ? '已是付费会员' : '领取成功！', icon: 'success' })
           // 刷新状态
           api.getVipStatus().then(function (status) {
-            that.setData({ vipStatus: status, showTrialBanner: false, vipTrialDays: that._computeTrialDays(status) })
+            that.setData({ vipStatus: status, showTrialBanner: false, vipTrialDays: that._computeTrialDays(status), vipExpiresText: that._formatVipExpiry(status) })
           }).catch(function () {})
         }).catch(function (err) {
           wx.hideLoading()
@@ -5385,7 +5763,7 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
             wx.showToast({ title: '订阅成功', icon: 'success' })
             // 刷新页面级 VIP 状态
             api.getVipStatus().then(function (s) {
-              that.setData({ showVipPage: false, vipDetailId: -1, vipSelected: -1, vipEnterpriseSeats: 4, vipStatus: s, vipTrialDays: that._computeTrialDays(s) })
+              that.setData({ showVipPage: false, vipDetailId: -1, vipSelected: -1, vipEnterpriseSeats: 4, vipStatus: s, vipTrialDays: that._computeTrialDays(s), vipExpiresText: that._formatVipExpiry(s) })
             }).catch(function () {
               that.setData({ showVipPage: false, vipDetailId: -1, vipSelected: -1, vipEnterpriseSeats: 4 })
             })

@@ -42,7 +42,7 @@ function _handleAuthExpired() {
   const keys = ['userInfo', 'personalItems', 'companyItems',
     'personalCategories', 'companyCategories', 'companyInfo',
     'auditList', 'notifyList', 'feedbackList', 'customOverviewCards',
-    'guideCompleted', '_deletedItems', '_syncMeta',
+    'guideCompleted', '_syncMeta',
     '_pendingConflicts', '_pendingServerData']
   for (const k of keys) wx.removeStorageSync(k)
   wx.showToast({ title: '登录已过期，请重新登录', icon: 'none' })
@@ -110,9 +110,8 @@ function _hasPendingQueue() {
   return _getQueue().length > 0
 }
 
-// ==================== 脏标记 & 墓碑 & 同步元数据 ====================
+// ==================== 脏标记 & 同步元数据 ====================
 
-const DELETED_ITEMS_KEY = '_deletedItems'
 const SYNC_META_KEY = '_syncMeta'
 const PENDING_CONFLICTS_KEY = '_pendingConflicts'
 const PENDING_SERVER_DATA_KEY = '_pendingServerData'
@@ -153,54 +152,6 @@ function _markClean(id, scope) {
     return it
   })
   _save(key, updated)
-}
-
-/** 在本地数组中查找条目 */
-function _findItem(id, scope) {
-  var key = scope === 'company' ? 'companyItems' : 'personalItems'
-  var items = wx.getStorageSync(key) || []
-  for (var i = 0; i < items.length; i++) {
-    if (items[i].id === id) return items[i]
-  }
-  return null
-}
-
-// ---- 墓碑（记录本地删除） ----
-
-function _getDeletedItems() {
-  return wx.getStorageSync(DELETED_ITEMS_KEY) || []
-}
-
-function _saveDeletedItems(list) {
-  _save(DELETED_ITEMS_KEY, list)
-}
-
-function _addToTombstone(id, scope) {
-  var list = _getDeletedItems()
-  list.push({ id: id, scope: scope, _deletedAt: Date.now() })
-  // 30 天自动清理
-  var cutoff = Date.now() - 30 * 24 * 60 * 60 * 1000
-  list = list.filter(function (d) { return d._deletedAt > cutoff })
-  _saveDeletedItems(list)
-}
-
-function _isInTombstone(id) {
-  var list = _getDeletedItems()
-  for (var i = 0; i < list.length; i++) {
-    if (list[i].id === id) return true
-  }
-  return false
-}
-
-function _removeFromTombstone(id) {
-  var list = _getDeletedItems()
-  _saveDeletedItems(list.filter(function (d) { return d.id !== id }))
-}
-
-function _cleanOldTombstones() {
-  var cutoff = Date.now() - 30 * 24 * 60 * 60 * 1000
-  var list = _getDeletedItems()
-  _saveDeletedItems(list.filter(function (d) { return d._deletedAt > cutoff }))
 }
 
 // ---- 同步元数据 ----
@@ -273,7 +224,13 @@ function _pushBackend(method, path, data) {
 
 function getItems(scope) {
   const key = scope === 'company' ? 'companyItems' : 'personalItems'
-  return wx.getStorageSync(key) || []
+  const items = wx.getStorageSync(key) || []
+  // 过滤已软删除的条目（append-only 策略）
+  var result = []
+  for (var i = 0; i < items.length; i++) {
+    if (!items[i]._voided) result.push(items[i])
+  }
+  return result
 }
 
 /**
@@ -281,7 +238,8 @@ function getItems(scope) {
  */
 function _addItemLocal(scope, item) {
   const key = scope === 'company' ? 'companyItems' : 'personalItems'
-  const items = getItems(scope)
+  // 直接读原始存储（不过滤 _voided），避免保存时丢失软删除条目
+  const items = wx.getStorageSync(key) || []
   items.unshift(item)
   _save(key, items)
   return item
@@ -290,7 +248,21 @@ function _addItemLocal(scope, item) {
 function addItem(scope, item) {
   const stamped = { ...item, _updatedAt: Date.now(), _dirty: true, _syncedAt: 0, _lastKnownHash: null }
   _addItemLocal(scope, stamped)
-  _pushBackend('POST', '/items', { scope, item: stamped })
+  // 立即推送到云端，成功/409 则清脏标记，网络失败入离线队列待重试
+  _request('POST', '/items', { scope, item: stamped }).then(function () {
+    _markClean(stamped.id, scope)
+  }).catch(function (err) {
+    if (err && err.existingItem) {
+      // 409：服务端已有同 ID 记录 → 静默标记已同步（本次或上次推送已生效）
+      _markClean(stamped.id, scope)
+      return
+    }
+    // 网络错误 → 保持 _dirty，入离线队列
+    if (err && (err.errMsg && err.errMsg.indexOf('fail') >= 0 || err.errno)) {
+      _initNetworkListener()
+      _enqueue('POST', '/items', { scope, item: stamped })
+    }
+  })
   return stamped
 }
 
@@ -304,21 +276,56 @@ function updateItem(id, data) {
   _pushBackend('PUT', '/items/' + id, patched)
 }
 
-function removeItem(id) {
+async function removeItem(id) {
   const scope = _findScope(id)
   const key = scope === 'company' ? 'companyItems' : 'personalItems'
-  const items = (wx.getStorageSync(key) || []).filter(it => it.id !== id)
-  _save(key, items)
-  _addToTombstone(id, scope)
-  _pushBackend('DELETE', '/items/' + id, { _deletedAt: Date.now() })
+  const items = wx.getStorageSync(key) || []
+  const item = items.find(it => it.id === id)
+
+  if (!item) return
+
+  // 从未同步过的条目 → 直接移除，并提醒用户
+  if (!item._syncedAt) {
+    _save(key, items.filter(it => it.id !== id))
+    wx.showToast({ title: '该记录尚未同步到云端，删除后无法恢复', icon: 'none', duration: 2500 })
+    return
+  }
+
+  // 已同步过的条目 → 软删除（append-only 策略：只增不减）
+  const updated = items.map(it =>
+    it.id === id ? { ...it, _voided: true, _dirty: true, _updatedAt: Date.now() } : it
+  )
+  _save(key, updated)
+
+  try {
+    await _request('PUT', '/items/' + id, { _voided: true })
+    _markClean(id, scope)
+  } catch (err) {
+    if (err && (err.errMsg && err.errMsg.indexOf('fail') >= 0 || err.errno)) {
+      _initNetworkListener()
+      _enqueue('PUT', '/items/' + id, { _voided: true })
+      wx.showToast({ title: '删除暂未同步，网络恢复后自动处理', icon: 'none', duration: 2000 })
+    }
+  }
 }
 
 function addLinkedItems(scope, item, mirrorScope, mirrorItem) {
-  // 先写本地 Storage（不推后端，避免重复）
-  _addItemLocal(scope, { ...item, _dirty: true, _syncedAt: 0, _lastKnownHash: null })
-  _addItemLocal(mirrorScope, { ...mirrorItem, _dirty: true, _syncedAt: 0, _lastKnownHash: null })
+  // 先写本地 Storage
+  var stamped = { ...item, _dirty: true, _syncedAt: 0, _lastKnownHash: null }
+  var mirrorStamped = { ...mirrorItem, _dirty: true, _syncedAt: 0, _lastKnownHash: null }
+  _addItemLocal(scope, stamped)
+  _addItemLocal(mirrorScope, mirrorStamped)
   // 后端联动接口（事务写入，一次推送两条）
-  _pushBackend('POST', '/items/linked', { scope, item, mirrorScope, mirrorItem })
+  _request('POST', '/items/linked', { scope, item: stamped, mirrorScope, mirrorItem: mirrorStamped }).then(function () {
+    _markClean(stamped.id, scope)
+    _markClean(mirrorStamped.id, mirrorScope)
+  }).catch(function (err) {
+    // 网络错误 → 保持 _dirty，入离线队列
+    if (err && (err.errMsg && err.errMsg.indexOf('fail') >= 0 || err.errno)) {
+      _initNetworkListener()
+      _enqueue('POST', '/items/linked', { scope, item: stamped, mirrorScope, mirrorItem: mirrorStamped })
+    }
+  })
 }
 
 // ==================== 结清（服务端权威） ====================
@@ -481,7 +488,7 @@ async function logout() {
   const keys = ['userInfo', 'personalItems', 'companyItems',
     'personalCategories', 'companyCategories', 'companyInfo',
     'auditList', 'notifyList', 'feedbackList', 'customOverviewCards',
-    '_deletedItems', '_syncMeta', '_pendingConflicts', '_pendingServerData']
+    '_syncMeta', '_pendingConflicts', '_pendingServerData']
   for (const k of keys) {
     wx.removeStorageSync(k)
   }
@@ -541,13 +548,11 @@ function saveOverviewCards(cards) {
 /**
  * 智能推送：仅推送有变更的账单条目（脏标记），不再全量 POST。
  * - _syncedAt === 0 → POST 新建
- * - _syncedAt > 0  → PUT 更新
- * - 墓碑中有      → DELETE
+ * - _syncedAt > 0  → PUT 更新（含软删除 _voided）
  */
 async function _pushDirtyItems() {
   var personalItems = wx.getStorageSync('personalItems') || []
   var companyItems = wx.getStorageSync('companyItems') || []
-  var deletedItems = _getDeletedItems()
 
   var allItems = []
   for (var i = 0; i < personalItems.length; i++) {
@@ -557,7 +562,6 @@ async function _pushDirtyItems() {
     allItems.push({ item: companyItems[j], scope: 'company' })
   }
 
-  // 推送脏条目
   for (var k = 0; k < allItems.length; k++) {
     var entry = allItems[k]
     var item = entry.item
@@ -571,20 +575,11 @@ async function _pushDirtyItems() {
         _markClean(item.id, scope)
       } catch (e) {
         if (e && e.existingItem) {
-          // 409 + 服务端返回已有记录 → 立即创建冲突，省去一轮 pull
-          var conflicts = wx.getStorageSync(PENDING_CONFLICTS_KEY) || []
-          conflicts.push({
-            id: item.id, scope: scope, type: 'duplicate_id',
-            localVersion: item, serverVersion: e.existingItem,
-            reason: '本地新建的账单与云端已有账单 ID 冲突'
-          })
-          _save(PENDING_CONFLICTS_KEY, conflicts)
-          // 不清脏标记，冲突面板裁决后会重新推送
+          _markClean(item.id, scope)
         }
-        // 其他 409 或网络错误 → 保持脏标记，下次重试
       }
     } else {
-      // 已同步过的修改 → PUT
+      // 已同步过的修改 → PUT（含软删除 _voided）
       try {
         await _request('PUT', '/items/' + item.id, item)
         _markClean(item.id, scope)
@@ -593,23 +588,6 @@ async function _pushDirtyItems() {
       }
     }
   }
-
-  // 推送墓碑中的删除
-  var remainingDeleted = []
-  for (var d = 0; d < deletedItems.length; d++) {
-    var entry = deletedItems[d]
-    try {
-      await _request('DELETE', '/items/' + entry.id, { _deletedAt: entry._deletedAt })
-      // 成功 → 不移入 remaining（含幂等场景 deleted=false）
-    } catch (e) {
-      // 404 视为已删除，不再重试
-      if (e && e.error === '账单不存在') {
-        continue
-      }
-      remainingDeleted.push(entry)
-    }
-  }
-  _saveDeletedItems(remainingDeleted)
 }
 
 /**
@@ -620,38 +598,29 @@ async function _pushAllItemsOnce() {
   var personalItems = wx.getStorageSync('personalItems') || []
   var companyItems = wx.getStorageSync('companyItems') || []
 
-  var promises = []
-  for (var i = 0; i < personalItems.length; i++) {
-    promises.push(
-      _request('POST', '/items', { scope: 'personal', item: personalItems[i] }).catch(function () {})
-    )
-  }
-  for (var j = 0; j < companyItems.length; j++) {
-    promises.push(
-      _request('POST', '/items', { scope: 'company', item: companyItems[j] }).catch(function () {})
-    )
-  }
-  if (promises.length > 0) {
-    await Promise.all(promises)
+  // 逐条推送，记录成功/失败，只对成功的清脏标记
+  async function pushAll(scope, items) {
+    for (var i = 0; i < items.length; i++) {
+      if (items[i]._voided) continue // 软删除条目不推送到服务端
+      try {
+        await _request('POST', '/items', { scope: scope, item: items[i] })
+        _markClean(items[i].id, scope)
+      } catch (e) {
+        // 409：服务端已有 → 也清脏
+        if (e && e.existingItem) {
+          _markClean(items[i].id, scope)
+        }
+      }
+    }
   }
 
-  // 全部标记为已同步
-  ;['personalItems', 'companyItems'].forEach(function (key) {
-    var items = wx.getStorageSync(key) || []
-    var updated = items.map(function (it) {
-      it._dirty = false
-      it._syncedAt = Date.now()
-      it._lastKnownHash = _hashItemFields(it)
-      return it
-    })
-    _save(key, updated)
-  })
+  await pushAll('personal', personalItems)
+  await pushAll('company', companyItems)
 }
 
 /** 冲突检测 → 逐条对比本地与云端，返回冲突列表 */
 function _detectConflicts(localItems, serverItems, scope) {
   var conflicts = []
-  var deletedItems = _getDeletedItems()
 
   var localMap = {}
   for (var i = 0; i < localItems.length; i++) {
@@ -670,46 +639,44 @@ function _detectConflicts(localItems, serverItems, scope) {
 
     if (lItem) {
       if (lItem._dirty) {
-        // 本地有未推送的变更
         var serverHash = _hashItemFields(sItem)
         if (lItem._lastKnownHash && serverHash !== lItem._lastKnownHash) {
-          // 服务端版本与上次同步时的快照不同 → 双方都改了
           conflicts.push({
             id: sItem.id, scope: scope, type: 'modified_both',
             localVersion: lItem, serverVersion: sItem,
             reason: '此项在本地和云端均被修改'
           })
         } else if (!lItem._lastKnownHash) {
-          // 本地新建但服务端已有同 ID → ID 冲突
           conflicts.push({
             id: sItem.id, scope: scope, type: 'duplicate_id',
             localVersion: lItem, serverVersion: sItem,
             reason: '本地新建的账单与云端已有账单 ID 冲突'
           })
         }
-        // _lastKnownHash 匹配 → 推送已生效，无冲突（下面会清脏标记）
       }
-    } else {
-      // 本地不存在
-      if (_isInTombstone(sItem.id)) {
+      // 服务端软删除的条目 → 本地未标记删除 → 需同步删除
+      if (sItem._voided && !lItem._voided) {
         conflicts.push({
-          id: sItem.id, scope: scope, type: 'resurrection',
-          localVersion: null, serverVersion: sItem,
-          reason: '此账单已在本地删除，但云端仍有记录'
+          id: sItem.id, scope: scope, type: 'server_voided',
+          localVersion: lItem, serverVersion: sItem,
+          reason: '此账单在云端已被删除（多端同步）'
         })
       }
     }
+    // 服务端有而本地没有 → 正常新增，无冲突（append-only 不会丢数据）
   }
 
-  // 检查本地脏条目在服务端已不存在
+  // 检查本地脏条目在服务端已不存在（append-only 不应发生，但保留检测）
   for (var m = 0; m < localItems.length; m++) {
     var lIt = localItems[m]
     if (lIt._dirty && !serverMap[lIt.id]) {
-      conflicts.push({
-        id: lIt.id, scope: scope, type: 'local_only',
-        localVersion: lIt, serverVersion: null,
-        reason: '本地修改的账单在云端已被删除'
-      })
+      if (lIt._syncedAt > 0) {
+        conflicts.push({
+          id: lIt.id, scope: scope, type: 'local_only',
+          localVersion: lIt, serverVersion: null,
+          reason: '本地修改的账单在云端已被删除'
+        })
+      }
     }
   }
 
@@ -738,12 +705,6 @@ function _mergeItems(key, remoteItems) {
     conflictIds[conflicts[c].id] = true
   }
 
-  var deletedIds = {}
-  var deletedItems = _getDeletedItems()
-  for (var d = 0; d < deletedItems.length; d++) {
-    deletedIds[deletedItems[d].id] = true
-  }
-
   // 构建服务端 ID 集合
   var serverIds = {}
   for (var s = 0; s < remoteItems.length; s++) {
@@ -767,7 +728,6 @@ function _mergeItems(key, remoteItems) {
     var rIt = remoteItems[j]
     if (seenIds[rIt.id]) continue
     if (conflictIds[rIt.id]) continue
-    if (deletedIds[rIt.id]) continue
     merged.push({
       ...rIt,
       _updatedAt: rIt.updatedAt || 0,
@@ -926,7 +886,6 @@ async function syncFromCloud() {
       userInfo: userInfo, overviewCards: overviewCards, settings: settings
     })
 
-    _cleanOldTombstones()
     meta.lastSyncAt = Date.now()
     _saveSyncMeta(meta)
     wx.removeStorageSync(PENDING_CONFLICTS_KEY)
@@ -946,7 +905,7 @@ function getPendingConflicts() {
 
 /**
  * 应用用户冲突裁决，完成同步。
- * @param {Array} resolutions — [{id, scope, resolution: 'local'|'server'|'keep_deleted'|'restore', resolvedItem}]
+ * @param {Array} resolutions — [{id, scope, resolution: 'local'|'server'|'server_voided_accept'|'server_voided_restore', resolvedItem}]
  */
 async function resolveConflicts(resolutions) {
   for (var i = 0; i < resolutions.length; i++) {
@@ -970,22 +929,20 @@ async function resolveConflicts(resolutions) {
           _lastKnownHash: _hashItemFields(r.resolvedItem)
         })
       }
-    } else if (r.resolution === 'keep_deleted') {
-      // 保持删除 → 仅清除墓碑
-      // 条目已在本地删除，无需操作 items
-    } else if (r.resolution === 'restore') {
-      // 恢复服务端版本
-      items = items.filter(function (it) { return it.id !== r.id })
-      if (r.resolvedItem) {
-        items.unshift({
-          ...r.resolvedItem,
-          _dirty: false, _syncedAt: Date.now(),
-          _lastKnownHash: _hashItemFields(r.resolvedItem)
-        })
-      }
+    } else if (r.resolution === 'server_voided_accept') {
+      // 接受云端删除 → 本地也标记软删除
+      items = items.map(function (it) {
+        if (it.id === r.id) { it._voided = true; it._dirty = false; it._lastKnownHash = _hashItemFields(r.resolvedItem || it) }
+        return it
+      })
+    } else if (r.resolution === 'server_voided_restore') {
+      // 拒绝云端删除 → 保留本地，标记脏，下次推送覆盖服务端
+      items = items.map(function (it) {
+        if (it.id === r.id) { it._voided = false; it._dirty = true; it._lastKnownHash = null }
+        return it
+      })
     }
     _save(key, items)
-    _removeFromTombstone(r.id)
   }
 
   // 清除待处理冲突
@@ -1158,30 +1115,30 @@ function asrRecognize(tempFilePath) {
   if (!usage.allowed) {
     return Promise.reject({ error: 'usage_limit', type: 'asr', limit: usage.limit, used: usage.used })
   }
-  const token = _getToken()
-  return new Promise((resolve, reject) => {
+  var token = _getToken()
+  return new Promise(function (resolve, reject) {
     wx.uploadFile({
       url: BASE_URL + '/asr/recognize',
       filePath: tempFilePath,
       name: 'file',
-      header: {
-        ...(token ? { 'Authorization': 'Bearer ' + token } : {})
-      },
-      success(res) {
-        try {
-          const data = JSON.parse(res.data)
-          if (data.ok && typeof data.text === 'string') {
-            resolve(data.text)
-          } else {
-            reject(data)
-          }
-        } catch (e) {
-          reject(res)
+      header: token ? { 'Authorization': 'Bearer ' + token } : {},
+      success: function (res) {
+        // 微信基础库有时会直接返回已解析的对象，容错处理
+        var data
+        if (typeof res.data === 'string') {
+          try { data = JSON.parse(res.data) } catch (e) { reject({ error: '服务响应异常' }); return }
+        } else {
+          data = res.data || {}
+        }
+        if (data.ok && typeof data.text === 'string') {
+          resolve(data.text)
+        } else {
+          reject(data && data.error ? data : { error: '识别失败', raw: data })
         }
       },
-      fail(err) {
-        console.error('[API] asrRecognize 失败', err)
-        reject(err)
+      fail: function (err) {
+        console.error('[API] asrRecognize 网络失败', err)
+        reject({ error: (err && err.errMsg) || '网络异常，请检查后端服务' })
       }
     })
   })
@@ -1199,6 +1156,13 @@ function ocrParse(imageUrl) {
   }
   return _request('POST', '/ocr/parse', { imageUrl }).then(function (data) {
     if (data && data.ok) {
+      // 多笔（NEW）：后端返回 items 数组
+      if (Array.isArray(data.items) && data.items.length) {
+        return { items: data.items.map(function (it) {
+          return { amount: it.amount || '', category: it.category || '', note: it.note || '', date: it.date || '' }
+        })}
+      }
+      // 单笔（兼容旧版）
       return { amount: data.amount || '', category: data.category || '', note: data.note || '', date: data.date || '' }
     }
     throw data
