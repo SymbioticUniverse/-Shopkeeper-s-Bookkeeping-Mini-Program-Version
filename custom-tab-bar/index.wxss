@@ -57,11 +57,9 @@
   margin-bottom: 2rpx;
 }
 
-.tab-icon-placeholder {
+.tab-icon-img {
   width: 40rpx;
   height: 40rpx;
-  border-radius: 8rpx;
-  background: #ddd;
 }
 
 .tab-label {

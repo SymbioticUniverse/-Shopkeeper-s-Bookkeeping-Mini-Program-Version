@@ -1,5 +1,5 @@
 page {
-  background: linear-gradient(160deg, #FAF7F2 0%, #F5F0E8 40%, #EDE8DF 100%);
+  background: #FAF7F2;
   height: 100vh;
   overflow: hidden;
 }
@@ -11,6 +11,186 @@ page {
   padding: 140rpx 26rpx 0;
   box-sizing: border-box;
   background: linear-gradient(160deg, #FAF7F2 0%, #F5F0E8 40%, #EDE8DF 100%);
+}
+
+/* ===== 平板适配：等比缩小关键尺寸（rpx 减半补偿） ===== */
+.page--tablet {
+  padding: 70rpx 13rpx 0;
+}
+.page--tablet .header {
+  height: 40rpx;
+  margin-top: 15rpx;
+  margin-bottom: -10rpx;
+}
+.page--tablet .header-left {
+  transform: translateY(-10rpx);
+}
+.page--tablet .year-text {
+  font-size: 13rpx;
+  top: -15rpx;
+}
+.page--tablet .date-month-num {
+  font-size: 30rpx;
+}
+.page--tablet .date-month-label {
+  font-size: 14rpx;
+  margin-top: 10rpx;
+}
+.page--tablet .header-title {
+  font-size: 18rpx;
+}
+.page--tablet .card {
+  padding: 16rpx 18rpx;
+  border-radius: 16rpx;
+}
+.page--tablet .card-title {
+  font-size: 15rpx;
+}
+.page--tablet .card-subtitle {
+  font-size: 11rpx;
+}
+.page--tablet .card-header {
+  margin-bottom: 8rpx;
+  padding-left: 46rpx;
+}
+.page--tablet .card-grid {
+  overflow-y: auto;
+}
+.page--tablet .expand-menu-card {
+  padding: 24rpx 20rpx;
+}
+.page--tablet .expand-icon-text {
+  font-size: 18rpx;
+}
+.page--tablet .report-chart-stage {
+  max-height: 35vh;
+}
+.page--tablet .report-canvas {
+  width: 100%;
+  height: 300rpx;
+}
+.page--tablet .report-pie-canvas {
+  width: 180rpx;
+  height: 180rpx;
+}
+.page--tablet .overview-canvas {
+  height: 160rpx;
+}
+.page--tablet .book-sheet {
+  height: 62vh;
+  padding: 16rpx 20rpx 0;
+}
+.page--tablet .book-sheet--with-photo {
+  height: 70vh;
+}
+.page--tablet .book-photo-thumb {
+  width: 80rpx;
+  height: 80rpx;
+}
+.page--tablet .book-photo-tag {
+  font-size: 20rpx;
+}
+.page--tablet .book-photo-hint {
+  font-size: 16rpx;
+}
+.page--tablet .book-photo-remove {
+  width: 36rpx;
+  height: 36rpx;
+  font-size: 18rpx;
+}
+.page--tablet .book-amount-value {
+  font-size: 36rpx;
+}
+.page--tablet .book-key {
+  height: 56rpx;
+  font-size: 26rpx;
+  border-radius: 8rpx;
+}
+.page--tablet .book-keypad {
+  padding: 6rpx 0 12rpx;
+}
+.page--tablet .book-keypad-row {
+  gap: 8rpx;
+  margin-bottom: 8rpx;
+}
+.page--tablet .book-btn-save {
+  padding: 14rpx 0;
+  font-size: 16rpx;
+  border-radius: 10rpx;
+}
+.page--tablet .book-cat-select {
+  padding: 10rpx 0;
+}
+.page--tablet .book-cat-select-val,
+.page--tablet .book-cat-select-label {
+  font-size: 15rpx;
+}
+.page--tablet .book-date-picker {
+  padding: 10rpx 0;
+}
+.page--tablet .book-date-label,
+.page--tablet .book-date-value {
+  font-size: 15rpx;
+}
+.page--tablet .book-note-input {
+  font-size: 15rpx;
+}
+.page--tablet .book-yen {
+  font-size: 28rpx;
+}
+.page--tablet .expand-menu-item {
+  padding: 12rpx 14rpx;
+  gap: 10rpx;
+}
+.page--tablet .expand-menu-icon {
+  width: 24rpx;
+  height: 24rpx;
+  border-radius: 6rpx;
+}
+.page--tablet .card-avatar {
+  width: 36rpx;
+  height: 36rpx;
+}
+.page--tablet .tab-icon-img {
+  width: 36rpx;
+  height: 36rpx;
+}
+.page--tablet .tab-icon-center-img {
+  width: 50rpx;
+  height: 50rpx;
+}
+.page--tablet .tab-label {
+  font-size: 16rpx;
+}
+.page--tablet .tab-bar-wrapper {
+  height: 90rpx;
+  margin: 0 -13rpx;
+}
+.page--tablet .tab-bar {
+  height: 72rpx;
+  padding-bottom: 10rpx;
+  border-radius: 20rpx 20rpx 0 0;
+}
+.page--tablet .tab-bar-center-btn {
+  width: 100rpx;
+  height: 100rpx;
+  top: -20rpx;
+}
+.page--tablet .tab-center-label {
+  font-size: 16rpx;
+  bottom: 10rpx;
+}
+.page--tablet .bill-item {
+  padding: 12rpx 0;
+}
+.page--tablet .bill-modal-mask {
+  padding: 30rpx;
+}
+.page--tablet .my-group {
+  margin-bottom: 16rpx;
+}
+.page--tablet .my-card {
+  padding: 24rpx;
 }
 
 /* ---- 标题栏 ---- */
@@ -818,8 +998,8 @@ page {
   flex: 1;
   gap: 8rpx;
   position: relative;
-  min-height: 240rpx;
-  flex-shrink: 0;
+  min-height: 100rpx;
+  overflow: hidden;
 }
 .report-canvas {
   flex: 1;
@@ -830,7 +1010,8 @@ page {
 /* 饼状图 */
 .report-pie-block {
   flex: 1;
-  min-height: 310rpx;
+  min-height: 180rpx;
+  overflow: hidden;
 }
 .report-pie-row {
   flex: 1;
@@ -3830,8 +4011,8 @@ page {
   flex: 1;
   gap: 8rpx;
   position: relative;
-  min-height: 240rpx;
-  flex-shrink: 0;
+  min-height: 100rpx;
+  overflow: hidden;
 }
 .report-canvas {
   flex: 1;
@@ -3842,7 +4023,8 @@ page {
 /* 饼状图 */
 .report-pie-block {
   flex: 1;
-  min-height: 310rpx;
+  min-height: 180rpx;
+  overflow: hidden;
 }
 .report-pie-row {
   flex: 1;
@@ -9759,10 +9941,12 @@ page {
   font-weight: 600;
 }
 .report-chart-stage {
-  flex-shrink: 0;
+  flex-shrink: 1;
   display: flex;
   flex-direction: column;
-  min-height: 360rpx;
+  min-height: 120rpx;
+  max-height: 45vh;
+  overflow: hidden;
 }
 .page--dark .report-chart-tabs { background: rgba(255, 255, 255, 0.06); }
 .page--dark .rct-tab { color: #888; }

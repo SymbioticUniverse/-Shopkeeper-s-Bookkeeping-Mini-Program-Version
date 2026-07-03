@@ -13,7 +13,7 @@
     >
       <!-- 图标占位 -->
       <view wx:if="{{index !== 2}}" class="tab-icon {{index === selected ? 'tab-icon-active' : ''}}">
-        <view class="tab-icon-placeholder"></view>
+        <image class="tab-icon-img" src="{{item.icon}}" mode="aspectFit"></image>
       </view>
       <text class="tab-label {{index === selected ? 'tab-label-active' : ''}} {{index === 2 ? 'tab-label-center' : ''}}">{{item.text}}</text>
     </view>

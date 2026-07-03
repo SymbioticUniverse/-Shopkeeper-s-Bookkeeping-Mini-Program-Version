@@ -141,6 +141,7 @@ Page({
     showHeader: true,
     showOverview: true, // 简览页 vs 明细页
     isDarkMode: false, // 深色模式
+    isTablet: false,
     currentTab: 0,
     tabSlideDir: '',
     tabs: [
@@ -654,6 +655,7 @@ Page({
       isDark = (darkMode === 'dark')
     }
     this.setData({ isDarkMode: isDark })
+    this._initTabletScale()
     const savedUser = api.getUserInfo()
     if (savedUser) {
       this.setData({ isLoggedIn: true, userInfo: savedUser })
@@ -676,6 +678,13 @@ Page({
     }
     this.updateAuditBadge()
     this._throttledSync()
+  },
+
+  _initTabletScale() {
+    const info = wx.getSystemInfoSync()
+    const tw = info.windowWidth
+    if (tw < 600) return
+    this.setData({ isTablet: true })
   },
 
   onShow() {
