@@ -54,7 +54,47 @@ page {
   padding-left: 46rpx;
 }
 .page--tablet .card-grid {
-  overflow-y: auto;
+  overflow: hidden auto;
+}
+.page--tablet .my-profile {
+  margin-bottom: 16rpx;
+}
+.page--tablet .my-avatar {
+  width: 48rpx;
+  height: 48rpx;
+}
+.page--tablet .my-nickname,
+.page--tablet .my-login-text {
+  font-size: 18rpx;
+}
+.page--tablet .my-item {
+  padding: 10rpx 14rpx;
+  border-radius: 14rpx;
+}
+.page--tablet .my-item-icon {
+  width: 36rpx;
+  height: 36rpx;
+  margin-right: 12rpx;
+  border-radius: 8rpx;
+}
+.page--tablet .my-item-title {
+  font-size: 18rpx;
+}
+.page--tablet .my-item-sub {
+  font-size: 14rpx;
+}
+.page--tablet .my-item-arrow {
+  font-size: 16rpx;
+}
+.page--tablet .my-icon-row {
+  padding: 14rpx 10rpx;
+}
+.page--tablet .my-icon-circle {
+  width: 32rpx;
+  height: 32rpx;
+}
+.page--tablet .my-icon-label {
+  font-size: 14rpx;
 }
 .page--tablet .expand-menu-card {
   padding: 24rpx 20rpx;
@@ -137,6 +177,41 @@ page {
 }
 .page--tablet .book-yen {
   font-size: 28rpx;
+}
+.page--tablet .book-cat-panel {
+  height: 65vh;
+  padding: 18rpx 18rpx 0;
+}
+.page--tablet .book-cat-panel-scope {
+  margin-bottom: 12rpx;
+}
+.page--tablet .book-cat-panel-grid {
+  margin-top: 12rpx;
+}
+.page--tablet .book-type-tab {
+  padding: 12rpx 0;
+  font-size: 18rpx;
+}
+.page--tablet .book-type-bar {
+  gap: 8rpx;
+  margin-bottom: 14rpx;
+}
+.page--tablet .book-cat-panel-emoji {
+  width: 50rpx;
+  height: 50rpx;
+  border-radius: 12rpx;
+  font-size: 24rpx;
+}
+.page--tablet .book-cat-panel-item {
+  gap: 4rpx;
+  padding: 8rpx 0;
+}
+.page--tablet .book-cat-panel-name {
+  font-size: 14rpx;
+}
+.page--tablet .book-cat-panel-icons {
+  gap: 10rpx;
+  padding-bottom: 30rpx;
 }
 .page--tablet .expand-menu-item {
   padding: 12rpx 14rpx;
