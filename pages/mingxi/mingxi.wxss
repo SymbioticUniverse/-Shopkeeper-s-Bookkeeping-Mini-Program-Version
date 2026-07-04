@@ -103,7 +103,18 @@ page {
   font-size: 18rpx;
 }
 .page--tablet .report-chart-stage {
+  flex-shrink: 1;
+  min-height: 120rpx;
   max-height: 35vh;
+  overflow: hidden;
+}
+.page--tablet .report-chart-block {
+  min-height: 100rpx;
+  overflow: hidden;
+}
+.page--tablet .report-pie-block {
+  min-height: 180rpx;
+  overflow: hidden;
 }
 .page--tablet .report-canvas {
   width: 100%;
@@ -1073,8 +1084,8 @@ page {
   flex: 1;
   gap: 8rpx;
   position: relative;
-  min-height: 100rpx;
-  overflow: hidden;
+  min-height: 240rpx;
+  flex-shrink: 0;
 }
 .report-canvas {
   flex: 1;
@@ -1085,8 +1096,7 @@ page {
 /* 饼状图 */
 .report-pie-block {
   flex: 1;
-  min-height: 180rpx;
-  overflow: hidden;
+  min-height: 310rpx;
 }
 .report-pie-row {
   flex: 1;
@@ -4086,8 +4096,8 @@ page {
   flex: 1;
   gap: 8rpx;
   position: relative;
-  min-height: 100rpx;
-  overflow: hidden;
+  min-height: 240rpx;
+  flex-shrink: 0;
 }
 .report-canvas {
   flex: 1;
@@ -4098,8 +4108,7 @@ page {
 /* 饼状图 */
 .report-pie-block {
   flex: 1;
-  min-height: 180rpx;
-  overflow: hidden;
+  min-height: 310rpx;
 }
 .report-pie-row {
   flex: 1;
@@ -10016,12 +10025,10 @@ page {
   font-weight: 600;
 }
 .report-chart-stage {
-  flex-shrink: 1;
+  flex-shrink: 0;
   display: flex;
   flex-direction: column;
-  min-height: 120rpx;
-  max-height: 45vh;
-  overflow: hidden;
+  min-height: 360rpx;
 }
 .page--dark .report-chart-tabs { background: rgba(255, 255, 255, 0.06); }
 .page--dark .rct-tab { color: #888; }
