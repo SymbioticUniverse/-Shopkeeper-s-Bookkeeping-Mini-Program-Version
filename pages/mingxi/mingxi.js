@@ -5215,7 +5215,14 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
       const userInfo = { nickName: result.nickName, avatarUrl: result.avatarUrl }
       this.setData({ isLoggedIn: true, userInfo, loginPhone: '', loginCode: '', _isNewUser: result.isNew })
       if (result.isNew) {
-        this.setData({ showGuide: false, showProfileModal: true, profileEditMode: false, profileName: '', profileAvatarLocal: '', profileAvatarUrl: '' })
+        // 新用户：不弹资料弹窗，直接用默认昵称进操作引导
+        const defaultName = '新用户'
+        this.setData({
+          showGuide: false,
+          userInfo: { nickName: defaultName, avatarUrl: (userInfo && userInfo.avatarUrl) || '' },
+          avatarDisplay: '',
+          profileName: defaultName, profileAvatarLocal: '', profileAvatarUrl: ''
+        })
       } else {
         this._refreshAvatarDisplay(userInfo)
       }
@@ -5282,8 +5289,15 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
         api.loginByWechat({ code: loginRes.code }).then(async result => {
           const userInfo = { nickName: result.nickName, avatarUrl: result.avatarUrl, updatedAt: result.updatedAt }
           this.setData({ isLoggedIn: true, userInfo, _isNewUser: result.isNew })
-          const needProfile = result.isNew || !result.avatarUrl || result.nickName === '微信用户'
-          if (needProfile) {
+          const needProfile = !result.isNew && (!result.avatarUrl || result.nickName === '微信用户')
+          if (result.isNew) {
+            const defaultName = '新用户'
+            this.setData({
+              userInfo: { nickName: defaultName, avatarUrl: result.avatarUrl || '', updatedAt: result.updatedAt },
+              avatarDisplay: '',
+              profileName: defaultName, profileAvatarLocal: '', profileAvatarUrl: ''
+            })
+          } else if (needProfile) {
             this.setData({ showGuide: false, showProfileModal: true, profileEditMode: false, profileName: '', profileAvatarLocal: '', profileAvatarUrl: '' })
           } else {
             this._refreshAvatarDisplay(userInfo)
@@ -5302,7 +5316,10 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
             this.updateNotifyBadge()
             this.updateAuditBadge()
           })
-          if (!needProfile) {
+          if (result.isNew) {
+            this.setData({ showGuide: false })
+            setTimeout(() => this._startSpotlight('tutorial'), 400)
+          } else if (!needProfile) {
             // 老用户资料完整：关引导，不进教程
             this.setData({ showGuide: false })
           }
