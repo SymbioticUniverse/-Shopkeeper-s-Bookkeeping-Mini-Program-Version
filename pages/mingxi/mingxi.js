@@ -685,7 +685,7 @@ Page({
     // 首次启动引导检测
     if (wx.getStorageSync('tapVolume') === '') wx.setStorageSync('tapVolume', 1)
     if (wx.getStorageSync('tapVibration') === '') wx.setStorageSync('tapVibration', 1)
-    if (!wx.getStorageSync('guideCompleted')) {
+    if (!wx.getStorageSync('guideCompleted') && !api.getUserInfo()) {
       this.setData({ showGuide: true, guideStep: 0 })
     }
     const now = new Date()
