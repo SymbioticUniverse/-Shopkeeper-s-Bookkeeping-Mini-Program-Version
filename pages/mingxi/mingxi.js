@@ -1012,9 +1012,9 @@ Page({
     this._syncOverviewCards(true)
     wx.showToast({ title: '已保存', icon: 'success' })
     if (isGuide) {
-      // 资料保存后 → 仅新用户播操作教程
+      // 资料保存后 → 仅新用户且未完成教程时触发操作引导
       this.setData({ showGuide: false })
-      if (this.data._isNewUser) {
+      if (this.data._isNewUser && !this._tutorialDone) {
         setTimeout(() => this._startSpotlight('tutorial'), 300)
       }
     }
@@ -5131,8 +5131,9 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
   _completeSpotlight() {
     const type = this.data.spotlightType
     if (type === 'tutorial') {
+      this._tutorialDone = true
       this._clearLedgerDemo()
-      // 教程结束 → 进入角色选择（已有引导页）
+      // 教程结束 → 弹资料完善弹窗，之后进入正常使用
       this.setData({
         showSpotlightGuide: false,
         spotlightType: '',
@@ -5141,8 +5142,11 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
         spotlightTargetRect: null,
         showBookPopup: false,
         showBookCatPanel: false,
-        showGuide: true,
-        guideStep: 2,
+        showProfileModal: true,
+        profileEditMode: false,
+        profileName: this.data.profileName || '',
+        profileAvatarLocal: '',
+        profileAvatarUrl: this.data.profileAvatarUrl || '',
       })
     } else {
       this.setData({
