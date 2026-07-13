@@ -5216,7 +5216,7 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
       const userInfo = { nickName: result.nickName, avatarUrl: result.avatarUrl }
       this.setData({ isLoggedIn: true, userInfo, loginPhone: '', loginCode: '' })
       if (result.isNew) {
-        this.setData({ showProfileModal: true, profileEditMode: false, profileName: '', profileAvatarLocal: '', profileAvatarUrl: '', _profileIsNewUser: true })
+        this.setData({ showGuide: false, showProfileModal: true, profileEditMode: false, profileName: '', profileAvatarLocal: '', profileAvatarUrl: '', _profileIsNewUser: true })
       } else {
         this._refreshAvatarDisplay(userInfo)
       }
@@ -5287,7 +5287,7 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
           this.setData({ isLoggedIn: true, userInfo })
           const needProfile = result.isNew || !result.avatarUrl || result.nickName === '微信用户'
           if (needProfile) {
-            this.setData({ showProfileModal: true, profileEditMode: false, profileName: '', profileAvatarLocal: '', profileAvatarUrl: '', _profileIsNewUser: result.isNew })
+            this.setData({ showGuide: false, showProfileModal: true, profileEditMode: false, profileName: '', profileAvatarLocal: '', profileAvatarUrl: '', _profileIsNewUser: result.isNew })
           } else {
             this._refreshAvatarDisplay(userInfo)
           }
