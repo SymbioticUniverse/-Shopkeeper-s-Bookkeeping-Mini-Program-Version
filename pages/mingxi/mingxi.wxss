@@ -11,6 +11,28 @@ page {
   box-sizing: border-box;
 }
 
+/* ===== 模式指示色带 ===== */
+.mode-accent {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  height: 30vh;
+  z-index: 0;
+  pointer-events: none;
+  transition: background 0.35s ease;
+}
+.mode-accent--personal {
+  background: linear-gradient(180deg, rgba(74, 138, 254, 0.10) 0%, rgba(74, 138, 254, 0.03) 50%, transparent 100%);
+}
+.mode-accent--company {
+  background: linear-gradient(180deg, rgba(255, 50, 50, 0.50) 0%, rgba(255, 50, 50, 0.15) 50%, transparent 100%);
+}
+.page--dark .mode-accent--personal {
+  background: linear-gradient(180deg, rgba(74, 138, 254, 0.08) 0%, rgba(74, 138, 254, 0.01) 50%, transparent 100%);
+}
+.page--dark .mode-accent--company {
+  background: linear-gradient(180deg, rgba(255, 50, 50, 0.40) 0%, rgba(255, 50, 50, 0.10) 50%, transparent 100%);
+}
+
 /* ===== 平板适配：等比缩小关键尺寸（rpx 减半补偿） ===== */
 .page--tablet {
   padding: 70rpx 13rpx 0;
@@ -1474,6 +1496,112 @@ page {
   color: #d7d7d7;
 }
 
+/* ---- 多笔记账卡片 ---- */
+.bill-item--multi {
+  flex-direction: column;
+  padding: 20rpx 24rpx;
+  border-radius: 16rpx;
+  background: #f8f9fc;
+}
+.bill-row--multi {
+  height: auto;
+}
+.bill-multi-main {
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+.bill-multi-left {
+  display: flex;
+  align-items: center;
+  gap: 10rpx;
+  flex: 1;
+  min-width: 0;
+}
+.bill-multi-badge {
+  font-size: 20rpx;
+  font-weight: 700;
+  color: #fff;
+  background: linear-gradient(135deg, #4a90d9, #6c5ce7);
+  padding: 4rpx 12rpx;
+  border-radius: 8rpx;
+  flex-shrink: 0;
+}
+.bill-multi-count {
+  font-size: 24rpx;
+  font-weight: 600;
+  color: #4a90d9;
+  flex-shrink: 0;
+}
+.bill-multi-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  flex-shrink: 0;
+  margin-right: 8rpx;
+}
+.bill-multi-date-info {
+  display: flex;
+  align-items: center;
+  gap: 4rpx;
+}
+.bill-multi-date {
+  font-size: 20rpx;
+  color: #aaa;
+}
+.bill-multi-date-sep {
+  font-size: 18rpx;
+  color: #ccc;
+}
+.bill-multi-arrow {
+  font-size: 32rpx;
+  color: #ccc;
+  transform: rotate(0deg);
+  flex-shrink: 0;
+}
+.bill-multi-arrow--up {
+  transform: rotate(90deg);
+}
+.bill-multi-detail {
+  width: 100%;
+  margin-top: 16rpx;
+  border-top: 1rpx solid #e8e8ee;
+  padding-top: 16rpx;
+}
+.bill-multi-detail-header {
+  margin-bottom: 12rpx;
+}
+.bill-multi-detail-title {
+  font-size: 24rpx;
+  font-weight: 600;
+  color: #888;
+}
+.bill-multi-items {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12rpx 24rpx;
+}
+.bill-multi-subitem {
+  display: flex;
+  align-items: center;
+  gap: 6rpx;
+}
+.bill-multi-subidx {
+  font-size: 22rpx;
+  color: #bbb;
+  width: 36rpx;
+  text-align: right;
+}
+.bill-multi-subamount {
+  font-size: 26rpx;
+  font-weight: 600;
+  color: #333;
+}
+.page--dark .bill-item--multi { background: #1e1e2e; }
+.page--dark .bill-multi-detail { border-top-color: #2a2a3a; }
+.page--dark .bill-multi-subamount { color: #e0e0e0; }
+.page--dark .bill-multi-badge { background: linear-gradient(135deg, #3a6fd9, #5c4ce7); }
+
 /* ---- 滑动操作 ---- */
 .bill-row {
   position: relative;
@@ -1578,6 +1706,45 @@ page {
   height: 2rpx;
   background: #d1d1d1;
   flex-shrink: 0;
+}
+.bill-modal-multi {
+  padding: 12rpx 0;
+}
+.bill-modal-multi-header {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6rpx;
+  margin-bottom: 10rpx;
+}
+.bill-modal-multi-title {
+  font-size: 26rpx;
+  font-weight: 600;
+  color: #4a90d9;
+  margin-right: 8rpx;
+}
+.bill-modal-multi-date {
+  font-size: 22rpx;
+  color: #999;
+}
+.bill-modal-multi-items {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8rpx 16rpx;
+}
+.bill-modal-multi-item {
+  display: flex;
+  align-items: center;
+  gap: 4rpx;
+}
+.bill-modal-multi-idx {
+  font-size: 24rpx;
+  color: #999;
+}
+.bill-modal-multi-amount {
+  font-size: 28rpx;
+  font-weight: 600;
+  color: #333;
 }
 .bill-modal-row {
   display: flex;
@@ -4486,6 +4653,112 @@ page {
   color: #d7d7d7;
 }
 
+/* ---- 多笔记账卡片 ---- */
+.bill-item--multi {
+  flex-direction: column;
+  padding: 20rpx 24rpx;
+  border-radius: 16rpx;
+  background: #f8f9fc;
+}
+.bill-row--multi {
+  height: auto;
+}
+.bill-multi-main {
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+.bill-multi-left {
+  display: flex;
+  align-items: center;
+  gap: 10rpx;
+  flex: 1;
+  min-width: 0;
+}
+.bill-multi-badge {
+  font-size: 20rpx;
+  font-weight: 700;
+  color: #fff;
+  background: linear-gradient(135deg, #4a90d9, #6c5ce7);
+  padding: 4rpx 12rpx;
+  border-radius: 8rpx;
+  flex-shrink: 0;
+}
+.bill-multi-count {
+  font-size: 24rpx;
+  font-weight: 600;
+  color: #4a90d9;
+  flex-shrink: 0;
+}
+.bill-multi-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  flex-shrink: 0;
+  margin-right: 8rpx;
+}
+.bill-multi-date-info {
+  display: flex;
+  align-items: center;
+  gap: 4rpx;
+}
+.bill-multi-date {
+  font-size: 20rpx;
+  color: #aaa;
+}
+.bill-multi-date-sep {
+  font-size: 18rpx;
+  color: #ccc;
+}
+.bill-multi-arrow {
+  font-size: 32rpx;
+  color: #ccc;
+  transform: rotate(0deg);
+  flex-shrink: 0;
+}
+.bill-multi-arrow--up {
+  transform: rotate(90deg);
+}
+.bill-multi-detail {
+  width: 100%;
+  margin-top: 16rpx;
+  border-top: 1rpx solid #e8e8ee;
+  padding-top: 16rpx;
+}
+.bill-multi-detail-header {
+  margin-bottom: 12rpx;
+}
+.bill-multi-detail-title {
+  font-size: 24rpx;
+  font-weight: 600;
+  color: #888;
+}
+.bill-multi-items {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12rpx 24rpx;
+}
+.bill-multi-subitem {
+  display: flex;
+  align-items: center;
+  gap: 6rpx;
+}
+.bill-multi-subidx {
+  font-size: 22rpx;
+  color: #bbb;
+  width: 36rpx;
+  text-align: right;
+}
+.bill-multi-subamount {
+  font-size: 26rpx;
+  font-weight: 600;
+  color: #333;
+}
+.page--dark .bill-item--multi { background: #1e1e2e; }
+.page--dark .bill-multi-detail { border-top-color: #2a2a3a; }
+.page--dark .bill-multi-subamount { color: #e0e0e0; }
+.page--dark .bill-multi-badge { background: linear-gradient(135deg, #3a6fd9, #5c4ce7); }
+
 /* ---- 滑动操作 ---- */
 .bill-row {
   position: relative;
@@ -4590,6 +4863,45 @@ page {
   height: 2rpx;
   background: #d1d1d1;
   flex-shrink: 0;
+}
+.bill-modal-multi {
+  padding: 12rpx 0;
+}
+.bill-modal-multi-header {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6rpx;
+  margin-bottom: 10rpx;
+}
+.bill-modal-multi-title {
+  font-size: 26rpx;
+  font-weight: 600;
+  color: #4a90d9;
+  margin-right: 8rpx;
+}
+.bill-modal-multi-date {
+  font-size: 22rpx;
+  color: #999;
+}
+.bill-modal-multi-items {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8rpx 16rpx;
+}
+.bill-modal-multi-item {
+  display: flex;
+  align-items: center;
+  gap: 4rpx;
+}
+.bill-modal-multi-idx {
+  font-size: 24rpx;
+  color: #999;
+}
+.bill-modal-multi-amount {
+  font-size: 28rpx;
+  font-weight: 600;
+  color: #333;
 }
 .bill-modal-row {
   display: flex;
@@ -8788,6 +9100,246 @@ page {
   color: #fff;
 }
 
+/* ========== 记账模式切换 Tab ========== */
+.book-mode-tabs {
+  display: flex;
+  background: #f0f0f5;
+  border-radius: 16rpx;
+  padding: 6rpx;
+  margin-bottom: 20rpx;
+  flex-shrink: 0;
+}
+
+.book-mode-tab {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16rpx 0;
+  border-radius: 12rpx;
+  font-size: 26rpx;
+  color: #888;
+  font-weight: 500;
+  transition: all 0.2s;
+}
+
+.book-mode-tab--active {
+  background: #fff;
+  color: #4a90d9;
+  font-weight: 700;
+  box-shadow: 0 2rpx 8rpx rgba(0,0,0,0.06);
+}
+
+/* 模式内容区：用 class 代替内联 style，配合 hidden 属性 */
+.book-mode-body {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  overflow: hidden;
+}
+
+.book-mode-body--hidden {
+  display: none !important;
+}
+
+/* ========== 多笔记账 ========== */
+.book-sheet--multi {
+  height: 68vh;
+}
+
+.multi-meta-row {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+  margin-bottom: 12rpx;
+  flex-shrink: 0;
+}
+
+.multi-scope-toggle {
+  display: flex;
+  background: #f0f0f5;
+  border-radius: 10rpx;
+  padding: 4rpx;
+  flex-shrink: 0;
+}
+
+.multi-scope-tab {
+  padding: 10rpx 20rpx;
+  border-radius: 8rpx;
+  font-size: 24rpx;
+  color: #999;
+  font-weight: 500;
+}
+
+.multi-scope-tab--active {
+  background: #fff;
+  color: #4a90d9;
+  font-weight: 700;
+  box-shadow: 0 1rpx 4rpx rgba(0,0,0,0.06);
+}
+
+.multi-type-toggle {
+  display: flex;
+  background: #f0f0f5;
+  border-radius: 10rpx;
+  padding: 4rpx;
+  flex-shrink: 0;
+}
+
+.multi-type-tab {
+  padding: 10rpx 20rpx;
+  border-radius: 8rpx;
+  font-size: 24rpx;
+  color: #999;
+  font-weight: 500;
+}
+
+.multi-type-tab--active {
+  font-weight: 700;
+  box-shadow: 0 1rpx 4rpx rgba(0,0,0,0.06);
+}
+
+.multi-type-tab--income.multi-type-tab--active {
+  background: #fff;
+  color: #4caf50;
+}
+
+.multi-type-tab--expense.multi-type-tab--active {
+  background: #fff;
+  color: #f44336;
+}
+
+.multi-note-input {
+  flex: 1;
+  height: 56rpx;
+  background: #f5f5f5;
+  border-radius: 10rpx;
+  padding: 0 16rpx;
+  font-size: 26rpx;
+  color: #333;
+}
+
+.multi-date-row {
+  display: flex;
+  align-items: center;
+  gap: 10rpx;
+  margin-bottom: 10rpx;
+  flex-shrink: 0;
+}
+
+.multi-date-picker {
+  display: flex;
+  align-items: center;
+  gap: 6rpx;
+  padding: 10rpx 16rpx;
+  background: #f5f5f5;
+  border-radius: 10rpx;
+}
+
+.multi-date-label {
+  font-size: 22rpx;
+  color: #999;
+  margin-right: 4rpx;
+}
+
+.multi-date-value {
+  font-size: 24rpx;
+  color: #333;
+  font-weight: 500;
+}
+
+.multi-date-sep {
+  font-size: 22rpx;
+  color: #bbb;
+  flex-shrink: 0;
+}
+
+/* 计算器显示区 */
+.multi-calc-display {
+  background: #f8f9fc;
+  border-radius: 14rpx;
+  padding: 28rpx 28rpx;
+  margin-bottom: 16rpx;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.multi-calc-expression {
+  font-size: 44rpx;
+  font-weight: 600;
+  color: #333;
+  word-break: break-all;
+  line-height: 1.3;
+  min-height: 56rpx;
+}
+
+.multi-calc-info {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-top: 14rpx;
+}
+
+.multi-calc-count {
+  font-size: 32rpx;
+  color: #4a90d9;
+  font-weight: 600;
+}
+
+.multi-calc-result {
+  font-size: 64rpx;
+  font-weight: 700;
+  color: #333;
+}
+
+/* 多笔记账：加大键盘 */
+.book-sheet--multi .book-key {
+  height: 96rpx;
+  font-size: 40rpx;
+  border-radius: 14rpx;
+}
+
+.book-sheet--multi .book-keypad {
+  padding: 4rpx 0 8rpx;
+}
+
+.book-sheet--multi .book-keypad-row {
+  gap: 14rpx;
+  margin-bottom: 14rpx;
+}
+
+.book-sheet--multi .book-btn-row {
+  padding: 12rpx 0 24rpx;
+}
+
+.book-sheet--multi .book-btn-save {
+  padding: 22rpx 0;
+  font-size: 30rpx;
+}
+
+/* 计算器操作键 */
+.book-key--op {
+  background: #e8ecf4;
+  font-size: 40rpx;
+  font-weight: 700;
+  color: #4a90d9;
+}
+
+.book-key--eq {
+  background: linear-gradient(135deg, #4a90d9, #6c5ce7);
+  color: #fff;
+  font-size: 40rpx;
+  font-weight: 700;
+}
+
+.book-key--clear {
+  background: #ffeaea;
+  color: #e74c3c;
+  font-size: 28rpx;
+  font-weight: 600;
+}
+
 /* ========== 深色模式 ========== */
 .page--dark .book-entry-card { background: #2a2a3a !important; }
 .page--dark .book-entry-text { color: #e0e0e0 !important; }
@@ -8805,6 +9357,24 @@ page {
 .page--dark .book-date-row { border-bottom-color: #333; }
 .page--dark .book-date-row { color: #aaa; }
 .page--dark .book-btn-cancel { background: #2a2a3a; color: #aaa; }
+.page--dark .book-mode-tabs { background: #2a2a3a; }
+.page--dark .book-mode-tab--active { background: #3a3a4e; color: #7eb8ff; }
+.page--dark .book-key--op { background: #2a2a4a; color: #7eb8ff; }
+.page--dark .book-key--eq { background: linear-gradient(135deg, #4a90d9, #6c5ce7); color: #fff; }
+.page--dark .book-key--clear { background: #3a2020; }
+.page--dark .multi-scope-toggle,
+.page--dark .multi-type-toggle { background: #2a2a3a; }
+.page--dark .multi-scope-tab--active { background: #3a3a4e; color: #7eb8ff; }
+.page--dark .multi-type-tab--income.multi-type-tab--active { background: #1a3a2a; color: #5fdb7a; }
+.page--dark .multi-type-tab--expense.multi-type-tab--active { background: #3a1a1a; color: #f87171; }
+.page--dark .multi-note-input { background: #2a2a3a; color: #ccc; }
+.page--dark .multi-date-picker { background: #2a2a3a; }
+.page--dark .multi-date-value { color: #ddd; }
+.page--dark .multi-calc-display { background: #1a1a2a; }
+.page--dark .multi-calc-result { color: #f0f0f0; }
+.page--dark .multi-calc-expression { color: #ddd; }
+.page--dark .multi-calc-count { color: #7eb8ff; }
+.page--dark .book-sheet--multi .book-key { background: #2a2a3a; color: #e0e0e0; }
 
 /* ========== 首次启动引导 ========== */
 .guide-overlay {
@@ -10976,3 +11546,7 @@ page {
 .page--dark .conflict-nav-dot--active { background: #fff; }
 .page--dark .conflict-progress-bar { background: #3a3a3c; }
 .page--dark .rsum-more-tip { color: #888; }
+.page--dark .bill-modal-multi-title { color: #7eb8ff; }
+.page--dark .bill-modal-multi-date { color: #888; }
+.page--dark .bill-modal-multi-amount { color: #ddd; }
+.page--dark .bill-modal-multi-idx { color: #777; }

@@ -212,12 +212,14 @@ Page({
     settleIsBoss: false,
     settleItems: [],
     detailType: 0, // 0=个人, 1=公司
+    currentMode: 0, // 0=个人(蓝) 1=公司(金)，用于顶部模式色带
     detailPeriod: 0,
     detailPickerDate: '2026-06',
     maxDate: (function () { var d = new Date(); return d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2) })(), // 图表/明细日期选择器上限：今天，禁止选未来
     detailDateText: '2026年06月',
     detailItems: [],
     detailGroups: [],
+    expandedMultiIds: {},
     // 弹窗 & 滑动
     modalItem: null,
     modalFrom: '',
@@ -225,7 +227,20 @@ Page({
     modalEdit: {},
     // 记账弹窗
     showBookPopup: false,
+    bookMode: 'normal',       // 'normal' | 'multi'
     bookForm: { type: 'expense', amount: '', category: '', date: '', note: '', target: '', targetType: 'external' },
+    // 多笔记账
+    multiStartDate: '',
+    multiEndDate: '',
+    multiUseDateRange: false,
+    multiExpression: '',
+    multiResult: '0.00',
+    multiCount: 0,
+    multiNote: '',
+    multiScope: 'personal',
+    multiScopeLabel: '个人',
+    multiType: 'income',
+    multiTypeLabel: '收入',
     bookPhoto: '',           // 凭证照片本地路径（''=普通记账）
     scanRecognizing: false,  // 识别中 loading
     showCamera: false,       // 自定义相机页
@@ -284,6 +299,7 @@ Page({
     // 首次引导：基础登录 + 公司设置（4步）
     spotlightFirstSteps: [
       { type: 'welcome' },
+      { type: 'intro' },
       { targetSelector: '.tab-item-mine', holePadding: 10, bubbleTitle: '进入「我的」', bubbleDesc: '先设置你的账户信息', showNext: false, showSkip: true, holeShape: 'rect' },
       { targetSelector: '.my-login-text', holePadding: 12, bubbleTitle: '登录 / 注册', bubbleDesc: '微信一键登录，数据云端同步', showNext: false, showSkip: true, holeShape: 'rect' },
       { targetSelector: '.my-share-entry', holePadding: 10, bubbleTitle: '链接公司账本', bubbleDesc: '创建公司或加入已有公司，开启共享账本', showNext: false, showSkip: true, holeShape: 'rect' },
@@ -1279,6 +1295,11 @@ Page({
     if (index === prevTab && !wasOverview) return
     this._setTabUI(index, false)
     this._loadTabData(index)
+    // 同步顶部模式色带
+    const modeMap = { 0: this.data.detailType, 1: this.data.reportType, 3: this.data.settleType }
+    if (modeMap[index] !== undefined) {
+      this.setData({ currentMode: modeMap[index] })
+    }
   },
 
   _setTabUI(index, isOverview) {
@@ -2201,6 +2222,7 @@ Page({
     this.setData({
       currentReportCard: next,
       reportType: next % 2,
+      currentMode: next % 2,
     })
     this._refreshReport()
   },
@@ -2335,7 +2357,8 @@ Page({
         return
       }
     }
-    this.setData({ settleType: this.data.settleType === 0 ? 1 : 0 })
+    const nextSettleType = this.data.settleType === 0 ? 1 : 0
+    this.setData({ settleType: nextSettleType, currentMode: nextSettleType })
     this.initSettleItems()
   },
 
@@ -2468,6 +2491,18 @@ Page({
     }
   },
 
+  onMultiItemTap(e) {
+    playTap()
+    const id = e.currentTarget.dataset.id
+    const expanded = { ...this.data.expandedMultiIds }
+    if (expanded[id]) {
+      delete expanded[id]
+    } else {
+      expanded[id] = true
+    }
+    this.setData({ expandedMultiIds: expanded })
+  },
+
   onModalFieldEdit(e) {
     playTap()
     const field = e.currentTarget.dataset.field
@@ -2521,6 +2556,7 @@ Page({
     const td = this._getBookTargetDefaults(this.data.bookScope, type)
     this.setData({
       showBookPopup: true,
+      bookMode: 'normal',
       bookPhoto: '',
       'bookForm.type': type,
       'bookForm.amount': '',
@@ -2549,6 +2585,158 @@ Page({
       'bookForm.targetType': td.targetType,
     })
     if (this.data.showBookCatPanel) this.refreshBookCatPanel()
+  },
+
+  // ========== 多笔记账 ==========
+  onBookModeSwitch(e) {
+    playTap()
+    const mode = e.currentTarget.dataset.mode
+    if (mode === 'multi') {
+      const now = new Date()
+      const date = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
+      this.setData({
+        bookMode: mode,
+        multiStartDate: date,
+        multiEndDate: date,
+        multiExpression: '',
+        multiResult: '0.00',
+        multiCount: 0,
+        multiNote: '',
+        multiScope: 'personal',
+        multiScopeLabel: '个人',
+        multiType: 'income',
+        multiTypeLabel: '收入',
+        multiUseDateRange: false,
+      })
+    } else {
+      this.setData({ bookMode: mode })
+    }
+  },
+
+  _calcMulti(expr) {
+    if (!expr) return { multiResult: '0.00', multiCount: 0 }
+    let clean = expr.replace(/[+\-]+$/, '')
+    if (!clean) return { multiResult: '0.00', multiCount: 0 }
+    try {
+      if (/[^0-9.+\-]/.test(clean)) throw new Error('invalid')
+      // 按 + 分组（每组一笔），组内按 - 递减
+      const groups = clean.split('+')
+      let total = 0
+      for (const g of groups) {
+        if (!g) continue
+        const parts = g.split('-')
+        let sub = parseFloat(parts[0]) || 0
+        for (let i = 1; i < parts.length; i++) {
+          sub -= parseFloat(parts[i]) || 0
+        }
+        total += sub
+      }
+      if (!isFinite(total)) throw new Error('invalid')
+      const parts = groups.filter(s => s)
+      return { multiResult: total.toFixed(2), multiCount: parts.length }
+    } catch (_) {
+      return {}
+    }
+  },
+
+  onMultiTypeToggle(e) {
+    playTap()
+    const type = e.currentTarget.dataset.type
+    this.setData({
+      multiType: type,
+      multiTypeLabel: type === 'income' ? '收入' : '支出',
+    })
+  },
+
+  onMultiScopeToggle(e) {
+    playTap()
+    const scope = e.currentTarget.dataset.scope
+    if (scope === 'company' && !api.getCompanyInfo()) {
+      wx.showToast({ title: '请先注册公司', icon: 'none' })
+      return
+    }
+    this.setData({
+      multiScope: scope,
+      multiScopeLabel: scope === 'personal' ? '个人' : '公司',
+    })
+  },
+
+  onMultiNoteInput(e) {
+    this.setData({ multiNote: e.detail.value })
+  },
+
+  onMultiStartDateChange(e) {
+    playTap()
+    this.setData({ multiStartDate: e.detail.value })
+  },
+
+  onMultiEndDateChange(e) {
+    playTap()
+    this.setData({ multiEndDate: e.detail.value })
+  },
+
+  onMultiDateRangeToggle() {
+    playTap()
+    this.setData({ multiUseDateRange: !this.data.multiUseDateRange })
+  },
+
+  onMultiSave() {
+    playTap()
+    const { multiExpression, multiResult, multiCount, multiNote, multiScope, multiType, multiStartDate, multiEndDate, multiUseDateRange } = this.data
+    if (!multiCount || parseFloat(multiResult) <= 0) {
+      wx.showToast({ title: '请输入金额', icon: 'none' })
+      return
+    }
+    // 按 + 拆分，解析每笔金额
+    const clean = multiExpression.replace(/[+\-]+$/, '')
+    const parts = clean.split('+').filter(s => s)
+    const amounts = parts.map(s => {
+      const subParts = s.split('-')
+      let sub = parseFloat(subParts[0]) || 0
+      for (let i = 1; i < subParts.length; i++) {
+        sub -= parseFloat(subParts[i]) || 0
+      }
+      return sub
+    })
+    const validAmounts = amounts.filter(a => a > 0)
+    if (!validAmounts.length) {
+      wx.showToast({ title: '请输入有效金额', icon: 'none' })
+      return
+    }
+    const total = validAmounts.reduce((s, a) => s + parseFloat(a.toFixed(2)), 0)
+    const today = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}-${String(new Date().getDate()).padStart(2, '0')}`
+    const itemType = multiType === 'income' ? 'in' : 'out'
+    const itemTypeLabel = multiType === 'income' ? '收入' : '支出'
+    const td = this._getBookTargetDefaults(multiScope, multiType)
+    const item = {
+      id: api.generateId(),
+      type: itemType,
+      typeLabel: itemTypeLabel,
+      amount: parseFloat(total.toFixed(2)),
+      category: '多笔记账',
+      date: today,
+      note: multiNote,
+      target: td.target,
+      targetType: td.targetType,
+      scope: multiScope,
+      isMulti: true,
+      multiItems: validAmounts.map(a => ({ amount: parseFloat(a.toFixed(2)) })),
+      multiCount: validAmounts.length,
+      multiDateStart: multiStartDate,
+      multiDateEnd: multiUseDateRange ? multiEndDate : '',
+    }
+    api.addItem(multiScope, item)
+    const _items = this._buildDetailList(multiScope, api.getItems(multiScope))
+    this.setData({
+      detailItems: _items,
+      detailGroups: this._buildDetailGroups(_items),
+      multiExpression: '',
+      multiResult: '0.00',
+      multiCount: 0,
+      multiNote: '',
+    })
+    this._calcOverviewData()
+    wx.showToast({ title: `已记 ${validAmounts.length} 笔`, icon: 'success' })
   },
 
   onBookClose() {
@@ -2612,6 +2800,40 @@ Page({
 
   onBookKey(e) {
     playTap()
+    // 多笔记账模式
+    if (this.data.bookMode === 'multi') {
+      const key = e.currentTarget.dataset.key
+      let expr = this.data.multiExpression || ''
+      if (key === 'C') {
+        this.setData({ multiExpression: '', multiResult: '0.00', multiCount: 0 })
+        return
+      }
+      if (key === 'del') {
+        expr = expr.slice(0, -1)
+      } else if (key === '+' || key === '-') {
+        if (!expr) return
+        if (expr.endsWith('+') || expr.endsWith('-')) {
+          expr = expr.slice(0, -1) + key
+        } else {
+          expr += key
+        }
+      } else if (key === '.') {
+        const lastNum = expr.split(/[+\-]/).pop()
+        if (lastNum.includes('.')) return
+        expr += expr ? '.' : '0.'
+      } else if (key === '=') {
+        return
+
+      } else {
+        expr += key
+      }
+      const update = this._calcMulti(expr)
+      update.multiExpression = expr
+      this.setData(update)
+      return
+    }
+
+    // 普通记账模式
     const key = e.currentTarget.dataset.key
     let amount = this.data.bookForm.amount || ''
     if (key === 'del') {
@@ -2989,7 +3211,8 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
         return
       }
     }
-    this.setData({ detailType: this.data.detailType === 0 ? 1 : 0 })
+    const nextDetailType = this.data.detailType === 0 ? 1 : 0
+    this.setData({ detailType: nextDetailType, currentMode: nextDetailType })
     this.initDetailItems()
   },
 
@@ -4878,6 +5101,11 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
     this._advanceSpotlight()
   },
 
+  onSpotlightIntroNext() {
+    playTap()
+    this._advanceSpotlight()
+  },
+
   _completeSpotlight() {
     const type = this.data.spotlightType
     if (type === 'tutorial') {
@@ -4909,7 +5137,6 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
   _onSpotlightAction() {
     const cfg = this.data.spotlightStepConfig
     if (this.data.showSpotlightGuide && cfg && cfg.showNext === false) {
-      playTap()
       this._advanceSpotlight()
     }
   },

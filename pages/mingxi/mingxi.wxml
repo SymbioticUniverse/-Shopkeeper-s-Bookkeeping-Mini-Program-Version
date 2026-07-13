@@ -1,4 +1,6 @@
 <view class="page {{isDarkMode ? 'page--dark' : ''}} {{isTablet ? 'page--tablet' : ''}}">
+  <!-- 模式指示色带 -->
+  <view class="mode-accent {{currentMode === 0 ? 'mode-accent--personal' : 'mode-accent--company'}}"></view>
   <!-- 标题栏 -->
   <view class="header">
     <view class="header-left-group">
@@ -453,31 +455,57 @@
               <view class="date-group-header">
                 <text class="date-group-label">{{group.dateLabel}}</text>
               </view>
-              <view wx:for="{{group.items}}" wx:key="id" wx:for-item="item" class="bill-row">
-                <view class="bill-actions">
-                  <view wx:if="{{item.typeLabel === '垫付' && (item.settleStatus === 'pending_confirm' || item.settleStatus === 'company_settled')}}" class="bill-act-btn bill-act-confirm" catchtap="onBillSettle" data-id="{{item.id}}" data-from="detail">确认到账</view>
-                  <view wx:elif="{{item.typeLabel === '应付' && (item.settleStatus === 'pending_confirm' || item.settleStatus === 'company_settled') && settleIsBoss}}" class="bill-act-btn bill-act-confirm" catchtap="onBillSettle" data-id="{{item.id}}" data-from="detail">确认收款</view>
-                  <view wx:elif="{{item.typeLabel === '应付' && !item.settleStatus}}" class="bill-act-btn bill-act-settle" catchtap="onBillSettle" data-id="{{item.id}}" data-from="detail">结清</view>
-                  <view wx:elif="{{item.typeLabel === '垫付' && !item.settleStatus && settleIsBoss}}" class="bill-act-btn bill-act-settle" catchtap="onBillSettle" data-id="{{item.id}}" data-from="detail">发起结清</view>
-                  <view wx:if="{{!item._autoSettle && item.typeLabel !== '垫付' && item.settleStatus !== 'settled' && item.scope !== 'company'}}" class="bill-act-btn bill-act-delete" catchtap="onBillDelete" data-id="{{item.id}}" data-from="detail">删除</view>
-                  <view wx:if="{{!item._autoSettle && !item._voided && item.settleStatus !== 'settled'}}" class="bill-act-btn bill-act-void" catchtap="onBillVoid" data-id="{{item.id}}" data-from="detail">作废</view>
-                  <view wx:elif="{{!item._autoSettle && item._voided}}" class="bill-act-btn bill-act-unvoid" catchtap="onBillUnvoid" data-id="{{item.id}}" data-from="detail">恢复</view>
-                </view>
-                <view class="bill-item {{item.typeLabel === '垫付' ? 'bill-item--advance' : ''}} {{item.typeLabel === '应付' ? 'bill-item--payable' : ''}} {{(item._voided || item.settleStatus === 'settled') ? 'bill-item--voided' : ''}} {{(item.settleStatus === 'pending_confirm' || item.settleStatus === 'company_settled') ? 'bill-item--pending-confirm' : ''}}"
-                      bindtouchstart="onBillTouchStart"
-                      bindtouchmove="onBillTouchMove"
-                      bindtouchend="onBillTouchEnd"
+              <view wx:for="{{group.items}}" wx:key="id" wx:for-item="item" class="bill-row {{item.isMulti ? 'bill-row--multi' : ''}}">
+                <!-- 多笔记账：聚合卡片 -->
+                <view wx:if="{{item.isMulti}}" class="bill-item bill-item--multi {{item.type === 'in' ? 'bill-item--multi-income' : 'bill-item--multi-expense'}} {{(item._voided || item.settleStatus === 'settled') ? 'bill-item--voided' : ''}}"
                       bindtap="onBillTap"
                       data-id="{{item.id}}"
                       data-from="detail">
-                  <text class="bill-icon">{{item._icon}}</text>
-                  <text class="bill-type">{{item.typeLabel}}</text>
-                  <text wx:if="{{item.settleStatus === 'pending_confirm' || item.settleStatus === 'company_settled'}}" class="bill-settle-tag bill-settle-tag--pending">待确认</text>
-                  <text wx:elif="{{item.settleStatus === 'settled'}}" class="bill-settle-tag bill-settle-tag--auto">结清</text>
-                  <text wx:if="{{item.target}}" class="bill-target {{item.targetType === 'internal' ? 'bill-target--internal' : 'bill-target--external'}}">{{item.target}}</text>
-                  <text class="bill-note-inline">{{item.note || '-'}}</text>
-                  <text class="bill-amount {{item.type === 'in' ? 'bill-amount--in' : 'bill-amount--out'}}">¥{{item.amount}}</text>
+                  <view class="bill-multi-main">
+                    <view class="bill-multi-left">
+                      <text class="bill-multi-badge">多笔</text>
+                      <text class="bill-multi-count">{{item.multiCount}}笔</text>
+                      <text class="bill-type">{{item.typeLabel || '支出'}}</text>
+                      <text class="bill-note-inline">{{item.note || '-'}}</text>
+                    </view>
+                    <view class="bill-multi-right">
+                      <text class="bill-amount {{item.type === 'in' ? 'bill-amount--in' : 'bill-amount--out'}}">¥{{item.amount}}</text>
+                      <view class="bill-multi-date-info">
+                        <text class="bill-multi-date">{{item.multiDateStart}}</text>
+                        <text class="bill-multi-date-sep" wx:if="{{item.multiDateEnd}}">~</text>
+                        <text class="bill-multi-date" wx:if="{{item.multiDateEnd}}">{{item.multiDateEnd}}</text>
+                      </view>
+                    </view>
+                    <text class="bill-multi-arrow">›</text>
+                  </view>
                 </view>
+                <!-- 普通条目 -->
+                <block wx:else>
+                  <view class="bill-actions">
+                    <view wx:if="{{item.typeLabel === '垫付' && (item.settleStatus === 'pending_confirm' || item.settleStatus === 'company_settled')}}" class="bill-act-btn bill-act-confirm" catchtap="onBillSettle" data-id="{{item.id}}" data-from="detail">确认到账</view>
+                    <view wx:elif="{{item.typeLabel === '应付' && (item.settleStatus === 'pending_confirm' || item.settleStatus === 'company_settled') && settleIsBoss}}" class="bill-act-btn bill-act-confirm" catchtap="onBillSettle" data-id="{{item.id}}" data-from="detail">确认收款</view>
+                    <view wx:elif="{{item.typeLabel === '应付' && !item.settleStatus}}" class="bill-act-btn bill-act-settle" catchtap="onBillSettle" data-id="{{item.id}}" data-from="detail">结清</view>
+                    <view wx:elif="{{item.typeLabel === '垫付' && !item.settleStatus && settleIsBoss}}" class="bill-act-btn bill-act-settle" catchtap="onBillSettle" data-id="{{item.id}}" data-from="detail">发起结清</view>
+                    <view wx:if="{{!item._autoSettle && item.typeLabel !== '垫付' && item.settleStatus !== 'settled' && item.scope !== 'company'}}" class="bill-act-btn bill-act-delete" catchtap="onBillDelete" data-id="{{item.id}}" data-from="detail">删除</view>
+                    <view wx:if="{{!item._autoSettle && !item._voided && item.settleStatus !== 'settled'}}" class="bill-act-btn bill-act-void" catchtap="onBillVoid" data-id="{{item.id}}" data-from="detail">作废</view>
+                    <view wx:elif="{{!item._autoSettle && item._voided}}" class="bill-act-btn bill-act-unvoid" catchtap="onBillUnvoid" data-id="{{item.id}}" data-from="detail">恢复</view>
+                  </view>
+                  <view class="bill-item {{item.typeLabel === '垫付' ? 'bill-item--advance' : ''}} {{item.typeLabel === '应付' ? 'bill-item--payable' : ''}} {{(item._voided || item.settleStatus === 'settled') ? 'bill-item--voided' : ''}} {{(item.settleStatus === 'pending_confirm' || item.settleStatus === 'company_settled') ? 'bill-item--pending-confirm' : ''}}"
+                        bindtouchstart="onBillTouchStart"
+                        bindtouchmove="onBillTouchMove"
+                        bindtouchend="onBillTouchEnd"
+                        bindtap="onBillTap"
+                        data-id="{{item.id}}"
+                        data-from="detail">
+                    <text class="bill-icon">{{item._icon}}</text>
+                    <text class="bill-type">{{item.typeLabel}}</text>
+                    <text wx:if="{{item.settleStatus === 'pending_confirm' || item.settleStatus === 'company_settled'}}" class="bill-settle-tag bill-settle-tag--pending">待确认</text>
+                    <text wx:elif="{{item.settleStatus === 'settled'}}" class="bill-settle-tag bill-settle-tag--auto">结清</text>
+                    <text wx:if="{{item.target}}" class="bill-target {{item.targetType === 'internal' ? 'bill-target--internal' : 'bill-target--external'}}">{{item.target}}</text>
+                    <text class="bill-note-inline">{{item.note || '-'}}</text>
+                    <text class="bill-amount {{item.type === 'in' ? 'bill-amount--in' : 'bill-amount--out'}}">¥{{item.amount}}</text>
+                  </view>
+                </block>
               </view>
             </block>
           </scroll-view>
@@ -1713,6 +1741,20 @@
         <text class="bill-modal-label">结清</text>
         <text class="bill-modal-settle-info">{{modalItem._settleText || modalItem.settleInfo}}</text>
       </view>
+      <!-- 多笔记账明细 -->
+      <view wx:if="{{modalItem.isMulti}}" class="bill-modal-multi">
+        <view class="bill-modal-multi-header">
+          <text class="bill-modal-multi-title">明细（共{{modalItem.multiCount}}笔）</text>
+          <text class="bill-modal-multi-date">{{modalItem.multiDateStart}}</text>
+          <text wx:if="{{modalItem.multiDateEnd}}"> ~ {{modalItem.multiDateEnd}}</text>
+        </view>
+        <view class="bill-modal-multi-items">
+          <view class="bill-modal-multi-item" wx:for="{{modalItem.multiItems}}" wx:key="idx" wx:for-item="sub" wx:for-index="idx">
+            <text class="bill-modal-multi-idx">{{idx + 1}}.</text>
+            <text class="bill-modal-multi-amount">¥{{sub.amount}}</text>
+          </view>
+        </view>
+      </view>
       <view class="bill-modal-divider"></view>
       <view class="bill-modal-btns">
         <view wx:if="{{!modalItem._readonly}}" class="bill-modal-btn bill-modal-save" bindtap="onModalSave">保存</view>
@@ -1754,68 +1796,145 @@
   </view>
 
   <view class="book-mask" wx:if="{{showBookPopup}}" bindtap="onBookClose">
-    <view class="book-sheet {{bookPhoto ? 'book-sheet--with-photo' : ''}}" catchtap="nop">
-      <view class="book-photo-row" wx:if="{{bookPhoto}}">
-        <image class="book-photo-thumb" src="{{bookPhoto}}" mode="aspectFill" bindtap="onBookPhotoPreview"></image>
-        <view class="book-photo-meta">
-          <text class="book-photo-tag">凭证已识别</text>
-          <text class="book-photo-hint">请核对金额与分类</text>
-        </view>
-        <view class="book-photo-remove" catchtap="onBookPhotoRemove"><text>✕</text></view>
+    <view class="book-sheet {{bookPhoto ? 'book-sheet--with-photo' : ''}} {{bookMode === 'multi' ? 'book-sheet--multi' : ''}}" catchtap="nop">
+      <!-- 模式切换 Tab -->
+      <view class="book-mode-tabs">
+        <view class="book-mode-tab {{bookMode === 'normal' ? 'book-mode-tab--active' : ''}}" bindtap="onBookModeSwitch" data-mode="normal"><text>普通记账</text></view>
+        <view class="book-mode-tab {{bookMode === 'multi' ? 'book-mode-tab--active' : ''}}" bindtap="onBookModeSwitch" data-mode="multi"><text>多笔记账</text></view>
       </view>
-      <view class="book-date-row">
-        <picker mode="date" value="{{bookForm.date}}" end="{{maxDate}}" bindchange="onBookDateChange">
-          <view class="book-date-picker">
-            <text class="book-date-label">日期</text>
-            <text class="book-date-value">{{bookForm.date}}</text>
+
+      <!-- ========== 普通记账 ========== -->
+      <view class="book-mode-body {{bookMode !== 'normal' ? 'book-mode-body--hidden' : ''}}">
+        <view class="book-photo-row" wx:if="{{bookPhoto}}">
+          <image class="book-photo-thumb" src="{{bookPhoto}}" mode="aspectFill" bindtap="onBookPhotoPreview"></image>
+          <view class="book-photo-meta">
+            <text class="book-photo-tag">凭证已识别</text>
+            <text class="book-photo-hint">请核对金额与分类</text>
           </view>
-        </picker>
+          <view class="book-photo-remove" catchtap="onBookPhotoRemove"><text>✕</text></view>
+        </view>
+        <view class="book-date-row">
+          <picker mode="date" value="{{bookForm.date}}" end="{{maxDate}}" bindchange="onBookDateChange">
+            <view class="book-date-picker">
+              <text class="book-date-label">日期</text>
+              <text class="book-date-value">{{bookForm.date}}</text>
+            </view>
+          </picker>
+        </view>
+        <view class="book-amount-row">
+          <view class="book-amount-left">
+            <text class="book-yen">¥</text>
+            <text class="book-amount-value">{{bookForm.amount || '0.00'}}</text>
+          </view>
+          <input class="book-note-input" placeholder="添加备注" value="{{bookForm.note}}" bindinput="onBookNoteInput" maxlength="50"/>
+        </view>
+        <view class="book-cat-select">
+          <view class="book-cat-tags" bindtap="onBookOpenCatPanel">
+            <text class="book-cat-select-label">{{bookScopeLabel}}</text>
+            <text class="book-cat-select-sep">·</text>
+            <text class="book-cat-select-label">{{bookTypeLabel}}</text>
+            <block wx:if="{{bookForm.type === 'payForward' || bookForm.type === 'payable' || bookForm.target}}">
+              <text class="book-cat-select-sep">→</text>
+              <text class="book-target-tag" catchtap="onBookTargetTap">{{bookForm.target || '选择对象'}}</text>
+            </block>
+            <text class="book-cat-select-sep">·</text>
+            <text class="book-cat-select-val">{{bookForm.category || '选择分类'}}</text>
+          </view>
+          <text class="book-cat-select-arrow" bindtap="onBookOpenCatPanel">›</text>
+        </view>
+        <view class="book-keypad">
+          <view class="book-keypad-row">
+            <view class="book-key" bindtap="onBookKey" data-key="1"><text>1</text></view>
+            <view class="book-key" bindtap="onBookKey" data-key="2"><text>2</text></view>
+            <view class="book-key" bindtap="onBookKey" data-key="3"><text>3</text></view>
+          </view>
+          <view class="book-keypad-row">
+            <view class="book-key" bindtap="onBookKey" data-key="4"><text>4</text></view>
+            <view class="book-key" bindtap="onBookKey" data-key="5"><text>5</text></view>
+            <view class="book-key" bindtap="onBookKey" data-key="6"><text>6</text></view>
+          </view>
+          <view class="book-keypad-row">
+            <view class="book-key" bindtap="onBookKey" data-key="7"><text>7</text></view>
+            <view class="book-key" bindtap="onBookKey" data-key="8"><text>8</text></view>
+            <view class="book-key" bindtap="onBookKey" data-key="9"><text>9</text></view>
+          </view>
+          <view class="book-keypad-row">
+            <view class="book-key book-key--dot" bindtap="onBookKey" data-key="."><text>.</text></view>
+            <view class="book-key" bindtap="onBookKey" data-key="0"><text>0</text></view>
+            <view class="book-key book-key--del" bindtap="onBookKey" data-key="del"><text>⌫</text></view>
+          </view>
+        </view>
+        <view class="book-btn-row">
+          <view class="book-btn-save" bindtap="onBookSave"><text>记一笔</text></view>
+        </view>
       </view>
-      <view class="book-amount-row">
-        <view class="book-amount-left">
-          <text class="book-yen">¥</text>
-          <text class="book-amount-value">{{bookForm.amount || '0.00'}}</text>
+
+      <!-- ========== 多笔记账 ========== -->
+      <view class="book-mode-body {{bookMode !== 'multi' ? 'book-mode-body--hidden' : ''}}">
+        <view class="multi-meta-row">
+          <view class="multi-scope-toggle">
+            <view class="multi-scope-tab {{multiScope === 'personal' ? 'multi-scope-tab--active' : ''}}" bindtap="onMultiScopeToggle" data-scope="personal"><text>个人</text></view>
+            <view class="multi-scope-tab {{multiScope === 'company' ? 'multi-scope-tab--active' : ''}}" bindtap="onMultiScopeToggle" data-scope="company"><text>公司</text></view>
+          </view>
+          <view class="multi-type-toggle">
+            <view class="multi-type-tab {{multiType === 'income' ? 'multi-type-tab--active multi-type-tab--income' : ''}}" bindtap="onMultiTypeToggle" data-type="income"><text>收入</text></view>
+            <view class="multi-type-tab {{multiType === 'expense' ? 'multi-type-tab--active multi-type-tab--expense' : ''}}" bindtap="onMultiTypeToggle" data-type="expense"><text>支出</text></view>
+          </view>
         </view>
-        <input class="book-note-input" placeholder="添加备注" value="{{bookForm.note}}" bindinput="onBookNoteInput" maxlength="50"/>
-      </view>
-      <view class="book-cat-select">
-        <view class="book-cat-tags" bindtap="onBookOpenCatPanel">
-          <text class="book-cat-select-label">{{bookScopeLabel}}</text>
-          <text class="book-cat-select-sep">·</text>
-          <text class="book-cat-select-label">{{bookTypeLabel}}</text>
-          <block wx:if="{{bookForm.type === 'payForward' || bookForm.type === 'payable' || bookForm.target}}">
-            <text class="book-cat-select-sep">→</text>
-            <text class="book-target-tag" catchtap="onBookTargetTap">{{bookForm.target || '选择对象'}}</text>
-          </block>
-          <text class="book-cat-select-sep">·</text>
-          <text class="book-cat-select-val">{{bookForm.category || '选择分类'}}</text>
+        <view class="multi-meta-row">
+          <input class="multi-note-input" placeholder="添加备注" value="{{multiNote}}" bindinput="onMultiNoteInput" maxlength="50"/>
         </view>
-        <text class="book-cat-select-arrow" bindtap="onBookOpenCatPanel">›</text>
-      </view>
-      <view class="book-keypad">
-        <view class="book-keypad-row">
-          <view class="book-key" bindtap="onBookKey" data-key="1"><text>1</text></view>
-          <view class="book-key" bindtap="onBookKey" data-key="2"><text>2</text></view>
-          <view class="book-key" bindtap="onBookKey" data-key="3"><text>3</text></view>
+        <view class="multi-date-row">
+          <picker mode="date" value="{{multiStartDate}}" end="{{maxDate}}" bindchange="onMultiStartDateChange">
+            <view class="multi-date-picker">
+              <text class="multi-date-label">开始</text>
+              <text class="multi-date-value">{{multiStartDate}}</text>
+            </view>
+          </picker>
+          <text class="multi-date-sep">~</text>
+          <picker mode="date" value="{{multiEndDate}}" end="{{maxDate}}" bindchange="onMultiEndDateChange">
+            <view class="multi-date-picker">
+              <text class="multi-date-label">结束</text>
+              <text class="multi-date-value">{{multiEndDate}}</text>
+            </view>
+          </picker>
         </view>
-        <view class="book-keypad-row">
-          <view class="book-key" bindtap="onBookKey" data-key="4"><text>4</text></view>
-          <view class="book-key" bindtap="onBookKey" data-key="5"><text>5</text></view>
-          <view class="book-key" bindtap="onBookKey" data-key="6"><text>6</text></view>
+        <view class="multi-calc-display">
+          <text class="multi-calc-expression">{{multiExpression || '0'}}</text>
+          <view class="multi-calc-info">
+            <text class="multi-calc-count">{{multiCount}} 笔</text>
+            <text class="multi-calc-result">= {{multiResult}}</text>
+          </view>
         </view>
-        <view class="book-keypad-row">
-          <view class="book-key" bindtap="onBookKey" data-key="7"><text>7</text></view>
-          <view class="book-key" bindtap="onBookKey" data-key="8"><text>8</text></view>
-          <view class="book-key" bindtap="onBookKey" data-key="9"><text>9</text></view>
+        <view class="book-keypad">
+          <view class="book-keypad-row">
+            <view class="book-key" bindtap="onBookKey" data-key="7"><text>7</text></view>
+            <view class="book-key" bindtap="onBookKey" data-key="8"><text>8</text></view>
+            <view class="book-key" bindtap="onBookKey" data-key="9"><text>9</text></view>
+            <view class="book-key book-key--op" bindtap="onBookKey" data-key="+"><text>+</text></view>
+          </view>
+          <view class="book-keypad-row">
+            <view class="book-key" bindtap="onBookKey" data-key="4"><text>4</text></view>
+            <view class="book-key" bindtap="onBookKey" data-key="5"><text>5</text></view>
+            <view class="book-key" bindtap="onBookKey" data-key="6"><text>6</text></view>
+            <view class="book-key book-key--op" bindtap="onBookKey" data-key="-"><text>−</text></view>
+          </view>
+          <view class="book-keypad-row">
+            <view class="book-key" bindtap="onBookKey" data-key="1"><text>1</text></view>
+            <view class="book-key" bindtap="onBookKey" data-key="2"><text>2</text></view>
+            <view class="book-key" bindtap="onBookKey" data-key="3"><text>3</text></view>
+            <view class="book-key book-key--eq" bindtap="onBookKey" data-key="="><text>=</text></view>
+          </view>
+          <view class="book-keypad-row">
+            <view class="book-key book-key--clear" bindtap="onBookKey" data-key="C"><text>C</text></view>
+            <view class="book-key" bindtap="onBookKey" data-key="0"><text>0</text></view>
+            <view class="book-key book-key--dot" bindtap="onBookKey" data-key="."><text>.</text></view>
+            <view class="book-key book-key--del" bindtap="onBookKey" data-key="del"><text>⌫</text></view>
+          </view>
         </view>
-        <view class="book-keypad-row">
-          <view class="book-key book-key--dot" bindtap="onBookKey" data-key="."><text>.</text></view>
-          <view class="book-key" bindtap="onBookKey" data-key="0"><text>0</text></view>
-          <view class="book-key book-key--del" bindtap="onBookKey" data-key="del"><text>⌫</text></view>
+        <view class="book-btn-row">
+          <view class="book-btn-save" bindtap="onMultiSave"><text>记 {{multiCount || 0}} 笔</text></view>
         </view>
-      </view>
-      <view class="book-btn-row">
-        <view class="book-btn-save" bindtap="onBookSave"><text>记一笔</text></view>
       </view>
     </view>
     <view class="book-cat-panel" wx:if="{{showBookCatPanel}}" catchtap="nop">
@@ -2071,6 +2190,7 @@
     bind:next="onSpotlightNext"
     bind:skip="onSpotlightSkip"
     bind:welcomenext="onSpotlightWelcomeNext"
+    bind:intronext="onSpotlightIntroNext"
   />
 
   <!-- 语音记账操作提示（引导完成后弹出） -->
