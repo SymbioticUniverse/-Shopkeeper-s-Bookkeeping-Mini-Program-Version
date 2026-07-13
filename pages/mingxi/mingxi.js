@@ -5255,8 +5255,8 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
 
   onGuideSkipLogin() {
     playTap()
-    // 移除开发后门
-
+    // 调试器后门：跳过登录，继续引导流程
+    this.setData({ guideStep: 2, guideRole: '' })
   },
 
   onGuideBack() {
