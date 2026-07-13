@@ -723,6 +723,18 @@ Page({
     if (savedUser) {
       this.setData({ isLoggedIn: true, userInfo: savedUser })
       this._refreshAvatarDisplay(savedUser)
+      // 已注册但资料不完整 → 强制弹资料完善弹窗
+      if (!savedUser.nickName || savedUser.nickName === '新用户' || !savedUser.avatarUrl) {
+        setTimeout(() => {
+          this.setData({
+            showProfileModal: true,
+            profileEditMode: false,
+            profileName: savedUser.nickName || '',
+            profileAvatarLocal: '',
+            profileAvatarUrl: savedUser.avatarUrl || '',
+          })
+        }, 800)
+      }
     }
     api.migrate()
     const savedPCats = api.getCategories('personal')
