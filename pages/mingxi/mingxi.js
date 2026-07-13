@@ -310,15 +310,17 @@ Page({
     ],
     // 操作教程：登录后展示核心功能
     spotlightTutorialSteps: [
-      { targetSelector: '.card', holePadding: 8, bubbleTitle: '简览页', bubbleDesc: '查看个人/公司收支概览\n点击卡片进入个人账本', showNext: false, showSkip: true, holeShape: 'rect' },
-      { targetSelector: '.ledger-budget-sec', holePadding: 10, bubbleTitle: '设置月度预算', bubbleDesc: '输入你的月度预算金额\n点击保存', showNext: false, showSkip: true, holeShape: 'rect', scrollTo: 'ledger-budget' },
-      { targetSelector: '.ledger-demo-area', holePadding: 10, bubbleTitle: '本月概览 & 往来款', bubbleDesc: '收入 ¥12,500 · 支出 ¥3,200\n应收 ¥5,000 · 应付 ¥1,500\n（演示数据仅供预览）', showNext: true, showSkip: true, nextText: '知道了', holeShape: 'rect', setupDemo: true, scrollTo: 'ledger-overview' },
-      { targetSelector: '.custom-cat-back', holePadding: 6, bubbleTitle: '返回简览', bubbleDesc: '看完账本了\n点左上角返回简览', showNext: false, showSkip: true, holeShape: 'rect' },
-      { targetSelector: '.report-type-toggle', autoSwitchTab: 0, holePadding: 22, bubbleTitle: '个人 / 公司切换', bubbleDesc: '所有数据都按「个人」和「公司」分开管理\n点击上方切换试试看', showNext: false, showSkip: true, holeShape: 'rect' },
-      { targetSelector: '.tab-bar-center-btn', holePadding: 16, bubbleTitle: '点击记账', bubbleDesc: '点击底部记账按钮\n开始记录你的第一笔账', showNext: false, showSkip: true, holeShape: 'rect' },
-      { targetSelector: '.book-cat-select', holePadding: 10, bubbleTitle: '选择分类', bubbleDesc: '点击分类栏，为这笔账选择归属类别', showNext: false, showSkip: true, holeShape: 'rect' },
-      { targetSelector: '.book-type-tab--payForward', holePadding: 10, bubbleTitle: '选择「垫付」', bubbleDesc: '个人为公司预先垫资\n例如：差旅垫付、采购垫付\n可追踪报销/结清状态', showNext: false, showSkip: true, holeShape: 'rect' },
-      { targetSelector: '.book-type-bar', holePadding: 12, bubbleTitle: '垫付的作用', bubbleDesc: '记录个人垫资后，可在「明细」和「结清」中追踪\n公司是否已还款，避免遗漏', showNext: true, showSkip: true, nextText: '开始使用', holeShape: 'rect' },
+      { targetSelector: '.card', holePadding: 8, bubbleTitle: '简览页', bubbleDesc: '查看个人/公司收支概览\n点击卡片进入个人账本', showNext: false, showSkip: false, holeShape: 'rect' },
+      { targetSelector: '.ledger-budget-sec', holePadding: 10, bubbleTitle: '设置月度预算', bubbleDesc: '输入你的月度预算金额\n点击保存', showNext: false, showSkip: false, holeShape: 'rect', scrollTo: 'ledger-budget' },
+      { targetSelector: '.ledger-demo-area', holePadding: 10, bubbleTitle: '本月概览 & 往来款', bubbleDesc: '收入 ¥12,500 · 支出 ¥3,200\n应收 ¥5,000 · 应付 ¥1,500\n（演示数据仅供预览）', showNext: true, showSkip: false, nextText: '知道了', holeShape: 'rect', setupDemo: true, scrollTo: 'ledger-overview' },
+      { targetSelector: '.custom-cat-back', holePadding: 6, bubbleTitle: '返回简览', bubbleDesc: '看完账本了\n点左上角返回简览', showNext: false, showSkip: false, holeShape: 'rect' },
+      { targetSelector: '.report-type-toggle', autoSwitchTab: 0, holePadding: 22, bubbleTitle: '个人 / 公司切换', bubbleDesc: '所有数据都按「个人」和「公司」分开管理\n点击上方切换试试看', showNext: false, showSkip: false, holeShape: 'rect' },
+      { targetSelector: '.tab-bar-center-btn', holePadding: 16, bubbleTitle: '点击记账', bubbleDesc: '点击底部记账按钮\n开始记录你的第一笔账', showNext: false, showSkip: false, holeShape: 'rect' },
+      { targetSelector: '.book-cat-select', holePadding: 10, bubbleTitle: '选择分类', bubbleDesc: '点击分类栏，为这笔账选择归属类别', showNext: false, showSkip: false, holeShape: 'rect' },
+      { targetSelector: '.book-type-tab--payForward', holePadding: 10, bubbleTitle: '选择「垫付」', bubbleDesc: '个人为公司预先垫资\n例如：差旅垫付、采购垫付\n可追踪报销/结清状态', showNext: false, showSkip: false, holeShape: 'rect' },
+      { targetSelector: '.book-type-bar', holePadding: 12, bubbleTitle: '垫付的作用', bubbleDesc: '记录个人垫资后，可在「明细」和「结清」中追踪\n公司是否已还款，避免遗漏', showNext: true, showSkip: false, nextText: '下一步', holeShape: 'rect' },
+      { targetSelector: '.book-mode-tab--multi', holePadding: 10, bubbleTitle: '多笔记账', bubbleDesc: '支持批量录入多笔金额\n一次保存，自动汇总', showNext: false, showSkip: false, holeShape: 'rect', closeBookCatPanel: true },
+      { targetSelector: '.multi-calc-display', holePadding: 14, bubbleTitle: '表达式计算', bubbleDesc: '38+89-20 自动拆为 3 笔\n实时显示笔数和总金额', showNext: true, showSkip: false, nextText: '开始使用', holeShape: 'rect' },
     ],
     // 自定义分类页
     showCustomCategory: false, // 自定义分类页
@@ -683,8 +685,9 @@ Page({
     // 首次启动引导检测
     if (wx.getStorageSync('tapVolume') === '') wx.setStorageSync('tapVolume', 1)
     if (wx.getStorageSync('tapVibration') === '') wx.setStorageSync('tapVibration', 1)
-    // DEBUG: 始终触发引导，方便测试
-    this.setData({ showGuide: true, guideStep: 0 })
+    if (!wx.getStorageSync('guideCompleted')) {
+      this.setData({ showGuide: true, guideStep: 0 })
+    }
     const now = new Date()
     const y = now.getFullYear()
     const m = now.getMonth() + 1
@@ -1009,9 +1012,11 @@ Page({
     this._syncOverviewCards(true)
     wx.showToast({ title: '已保存', icon: 'success' })
     if (isGuide) {
-      // 资料保存后 → 播操作教程（聚光引导）
+      // 资料保存后 → 播操作教程（聚光引导，仅首次）
       this.setData({ showGuide: false })
-      setTimeout(() => this._startSpotlight('tutorial'), 300)
+      if (!wx.getStorageSync('opGuideCompleted')) {
+        setTimeout(() => this._startSpotlight('tutorial'), 300)
+      }
     }
   },
 
@@ -2608,6 +2613,7 @@ Page({
         multiTypeLabel: '收入',
         multiUseDateRange: false,
       })
+      this._onSpotlightAction()
     } else {
       this.setData({ bookMode: mode })
     }
@@ -2811,8 +2817,8 @@ Page({
       if (key === 'del') {
         expr = expr.slice(0, -1)
       } else if (key === '+' || key === '-') {
-        if (!expr) return
-        if (expr.endsWith('+') || expr.endsWith('-')) {
+        if (!expr && key === '+') return
+        if (expr && (expr.endsWith('+') || expr.endsWith('-'))) {
           expr = expr.slice(0, -1) + key
         } else {
           expr += key
@@ -2821,9 +2827,6 @@ Page({
         const lastNum = expr.split(/[+\-]/).pop()
         if (lastNum.includes('.')) return
         expr += expr ? '.' : '0.'
-      } else if (key === '=') {
-        return
-
       } else {
         expr += key
       }
@@ -3454,6 +3457,21 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
       ledgerNetPos: true,
       ledgerReceivableCount: 2,
       ledgerPayableCount: 1,
+    })
+  },
+
+  _clearLedgerDemo() {
+    this.setData({
+      ledgerMonthIncome: '0.00',
+      ledgerMonthExpense: '0.00',
+      ledgerMonthBalance: '0.00',
+      ledgerMonthBalancePos: true,
+      ledgerReceivable: '0.00',
+      ledgerPayable: '0.00',
+      ledgerNet: '0.00',
+      ledgerNetPos: true,
+      ledgerReceivableCount: 0,
+      ledgerPayableCount: 0,
     })
   },
 
@@ -5034,6 +5052,10 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
     if (cfg.setupDemo) {
       this._showLedgerDemo()
     }
+    // 关闭分类面板（如从垫付引导到多笔记账引导）
+    if (cfg.closeBookCatPanel) {
+      this.setData({ showBookCatPanel: false })
+    }
     // 自动打开公司身份选择卡片
     const setup = {}
     if (cfg.autoShowCompanyShare) {
@@ -5110,6 +5132,7 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
     const type = this.data.spotlightType
     if (type === 'tutorial') {
       wx.setStorageSync('opGuideCompleted', true)
+      this._clearLedgerDemo()
       // 教程结束 → 进入角色选择（已有引导页）
       this.setData({
         showSpotlightGuide: false,
@@ -5212,7 +5235,9 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
         this.onGuideComplete()
       } else {
         this.setData({ showGuide: false })
-        setTimeout(() => this._startSpotlight('tutorial'), 400)
+        if (!wx.getStorageSync('opGuideCompleted')) {
+          setTimeout(() => this._startSpotlight('tutorial'), 400)
+        }
       }
     }).catch(() => {
       wx.showToast({ title: '登录失败', icon: 'none' })
@@ -5276,10 +5301,11 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
             this.updateNotifyBadge()
             this.updateAuditBadge()
           })
-          // DEBUG: 始终走完整流程
           if (!needProfile) {
             this.setData({ showGuide: false })
-            setTimeout(() => this._startSpotlight('tutorial'), 400)
+            if (!wx.getStorageSync('opGuideCompleted')) {
+              setTimeout(() => this._startSpotlight('tutorial'), 400)
+            }
           }
           // needProfile 时由 onProfileSave 触发教程
         }).catch((err) => {

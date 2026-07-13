@@ -1800,7 +1800,7 @@
       <!-- 模式切换 Tab -->
       <view class="book-mode-tabs">
         <view class="book-mode-tab {{bookMode === 'normal' ? 'book-mode-tab--active' : ''}}" bindtap="onBookModeSwitch" data-mode="normal"><text>普通记账</text></view>
-        <view class="book-mode-tab {{bookMode === 'multi' ? 'book-mode-tab--active' : ''}}" bindtap="onBookModeSwitch" data-mode="multi"><text>多笔记账</text></view>
+        <view class="book-mode-tab book-mode-tab--multi {{bookMode === 'multi' ? 'book-mode-tab--active' : ''}}" bindtap="onBookModeSwitch" data-mode="multi"><text>多笔记账</text></view>
       </view>
 
       <!-- ========== 普通记账 ========== -->
@@ -1906,24 +1906,29 @@
             <text class="multi-calc-result">= {{multiResult}}</text>
           </view>
         </view>
-        <view class="book-keypad">
-          <view class="book-keypad-row">
-            <view class="book-key" bindtap="onBookKey" data-key="7"><text>7</text></view>
-            <view class="book-key" bindtap="onBookKey" data-key="8"><text>8</text></view>
-            <view class="book-key" bindtap="onBookKey" data-key="9"><text>9</text></view>
-            <view class="book-key book-key--op" bindtap="onBookKey" data-key="+"><text>+</text></view>
-          </view>
-          <view class="book-keypad-row">
-            <view class="book-key" bindtap="onBookKey" data-key="4"><text>4</text></view>
-            <view class="book-key" bindtap="onBookKey" data-key="5"><text>5</text></view>
-            <view class="book-key" bindtap="onBookKey" data-key="6"><text>6</text></view>
-            <view class="book-key book-key--op" bindtap="onBookKey" data-key="-"><text>−</text></view>
-          </view>
-          <view class="book-keypad-row">
-            <view class="book-key" bindtap="onBookKey" data-key="1"><text>1</text></view>
-            <view class="book-key" bindtap="onBookKey" data-key="2"><text>2</text></view>
-            <view class="book-key" bindtap="onBookKey" data-key="3"><text>3</text></view>
-            <view class="book-key book-key--eq" bindtap="onBookKey" data-key="="><text>=</text></view>
+        <view class="book-keypad book-keypad--multi">
+          <view class="book-keypad-main">
+            <view class="book-keypad-nums">
+              <view class="book-keypad-row">
+                <view class="book-key" bindtap="onBookKey" data-key="7"><text>7</text></view>
+                <view class="book-key" bindtap="onBookKey" data-key="8"><text>8</text></view>
+                <view class="book-key" bindtap="onBookKey" data-key="9"><text>9</text></view>
+              </view>
+              <view class="book-keypad-row">
+                <view class="book-key" bindtap="onBookKey" data-key="4"><text>4</text></view>
+                <view class="book-key" bindtap="onBookKey" data-key="5"><text>5</text></view>
+                <view class="book-key" bindtap="onBookKey" data-key="6"><text>6</text></view>
+              </view>
+              <view class="book-keypad-row">
+                <view class="book-key" bindtap="onBookKey" data-key="1"><text>1</text></view>
+                <view class="book-key" bindtap="onBookKey" data-key="2"><text>2</text></view>
+                <view class="book-key" bindtap="onBookKey" data-key="3"><text>3</text></view>
+              </view>
+            </view>
+            <view class="book-keypad-ops">
+              <view class="book-key book-key--op book-key--op-tall" bindtap="onBookKey" data-key="+"><text>+</text></view>
+              <view class="book-key book-key--op book-key--op-tall" bindtap="onBookKey" data-key="-"><text>−</text></view>
+            </view>
           </view>
           <view class="book-keypad-row">
             <view class="book-key book-key--clear" bindtap="onBookKey" data-key="C"><text>C</text></view>
