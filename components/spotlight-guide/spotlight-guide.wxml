@@ -1,0 +1,48 @@
+<!-- 聚光引导：四段拼接遮罩 + 气泡提示 -->
+<view class="sgl-root" wx:if="{{visible && maskReady}}">
+  <!-- 上段遮罩 -->
+  <view class="sgl-mask sgl-mask--top" style="height: {{mask.top}}px;"></view>
+
+  <!-- 中段：左遮罩 + 挖空区 + 右遮罩 -->
+  <view class="sgl-mask-row" style="top: {{mask.top}}px; height: {{mask.holeH}}px;">
+    <view class="sgl-mask sgl-mask--left" style="width: {{mask.left}}px;"></view>
+    <!-- 挖空区（真实 UI 可见 + 高亮边框） -->
+    <view class="sgl-hole sgl-hole--{{holeShape || 'rect'}}" style="width: {{mask.holeW}}px; height: {{mask.holeH}}px;">
+      <!-- 圆形挖空四角填充块 -->
+      <block wx:if="{{holeShape === 'circle'}}">
+        <view class="sgl-hole-corner sgl-hole-corner--tl" style="width: {{cornerSize}}px; height: {{cornerSize}}px;"></view>
+        <view class="sgl-hole-corner sgl-hole-corner--tr" style="width: {{cornerSize}}px; height: {{cornerSize}}px;"></view>
+        <view class="sgl-hole-corner sgl-hole-corner--bl" style="width: {{cornerSize}}px; height: {{cornerSize}}px;"></view>
+        <view class="sgl-hole-corner sgl-hole-corner--br" style="width: {{cornerSize}}px; height: {{cornerSize}}px;"></view>
+      </block>
+      <view class="sgl-hole-border sgl-hole-border--{{holeShape || 'rect'}}"></view>
+    </view>
+    <view class="sgl-mask sgl-mask--right"></view>
+  </view>
+
+  <!-- 下段遮罩 -->
+  <view class="sgl-mask sgl-mask--bottom" style="top: {{mask.top + mask.holeH}}px;"></view>
+
+  <!-- 欢迎页 -->
+  <view class="sgl-welcome" wx:if="{{showWelcome}}">
+    <image class="sgl-welcome-logo" src="/assets/zhangguihuizhang.png" mode="aspectFit"/>
+    <text class="sgl-welcome-name">掌柜记账</text>
+    <text class="sgl-welcome-slogan">简单好用的智能记账工具</text>
+    <view class="sgl-welcome-btn" bindtap="onWelcomeNext">开始使用</view>
+  </view>
+
+  <!-- 气泡提示 -->
+  <view
+    class="sgl-bubble sgl-bubble--{{bubblePos}}"
+    wx:if="{{!showWelcome && bubbleTitle}}"
+    style="top: {{bubbleStyle.top}}px; left: {{bubbleStyle.left}}px;"
+  >
+    <text class="sgl-bubble-title">{{bubbleTitle}}</text>
+    <text class="sgl-bubble-desc" wx:if="{{bubbleDesc}}">{{bubbleDesc}}</text>
+    <text class="sgl-bubble-step" wx:if="{{stepText}}">{{stepText}}</text>
+    <view class="sgl-bubble-btns">
+      <text class="sgl-bubble-skip" wx:if="{{showSkip}}" bindtap="onSkipTap">跳过</text>
+      <view class="sgl-bubble-next" wx:if="{{showNext}}" bindtap="onNextTap">{{nextText || '下一步'}}</view>
+    </view>
+  </view>
+</view>

@@ -1,0 +1,259 @@
+/* ========== 聚光引导组件 ========== */
+
+.sgl-root {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  z-index: 10006;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+/* 四段遮罩 */
+.sgl-mask {
+  position: absolute;
+  background: rgba(0, 0, 0, 0.55);
+  pointer-events: auto;
+}
+
+.sgl-mask--top {
+  top: 0; left: 0; right: 0;
+}
+
+.sgl-mask--bottom {
+  left: 0; right: 0; bottom: 0;
+}
+
+.sgl-mask-row {
+  position: absolute;
+  left: 0; right: 0;
+  display: flex;
+  pointer-events: none;
+}
+
+.sgl-mask--left,
+.sgl-mask--right {
+  position: relative;
+  pointer-events: auto;
+}
+
+.sgl-mask--right {
+  flex: 1;
+}
+
+/* 挖空区 */
+.sgl-hole {
+  position: relative;
+  pointer-events: none;
+  flex-shrink: 0;
+}
+
+.sgl-hole-border {
+  position: absolute;
+  top: -4px; left: -4px;
+  right: -4px; bottom: -4px;
+  border-radius: 28rpx;
+  border: 3px solid rgba(255, 255, 255, 0.9);
+  box-shadow: 0 0 0 6px rgba(74, 138, 254, 0.25), 0 0 24px rgba(74, 138, 254, 0.15);
+  pointer-events: none;
+  z-index: 3;
+}
+
+.sgl-hole-border--circle {
+  border-radius: 50%;
+}
+
+/* 圆形挖空：四角填充块（与遮罩同色，填掉矩形 hole 的四个方角） */
+.sgl-hole-corner {
+  position: absolute;
+  background: rgba(0, 0, 0, 0.55);
+  pointer-events: auto;
+  z-index: 2;
+}
+
+.sgl-hole-corner--tl {
+  top: 0; left: 0;
+  border-bottom-right-radius: 50%;
+}
+
+.sgl-hole-corner--tr {
+  top: 0; right: 0;
+  border-bottom-left-radius: 50%;
+}
+
+.sgl-hole-corner--bl {
+  bottom: 0; left: 0;
+  border-top-right-radius: 50%;
+}
+
+.sgl-hole-corner--br {
+  bottom: 0; right: 0;
+  border-top-left-radius: 50%;
+}
+
+/* 欢迎页（居中卡片） */
+.sgl-welcome {
+  position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  width: 560rpx;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-radius: 36rpx;
+  padding: 56rpx 44rpx 40rpx;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  box-shadow:
+    0 2rpx 4rpx rgba(0,0,0,0.02),
+    0 8rpx 24rpx rgba(0,0,0,0.06),
+    0 24rpx 64rpx rgba(0,0,0,0.08);
+  pointer-events: auto;
+  z-index: 10;
+}
+
+.sgl-welcome-logo {
+  width: 140rpx;
+  height: 140rpx;
+  border-radius: 36rpx;
+  margin-bottom: 12rpx;
+}
+
+.sgl-welcome-name {
+  font-size: 48rpx;
+  font-weight: 800;
+  color: #1a1a2e;
+  letter-spacing: 6rpx;
+  margin-top: 28rpx;
+}
+
+.sgl-welcome-slogan {
+  font-size: 26rpx;
+  color: #888;
+  margin-top: 12rpx;
+  margin-bottom: 32rpx;
+  letter-spacing: 2rpx;
+}
+
+.sgl-welcome-btn {
+  width: 100%;
+  height: 92rpx;
+  background: linear-gradient(135deg, #4a8afe 0%, #3a7bfd 50%, #2d6ce0 100%);
+  border-radius: 46rpx;
+  color: #fff;
+  font-size: 32rpx;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  letter-spacing: 3rpx;
+  box-shadow: 0 6rpx 20rpx rgba(58,123,253,0.3);
+}
+
+/* 气泡提示 */
+.sgl-bubble {
+  position: absolute;
+  width: 480rpx;
+  max-height: 40vh;
+  overflow-y: auto;
+  background: rgba(255, 255, 255, 0.96);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-radius: 24rpx;
+  padding: 28rpx 32rpx 24rpx;
+  box-shadow:
+    0 2rpx 4rpx rgba(0,0,0,0.02),
+    0 8rpx 24rpx rgba(0,0,0,0.08),
+    0 24rpx 64rpx rgba(0,0,0,0.12);
+  pointer-events: auto;
+  z-index: 10;
+}
+
+.sgl-bubble-title {
+  font-size: 32rpx;
+  font-weight: 700;
+  color: #1a1a2e;
+  display: block;
+  margin-bottom: 8rpx;
+}
+
+.sgl-bubble-desc {
+  font-size: 26rpx;
+  color: #666;
+  display: block;
+  line-height: 1.5;
+  white-space: pre-line;
+}
+
+.sgl-bubble-step {
+  font-size: 22rpx;
+  color: #aaa;
+  display: block;
+  margin-top: 10rpx;
+}
+
+.sgl-bubble-btns {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 20rpx;
+  margin-top: 20rpx;
+}
+
+.sgl-bubble-skip {
+  font-size: 24rpx;
+  color: #999;
+  padding: 8rpx 4rpx;
+}
+
+.sgl-bubble-next {
+  padding: 14rpx 36rpx;
+  background: linear-gradient(135deg, #4a8afe 0%, #3a7bfd 50%, #2d6ce0 100%);
+  border-radius: 36rpx;
+  color: #fff;
+  font-size: 26rpx;
+  font-weight: 600;
+  box-shadow: 0 4rpx 14rpx rgba(58,123,253,0.25);
+}
+
+/* ========== 深色模式 ========== */
+.page--dark .sgl-mask {
+  background: rgba(0, 0, 0, 0.72);
+}
+
+.page--dark .sgl-hole-border {
+  border-color: rgba(255, 255, 255, 0.6);
+  box-shadow: 0 0 0 6px rgba(74, 138, 254, 0.15), 0 0 24px rgba(74, 138, 254, 0.08);
+}
+
+.page--dark .sgl-hole-corner {
+  background: rgba(0, 0, 0, 0.72);
+}
+
+.page--dark .sgl-welcome {
+  background: rgba(30, 30, 40, 0.95);
+}
+
+.page--dark .sgl-welcome-name {
+  color: #f0f0f0;
+}
+
+.page--dark .sgl-welcome-slogan {
+  color: #888;
+}
+
+.page--dark .sgl-bubble {
+  background: rgba(40, 40, 55, 0.96);
+}
+
+.page--dark .sgl-bubble-title {
+  color: #f0f0f0;
+}
+
+.page--dark .sgl-bubble-desc {
+  color: #aaa;
+}
+
+.page--dark .sgl-bubble-step {
+  color: #777;
+}

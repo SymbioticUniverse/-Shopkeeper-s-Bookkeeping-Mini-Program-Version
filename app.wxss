@@ -1,4 +1,10 @@
 /**app.wxss**/
+page {
+  background: linear-gradient(to top, #BEDAFF 0%, #DBEAFF 37%, #DDF4FF 62%, #CEE9FB 100%);
+  height: 100vh;
+  overflow: hidden;
+}
+
 .container {
   height: 100%;
   display: flex;

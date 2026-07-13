@@ -60,6 +60,7 @@
 .tab-icon-img {
   width: 40rpx;
   height: 40rpx;
+  transition: opacity 0.2s ease;
 }
 
 .tab-label {
@@ -67,8 +68,19 @@
   font-weight: 600;
   color: #999;
   letter-spacing: 6rpx;
+  transition: color 0.2s ease;
 }
 
 .tab-label-active {
   color: #000;
+}
+
+/* 点击瞬间缩放反馈 */
+.tab-item-press {
+  transform: scale(0.88);
+  transition: transform 0.12s ease;
+}
+
+.tab-item-press .tab-icon-img {
+  opacity: 0.6;
 }

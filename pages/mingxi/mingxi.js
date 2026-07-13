@@ -1,5 +1,6 @@
 const api = require('../../utils/api')
 const xlsx = require('../../utils/xlsx')
+const { playTap, setVolume, getVolume } = require('../../utils/tapSound')
 
 // 多语言翻译表
 const LANG_TABLE = {
@@ -143,7 +144,7 @@ Page({
     isDarkMode: false, // 深色模式
     isTablet: false,
     currentTab: 0,
-    tabSlideDir: '',
+    _switchingTab: false,
     tabs: [
       { text: '明细', icon: '/assets/icons/mingxi.png' },
       { text: '报表', icon: '/assets/icons/baobiao.png' },
@@ -208,6 +209,7 @@ Page({
     tooltipY: 0,
     tooltipData: { income: 0, expense: 0, receivable: 0, payable: 0 },
     settleType: 0, // 0=个人, 1=公司
+    settleIsBoss: false,
     settleItems: [],
     detailType: 0, // 0=个人, 1=公司
     detailPeriod: 0,
@@ -265,17 +267,54 @@ Page({
     loginCode: '',
     loginCodeSending: false,
     loginCodeCountdown: 0,
-    showCustomOverview: false,
+    // 操作教程
+    showOpGuide: false,
+    opGuideStep: 0,
+    _opGuideAfter: '',          // 'role'=教程结束后继续选择身份, 'done'=直接结束
+    showVoiceTip: false,        // 引导完成后语音记账提示
+
+    ledgerScrollTo: '',            // 账本页 scroll-into-view 定位
+    // ===== 聚光引导（product tour，真实界面 + 高亮遮罩）=====
+    showSpotlightGuide: false,
+    spotlightType: '',           // 'first' | 'tutorial'
+    spotlightStep: 0,
+    spotlightTotalSteps: 1,
+    spotlightStepConfig: {},     // 当前步骤配置（传给组件）
+    spotlightTargetRect: null,   // 目标元素 rect（页面侧计算后传入组件）
+    // 首次引导：基础登录 + 公司设置（4步）
+    spotlightFirstSteps: [
+      { type: 'welcome' },
+      { targetSelector: '.tab-item-mine', holePadding: 10, bubbleTitle: '进入「我的」', bubbleDesc: '先设置你的账户信息', showNext: false, showSkip: true, holeShape: 'rect' },
+      { targetSelector: '.my-login-text', holePadding: 12, bubbleTitle: '登录 / 注册', bubbleDesc: '微信一键登录，数据云端同步', showNext: false, showSkip: true, holeShape: 'rect' },
+      { targetSelector: '.my-share-entry', holePadding: 10, bubbleTitle: '链接公司账本', bubbleDesc: '创建公司或加入已有公司，开启共享账本', showNext: false, showSkip: true, holeShape: 'rect' },
+    ],
+    // 角色选择引导：教程结束后进入
+    spotlightRoleSteps: [
+      { targetSelector: '.company-share-body', autoSwitchTab: 4, autoShowCompanyShare: true, holePadding: 12, bubbleTitle: '选择身份', bubbleDesc: '「我是老板」创建公司，邀请员工加入\n「我是员工」输入 UID 加入已有公司', showNext: false, showSkip: true, holeShape: 'rect' },
+    ],
+    // 操作教程：登录后展示核心功能
+    spotlightTutorialSteps: [
+      { targetSelector: '.card', holePadding: 8, bubbleTitle: '简览页', bubbleDesc: '查看个人/公司收支概览\n点击卡片进入个人账本', showNext: false, showSkip: true, holeShape: 'rect' },
+      { targetSelector: '.ledger-budget-sec', holePadding: 10, bubbleTitle: '设置月度预算', bubbleDesc: '输入你的月度预算金额\n点击保存', showNext: false, showSkip: true, holeShape: 'rect', scrollTo: 'ledger-budget' },
+      { targetSelector: '.ledger-demo-area', holePadding: 10, bubbleTitle: '本月概览 & 往来款', bubbleDesc: '收入 ¥12,500 · 支出 ¥3,200\n应收 ¥5,000 · 应付 ¥1,500\n（演示数据仅供预览）', showNext: true, showSkip: true, nextText: '知道了', holeShape: 'rect', setupDemo: true, scrollTo: 'ledger-overview' },
+      { targetSelector: '.custom-cat-back', holePadding: 6, bubbleTitle: '返回简览', bubbleDesc: '看完账本了\n点左上角返回简览', showNext: false, showSkip: true, holeShape: 'rect' },
+      { targetSelector: '.report-type-toggle', autoSwitchTab: 0, holePadding: 22, bubbleTitle: '个人 / 公司切换', bubbleDesc: '所有数据都按「个人」和「公司」分开管理\n点击上方切换试试看', showNext: false, showSkip: true, holeShape: 'rect' },
+      { targetSelector: '.tab-bar-center-btn', holePadding: 16, bubbleTitle: '点击记账', bubbleDesc: '点击底部记账按钮\n开始记录你的第一笔账', showNext: false, showSkip: true, holeShape: 'rect' },
+      { targetSelector: '.book-cat-select', holePadding: 10, bubbleTitle: '选择分类', bubbleDesc: '点击分类栏，为这笔账选择归属类别', showNext: false, showSkip: true, holeShape: 'rect' },
+      { targetSelector: '.book-type-tab--payForward', holePadding: 10, bubbleTitle: '选择「垫付」', bubbleDesc: '个人为公司预先垫资\n例如：差旅垫付、采购垫付\n可追踪报销/结清状态', showNext: false, showSkip: true, holeShape: 'rect' },
+      { targetSelector: '.book-type-bar', holePadding: 12, bubbleTitle: '垫付的作用', bubbleDesc: '记录个人垫资后，可在「明细」和「结清」中追踪\n公司是否已还款，避免遗漏', showNext: true, showSkip: true, nextText: '开始使用', holeShape: 'rect' },
+    ],
+    // 自定义分类页
     showCustomCategory: false, // 自定义分类页
     showExportBill: false, // 导出账单页
-    // AI 对话
-    showAiChat: false,
-    aiMessages: [],
-    aiInputText: '',
-    aiThinking: false,
-    aiScrollTop: 0,
-    aiVoiceMode: true,
-    aiRecording: false,
+    // 语音对话
+    showChat: false,
+    chatMessages: [],
+    chatInputText: '',
+    chatThinking: false,
+    chatScrollTop: 0,
+    chatVoiceMode: true,
+    chatRecording: false,
     catOptions: ['餐饮', '交通', '购物', '饮品', '人情', '通讯', '医疗', '住房', '工资', '办公', '金融', '服饰', '娱乐', '数码', '其他'],
     typeOptions: ['支出', '收入', '垫付', '应付'],
     targetOptions: ['公司', '个人', '外部'],
@@ -333,6 +372,10 @@ Page({
     settingsLanguageLabel: '简体中文',
     settingsDarkMode: 'system', // 深色模式: system/light/dark
     settingsDarkModeLabel: '跟随系统',
+    tapVolumePercent: Math.round(getVolume() * 100),
+    tapVibrationLevel: wx.getStorageSync('tapVibration') || 1,
+    tapVibrationLabel: ['关闭', '轻度 ~50ms', '中度 ~150ms', '高度 ~200ms', '最高 ~300ms'][wx.getStorageSync('tapVibration') || 1],
+    _vibrationLabels: ['关闭', '轻度 ~50ms', '中度 ~150ms', '高度 ~200ms', '最高 ~300ms'],
     auditList: [],
     notifyList: [],
     hasPendingAudit: false,
@@ -622,9 +665,10 @@ Page({
 
   onLoad() {
     // 首次启动引导检测
-    if (!wx.getStorageSync('guideCompleted')) {
-      this.setData({ showGuide: true, guideStep: 0 })
-    }
+    if (wx.getStorageSync('tapVolume') === '') wx.setStorageSync('tapVolume', 1)
+    if (wx.getStorageSync('tapVibration') === '') wx.setStorageSync('tapVibration', 1)
+    // DEBUG: 始终触发引导，方便测试
+    this.setData({ showGuide: true, guideStep: 0 })
     const now = new Date()
     const y = now.getFullYear()
     const m = now.getMonth() + 1
@@ -689,16 +733,26 @@ Page({
 
   onShow() {
     this._throttledSync()
-    // 预请求麦克风权限，避免首次语音使用时弹窗打断体验
     if (this.data.isLoggedIn && !this._recordAuthRequested) {
       this._recordAuthRequested = true
       wx.authorize({ scope: 'scope.record' }).catch(() => {})
+    }
+    // 记账 tab 按钮 → 打开记账弹窗
+    if (typeof this.getTabBar === 'function' && this.getTabBar()) {
+      this.getTabBar()._bookTapHandler = () => {
+        this.onBookEntry({ currentTarget: { dataset: { type: 'expense' } } })
+      }
     }
   },
 
   // 进页面节流同步：以后端为准刷新本地缓存（30s 内最多一次）
   async _throttledSync() {
     if (this.data.showConflictPanel) return
+    // 延迟刷新避免页面切换动画期间 setData 抢帧
+    setTimeout(() => {
+      this.initDetailItems()
+      this.initSettleItems()
+    }, 50)
     if (Date.now() - (this._lastSyncAt || 0) < 30000) return
     this._lastSyncAt = Date.now()
     try {
@@ -726,6 +780,8 @@ Page({
     if (this.data.showLedgerPage) {
       this.setData(this._ledgerData(this.data.ledgerScope))
     }
+    this.updateNotifyBadge()
+    this.updateAuditBadge()
   },
 
   // ---- 冲突解决面板 ----
@@ -742,6 +798,7 @@ Page({
 
   /** 用户对单个冲突做出裁决（保留本地/云端） */
   onConflictResolve(e) {
+    playTap()
     var ds = e.currentTarget.dataset
     var id = ds.id
     var resolution = ds.resolution
@@ -757,12 +814,14 @@ Page({
 
   /** 上一个冲突 */
   onConflictPrev() {
+    playTap()
     if (this.data.conflictIndex <= 0) return
     this.setData({ conflictIndex: this.data.conflictIndex - 1 })
   },
 
   /** 下一个冲突 */
   onConflictNext() {
+    playTap()
     if (this.data.conflictIndex >= this.data.conflicts.length - 1) return
     this.setData({ conflictIndex: this.data.conflictIndex + 1 })
   },
@@ -830,6 +889,7 @@ Page({
   },
 
   onChooseAvatar() {
+    playTap()
     wx.chooseMedia({
       count: 1,
       mediaType: ['image'],
@@ -887,6 +947,7 @@ Page({
   },
 
   onMyAvatarTap() {
+    playTap()
     const cur = this.data.userInfo || {}
     this._profileOpenAt = Date.now()
     this.setData({
@@ -899,15 +960,29 @@ Page({
   },
 
   onProfileSave() {
+    playTap()
     if (this.data.profileUploading) {
       wx.showToast({ title: '头像上传中…', icon: 'none' })
       return
     }
-    const cur = this.data.userInfo || {}
+    const isGuide = !this.data.profileEditMode
     const name = (this.data.profileName || '').trim()
+    const hasAvatar = this.data.profileAvatarLocal || this.data.profileAvatarUrl
+    if (isGuide) {
+      if (!name) {
+        wx.showToast({ title: '请填写昵称', icon: 'none' })
+        return
+      }
+      if (!hasAvatar) {
+        wx.showToast({ title: '请上传头像', icon: 'none' })
+        return
+      }
+    }
+    const cur = this.data.userInfo || {}
     const next = {
       nickName: name || cur.nickName,
-      avatarUrl: this.data.profileAvatarUrl || cur.avatarUrl || ''
+      avatarUrl: this.data.profileAvatarUrl || cur.avatarUrl || '',
+      updatedAt: cur.updatedAt  // 把服务端时间戳回传，避免 409 冲突
     }
     api.saveUserInfo(next)
     this.setData({
@@ -915,16 +990,24 @@ Page({
       showProfileModal: false,
       avatarDisplay: this.data.profileAvatarLocal || this.data.avatarDisplay
     })
-    // 仅刷新卡名（昵称变化），不重绘简览 canvas，避免真机崩溃重启
     this._syncOverviewCards(true)
     wx.showToast({ title: '已保存', icon: 'success' })
+    if (isGuide) {
+      // 资料保存后 → 播操作教程（聚光引导）
+      this.setData({ showGuide: false })
+      setTimeout(() => this._startSpotlight('tutorial'), 300)
+    }
   },
 
   onProfileSkip() {
+    playTap()
+    if (!this.data.profileEditMode) return // 引导模式禁止跳过
     this.setData({ showProfileModal: false })
   },
 
   onProfileMaskTap() {
+    playTap()
+    if (!this.data.profileEditMode) return // 引导模式禁止点蒙层关闭
     // 拦截「打开弹窗的同一次点击」穿透到刚渲染的蒙层导致秒关
     if (Date.now() - (this._profileOpenAt || 0) < 350) return
     this.setData({ showProfileModal: false })
@@ -1024,7 +1107,7 @@ Page({
     const ym = this.data.overviewMonth || '' // 'YYYY-MM'，按所选月份过滤
     const inMonth = (it) => !ym || (typeof it.date === 'string' && it.date.slice(0, 7) === ym)
     const personalItems = api.getItems('personal').filter(inMonth)
-    const companyItems = api.getItems('company').filter(inMonth)
+    const companyItems = this.data.canSeeCompanyLedger ? api.getItems('company').filter(inMonth) : []
     const sum = (items, fn) => items.filter(fn).reduce((s, it) => s + parseFloat(it.amount || 0), 0)
     // 金额缩写：千用 k、万用 W，最多 3 位小数
     const fmt = (n) => {
@@ -1094,6 +1177,7 @@ Page({
   },
 
   onOverviewMonthChange(e) {
+    playTap()
     const ym = e.detail.value // 'YYYY-MM'
     this.setData({ overviewMonth: ym, overviewYear: ym.slice(0, 4), overviewMonthNum: ym.slice(5, 7) })
     this._calcOverviewData() // 只重算卡片数字，不重绘简览 canvas（避免真机崩溃重启）
@@ -1158,38 +1242,49 @@ Page({
   },
 
   switchTab(e) {
+    playTap()
+    const now = Date.now()
     const index = e.currentTarget.dataset.index
     const prevTab = this.data.currentTab
     const wasOverview = this.data.showOverview
 
-    // 底部"明细"按钮双击返回简览页
-    if (index === 0 && prevTab === 0 && !wasOverview) {
-      var now = Date.now()
-      var last = this._tabDetailLastTap || 0
-      this._tabDetailLastTap = now
-      if (now - last < 350) {
-        this._tabDetailLastTap = 0
-        this.setData({ showOverview: true, tabSlideDir: 'slide-left' })
-        setTimeout(() => this.setData({ tabSlideDir: '' }), 400)
+    // 正在切换中直接忽略
+    if (this.data._switchingTab) return
+    if (now - (this._lastSwitchTab || 0) < 250) return
+    this._lastSwitchTab = now
+
+    // Tab 0 双击 → 返回简览页
+    if (index === 0) {
+      var last = this._tab0LastTap || 0
+      this._tab0LastTap = now
+      if (last && now - last < 350) {
+        this._tab0LastTap = 0
+        this._setTabUI(0, true)
+        if (prevTab !== 0) this._loadTabData(0)
         return
       }
-      return
+      if (prevTab === 0 && !wasOverview) return
+    } else {
+      this._tab0LastTap = 0
     }
 
-    let dir = ''
+    if (index === 4) {
+      this._onSpotlightAction()
+    }
     if (index === 2) {
-      // 报表 canvas 是原生组件，记账弹窗打开时已被 wx:if 移除、不再穿透盖住弹窗，故无需先跳明细页规避
       this.onBookEntry({ currentTarget: { dataset: { type: 'expense' } } })
       return
     }
-    if (wasOverview) {
-      dir = 'slide-right'
-    } else if (index !== prevTab) {
-      dir = index > prevTab ? 'slide-right' : 'slide-left'
-    }
+
+    if (index === prevTab && !wasOverview) return
+    this._setTabUI(index, false)
+    this._loadTabData(index)
+  },
+
+  _setTabUI(index, isOverview) {
     this.setData({
-      currentTab: index, showOverview: false, tabSlideDir: dir,
-      // 切 tab 时复位"我的"区域全部子页 + 自定义简览状态，避免再次进入"我的"停留在旧子页
+      _switchingTab: true,
+      currentTab: index, showOverview: isOverview,
       showVipPage: false, vipDetailId: -1, vipSelected: -1,
       showCustomCategory: false, showCompanyShare: false, showExportBill: false,
       showAuditPage: false, showContactPage: false, showSettingsPage: false,
@@ -1197,17 +1292,23 @@ Page({
       showPrivacyPage: false, showPrivacyPolicyPage: false, showAboutPage: false,
       showLoginPage: false, showCustomOverview: false,
     })
-    if (dir) setTimeout(() => this.setData({ tabSlideDir: '' }), 400)
+    // 等 wx:if 切完后再允许下一次切换
+    setTimeout(() => this.setData({ _switchingTab: false }), 100)
+  },
+
+  _loadTabData(index) {
     if (index === 1) {
       setTimeout(() => {
-        this._refreshReport()
+        if (this.data.currentTab === 1) this._refreshReport()
       }, 300)
-    }
-    if (index === 0) {
-      this.initDetailItems()
-    }
-    if (index === 3) {
-      this.initSettleItems()
+    } else if (index === 0) {
+      setTimeout(() => {
+        if (this.data.currentTab === 0) this.initDetailItems()
+      }, 50)
+    } else if (index === 3) {
+      setTimeout(() => {
+        if (this.data.currentTab === 3) this.initSettleItems()
+      }, 50)
     }
   },
 
@@ -1733,6 +1834,7 @@ Page({
 
   // 报表图表三合一：点击切换，折线/柱状/饼图共用同一区域
   switchReportChart(e) {
+    playTap()
     const t = parseInt(e.currentTarget.dataset.t)
     if (isNaN(t) || t === this.data.reportChartType) return
     this.setData({ reportChartType: t })
@@ -1853,6 +1955,7 @@ Page({
   },
 
   onPieTap(e, pieKey) {
+    playTap()
     const data = this._pieData && this._pieData[pieKey]
     if (!data) return
     const { segments, total, cx, cy, r, colors } = data
@@ -1896,10 +1999,12 @@ Page({
   },
 
   onPieIncomeTap(e) {
+    playTap()
     this.onPieTap(e, 'income')
   },
 
   onPieExpenseTap(e) {
+    playTap()
     this.onPieTap(e, 'expense')
   },
 
@@ -1979,6 +2084,7 @@ Page({
   },
 
   onChartTap(e) {
+    playTap()
     if (!this._chartData || !this._chartLayout) return
     const { ml, pw } = this._chartLayout
     const data = this._chartData
@@ -2081,9 +2187,13 @@ Page({
 
   // 切换个人/公司
   switchReportType() {
-    if (this.data.reportType === 0 && !api.getCompanyInfo()) {
-      wx.showToast({ title: '请先注册公司', icon: 'none' })
-      return
+    playTap()
+    if (this.data.reportType === 0) {
+      const ci = api.getCompanyInfo()
+      if (!(ci && ci.companyRole === 'boss' && ci.companyUid)) {
+        wx.showToast({ title: '公司账本仅企业管理员可见', icon: 'none' })
+        return
+      }
     }
     const { currentReportCard, reportCards } = this.data
     const card = reportCards[currentReportCard]
@@ -2097,6 +2207,7 @@ Page({
 
   // 切换报表周期
   switchReportPeriod(e) {
+    playTap()
     const period = parseInt(e.currentTarget.dataset.period)
     this.setData({ reportPeriod: period })
     this.updateReportDate()
@@ -2105,6 +2216,7 @@ Page({
 
   // 日期选择器变更（月度/年度/日度）
   onReportPickerChange(e) {
+    playTap()
     const val = e.detail.value
     const { reportPeriod } = this.data
     if (reportPeriod === 0) {
@@ -2129,6 +2241,7 @@ Page({
 
   // 季度多列选择器列变更
   onReportQuarterColumnChange(e) {
+    playTap()
     const { column, value } = e.detail
     if (column === 0) {
       const year = this.data.reportQuarterRange[0][value]
@@ -2138,6 +2251,7 @@ Page({
 
   // 季度多列选择器确认
   onReportQuarterChange(e) {
+    playTap()
     let [yearIdx, quarterIdx] = e.detail.value
     const year = this.data.reportQuarterRange[0][yearIdx]
     const now = new Date()
@@ -2213,35 +2327,52 @@ Page({
 
   // ---- 结清 ----
   switchSettleType() {
-    if (this.data.settleType === 0 && !api.getCompanyInfo()) {
-      wx.showToast({ title: '请先注册公司', icon: 'none' })
-      return
+    playTap()
+    if (this.data.settleType === 0) {
+      const ci = api.getCompanyInfo()
+      if (!(ci && ci.companyRole === 'boss' && ci.companyUid)) {
+        wx.showToast({ title: '公司账本仅企业管理员可见', icon: 'none' })
+        return
+      }
     }
     this.setData({ settleType: this.data.settleType === 0 ? 1 : 0 })
     this.initSettleItems()
   },
 
   onSettleAll() {
+    playTap()
     const items = this.data.settleItems
-    const settleable = items.filter(it =>
-      it.typeLabel === '应付' || (it.typeLabel === '垫付' && it.settleStatus === 'company_settled')
-    )
+    const ci = api.getCompanyInfo()
+    const isBoss = !!(ci && ci.companyRole === 'boss')
+    const isPending = s => s === 'pending_confirm' || s === 'company_settled'
+
+    const settleable = items.filter(it => {
+      // 垫付 + pending → 确认到账（owner）
+      if (it.typeLabel === '垫付' && isPending(it.settleStatus)) return true
+      // 应付 + pending → boss 确认收款
+      if (it.typeLabel === '应付' && isPending(it.settleStatus)) return isBoss
+      // 垫付 + 无状态 → boss 发起
+      if (it.typeLabel === '垫付' && !it.settleStatus) return isBoss
+      // 应付 + 无状态 → 发起
+      if (it.typeLabel === '应付' && !it.settleStatus) return true
+      return false
+    })
     if (!settleable.length) {
-      wx.showToast({ title: '没有可结清的项目', icon: 'none' })
+      wx.showToast({ title: '没有可操作的结清项目', icon: 'none' })
       return
     }
     wx.showModal({
-      title: '确认结清',
-      content: `将结清 ${settleable.length} 笔账单并自动生成对账记录，确定吗？`,
+      title: '批量结清',
+      content: `将对 ${settleable.length} 笔账单执行结清操作，确定吗？`,
       success: async (res) => {
         if (!res.confirm) return
         let failed = 0
         for (const item of settleable) {
           try {
-            if (item.typeLabel === '应付') {
-              await api.settleItem(item.id)
-            } else {
+            if (isPending(item.settleStatus)) {
               await api.settleConfirm(item.id)
+            } else {
+              await api.settleItem(item.id)
             }
           } catch (e) {
             failed++
@@ -2252,7 +2383,7 @@ Page({
         this.initDetailItems()
         this._calcOverviewData()
         wx.showToast({
-          title: failed ? `完成，${failed} 笔失败` : '已全部结清',
+          title: failed ? `完成，${failed} 笔失败` : '已全部处理',
           icon: failed ? 'none' : 'success',
         })
       },
@@ -2311,6 +2442,7 @@ Page({
   },
 
   onBillTap(e) {
+    playTap()
     const id = e.currentTarget.dataset.id
     const from = e.currentTarget.dataset.from || 'detail'
     const items = from === 'settle' ? 'settleItems' : 'detailItems'
@@ -2337,12 +2469,14 @@ Page({
   },
 
   onModalFieldEdit(e) {
+    playTap()
     const field = e.currentTarget.dataset.field
     const val = e.detail.value
     this.setData({ [`modalEdit.${field}`]: val })
   },
 
   onModalSave() {
+    playTap()
     const { modalItem, modalEdit, modalFrom } = this.data
     if (!modalItem || !modalEdit) return
     wx.showModal({
@@ -2379,6 +2513,7 @@ Page({
   },
 
   onBookEntry(e) {
+    playTap()
     const type = e.currentTarget.dataset.type
     const now = new Date()
     const date = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
@@ -2396,9 +2531,11 @@ Page({
       'bookForm.targetType': td.targetType,
       bookTypeLabel: typeLabelMap[type] || '支出',
     })
+    this._onSpotlightAction()
   },
 
   onBookScopeToggle(e) {
+    playTap()
     const scope = e.currentTarget.dataset.scope
     if (scope === 'company' && !api.getCompanyInfo()) {
       wx.showToast({ title: '请先注册公司', icon: 'none' })
@@ -2415,6 +2552,7 @@ Page({
   },
 
   onBookClose() {
+    playTap()
     if (this.data.showBookCatPanel) {
       this.setData({ showBookCatPanel: false })
     } else {
@@ -2424,6 +2562,7 @@ Page({
   },
 
   onBookTypeSelect(e) {
+    playTap()
     const type = e.currentTarget.dataset.type
     const typeLabelMap = { income: '收入', expense: '支出', payForward: '垫付', payable: '应付' }
     const td = this._getBookTargetDefaults(this.data.bookScope, type)
@@ -2435,15 +2574,19 @@ Page({
       bookTypeLabel: typeLabelMap[type] || '支出',
     })
     if (this.data.showBookCatPanel) this.refreshBookCatPanel()
+    this._onSpotlightAction()
   },
 
   onBookCatSelect(e) {
+    playTap()
     this.setData({ 'bookForm.category': e.currentTarget.dataset.cat })
   },
 
   onBookOpenCatPanel() {
+    playTap()
     this.refreshBookCatPanel()
     this.setData({ showBookCatPanel: true })
+    this._onSpotlightAction()
   },
 
   refreshBookCatPanel() {
@@ -2455,6 +2598,7 @@ Page({
   },
 
   onBookCatPanelSelect(e) {
+    playTap()
     this.setData({
       'bookForm.category': e.currentTarget.dataset.cat,
       showBookCatPanel: false,
@@ -2467,6 +2611,7 @@ Page({
   },
 
   onBookKey(e) {
+    playTap()
     const key = e.currentTarget.dataset.key
     let amount = this.data.bookForm.amount || ''
     if (key === 'del') {
@@ -2491,6 +2636,7 @@ Page({
   },
 
   onBookTargetTap() {
+    playTap()
     const scope = this.data.bookScope
     const type = this.data.bookForm.type
     const defaults = this._getBookTargetDefaults(scope, type)
@@ -2522,10 +2668,12 @@ Page({
   },
 
   onBookDateChange(e) {
+    playTap()
     this.setData({ 'bookForm.date': e.detail.value })
   },
 
   onBookSave() {
+    playTap()
     const { type, amount, category, date, note, target, targetType } = this.data.bookForm
     if (!amount || parseFloat(amount) <= 0) {
       wx.showToast({ title: '请输入金额', icon: 'none' })
@@ -2547,7 +2695,7 @@ Page({
     const typeLabelMap = { income: '收入', expense: '支出', payForward: '垫付', payable: '应付' }
     const itemType = type === 'income' ? 'in' : 'out'
     const newItem = {
-      id: Date.now(),
+      id: api.generateId(),
       category: category,
       type: itemType,
       typeLabel: typeLabelMap[type] || '支出',
@@ -2567,7 +2715,7 @@ Page({
       const mirrorTypeLabel = type === 'payForward' ? '应付' : '垫付'
       const mirrorType = mirrorTypeLabel === '应付' ? 'out' : 'in'
       const mirrorItem = {
-        id: Date.now() + 1,
+        id: api.generateId(),
         category: category,
         type: mirrorType,
         typeLabel: mirrorTypeLabel,
@@ -2589,10 +2737,12 @@ Page({
 this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_items2497), showBookPopup: false, bookPhoto: '' })
     this._calcOverviewData()
     wx.showToast({ title: '记账成功', icon: 'success' })
+    this._onSpotlightAction()
     this._redrawReportCharts()
   },
 
   onModalClose() {
+    playTap()
     this.setData({ modalItem: null })
   },
 
@@ -2612,25 +2762,56 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
   },
 
   onBillSettle(e) {
+    playTap()
     const id = e.currentTarget.dataset.id
     const from = e.currentTarget.dataset.from || 'detail'
     const itemsKey = from === 'settle' ? 'settleItems' : 'detailItems'
     const found = this.data[itemsKey].find(item => item.id === id)
     if (!found) return
 
-    if (found.typeLabel === '垫付') {
-      if (found.settleStatus === 'company_settled') {
-        this.onBillConfirmSettle(e)
-      } else {
-        wx.showToast({ title: '请等待对方结清应付款', icon: 'none' })
-      }
+    const ci = api.getCompanyInfo()
+    const isBoss = !!(ci && ci.companyRole === 'boss')
+    const isPending = found.settleStatus === 'pending_confirm' || found.settleStatus === 'company_settled'
+
+    // 垫付 + pending → 员工确认到账
+    if (found.typeLabel === '垫付' && isPending) {
+      this.onBillConfirmSettle(e)
       return
     }
+
+    // 应付 + pending → boss 确认收款
+    if (found.typeLabel === '应付' && isPending) {
+      if (!isBoss) {
+        wx.showToast({ title: '仅公司管理员可确认收款', icon: 'none' })
+        return
+      }
+      this.onBillConfirmSettle(e)
+      return
+    }
+
+    // 垫付 + 无状态 → boss 发起结清
+    if (found.typeLabel === '垫付') {
+      if (!isBoss) {
+        wx.showToast({ title: '仅公司管理员可发起垫付结清', icon: 'none' })
+        return
+      }
+      wx.showModal({
+        title: '发起结清',
+        content: '发起后需等待对方确认到账，确定吗？',
+        success: async (res) => {
+          if (!res.confirm) return
+          await this._doSettle(found, from)
+        },
+      })
+      return
+    }
+
+    // 应付 + 无状态 → 员工发起结清
     if (found.typeLabel !== '应付') return
 
     wx.showModal({
-      title: '确认结清',
-      content: '结清后将自动生成对账记录，确定吗？',
+      title: '发起结清',
+      content: '发起后需等待公司管理员确认，确定吗？',
       success: async (res) => {
         if (!res.confirm) return
         await this._doSettle(found, from)
@@ -2643,7 +2824,7 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
     try {
       await api.settleItem(found.id)
     } catch (e) {
-      wx.showToast({ title: '结清失败，请重试', icon: 'none' })
+      wx.showToast({ title: '发起失败，请重试', icon: 'none' })
       return false
     }
 
@@ -2653,21 +2834,29 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
       this.initDetailItems()
       this.setData({ modalItem: null })
       this._calcOverviewData()
-      wx.showToast({ title: '已结清', icon: 'success' })
+      wx.showToast({ title: '已发起结清，等待对方确认', icon: 'success' })
     }
     return true
   },
 
   onBillConfirmSettle(e) {
+    playTap()
     const id = e.currentTarget.dataset.id
     const from = e.currentTarget.dataset.from || 'settle'
     const itemsKey = from === 'settle' ? 'settleItems' : 'detailItems'
     const found = this.data[itemsKey].find(item => item.id === id)
-    if (!found || found.settleStatus !== 'company_settled') return
+    const validStatus = found && (found.settleStatus === 'pending_confirm' || found.settleStatus === 'company_settled')
+    if (!validStatus) return
+
+    const isPayForward = found.typeLabel === '垫付'
+    const title = isPayForward ? '确认到账' : '确认收款'
+    const content = isPayForward
+      ? '确认资金已到账？一旦确认将视为结清。'
+      : '确认已收到该笔款项？一旦确认将视为结清。'
 
     wx.showModal({
-      title: '确认到账',
-      content: '确认资金已到账？一旦确认将视为结清。',
+      title,
+      content,
       success: async (res) => {
         if (!res.confirm) return
         try {
@@ -2681,12 +2870,13 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
         this.initDetailItems()
         this.setData({ modalItem: null })
         this._calcOverviewData()
-        wx.showToast({ title: '已确认到账', icon: 'success' })
+        wx.showToast({ title: '已确认结清', icon: 'success' })
       },
     })
   },
 
   onBillDelete(e) {
+    playTap()
     const id = e.currentTarget.dataset.id
     const from = e.currentTarget.dataset.from || 'detail'
     const itemsKey = from === 'settle' ? 'settleItems' : 'detailItems'
@@ -2708,6 +2898,7 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
   },
 
   onBillVoid(e) {
+    playTap()
     const id = e.currentTarget.dataset.id
     const from = e.currentTarget.dataset.from || 'detail'
     wx.showModal({
@@ -2737,6 +2928,7 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
   },
 
   onBillUnvoid(e) {
+    playTap()
     const id = e.currentTarget.dataset.id
     const from = e.currentTarget.dataset.from || 'detail'
     wx.showModal({
@@ -2781,22 +2973,28 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
   },
 
   goOverview() {
+    playTap()
     this._syncOverviewCards()
-    this.setData({ showOverview: true, showCustomOverview: false, showCustomCategory: false, tabSlideDir: 'slide-left' })
-    setTimeout(() => this.setData({ tabSlideDir: '' }), 400)
+    this.setData({ showOverview: true, showCustomOverview: false, showCustomCategory: false })
   },
 
   // ---- 明细 ----
   switchDetailType() {
-    if (this.data.detailType === 0 && !api.getCompanyInfo()) {
-      wx.showToast({ title: '请先注册公司', icon: 'none' })
-      return
+    playTap()
+    this._onSpotlightAction()
+    if (this.data.detailType === 0) {
+      const ci = api.getCompanyInfo()
+      if (!(ci && ci.companyRole === 'boss' && ci.companyUid)) {
+        wx.showToast({ title: '公司账本仅企业管理员可见', icon: 'none' })
+        return
+      }
     }
     this.setData({ detailType: this.data.detailType === 0 ? 1 : 0 })
     this.initDetailItems()
   },
 
   switchDetailPeriod(e) {
+    playTap()
     const period = parseInt(e.currentTarget.dataset.period)
     this.setData({ detailPeriod: period })
     this.updateDetailDate()
@@ -2804,6 +3002,7 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
   },
 
   onDetailPickerChange(e) {
+    playTap()
     const val = e.detail.value
     const { detailPeriod } = this.data
     if (detailPeriod === 0) {
@@ -2821,6 +3020,7 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
   },
 
   onDetailQuarterChange(e) {
+    playTap()
     let [yearIdx, quarterIdx] = e.detail.value
     const year = this.data.reportQuarterRange[0][yearIdx]
     const now = new Date()
@@ -2855,12 +3055,13 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
     }
   },
 
-  // 明细列表预处理：① 按分类名附分类 emoji（_icon，未知回退 📌）② 排序：日期倒序为主（新日期在前），同一天内按 id（前端记账=Date.now() 毫秒时间戳）倒序，到毫秒严格
+  // 明细列表预处理：① 按分类名附分类 emoji（_icon，未知回退 📌）② 排序：日期倒序为主（新日期在前），同一天内按 id（UUID 十六进制字符串）倒序
   // 顶部搜索：匹配明细的全字段（日期/类型/分类/对象/金额/备注/状态），大小写不敏感
   _matchSearch(it, q) {
     if (!q) return true
     const status = it._voided ? '已作废'
-      : (it.settleStatus === 'settled' || it.settleStatus === 'company_settled') ? '已结清' : ''
+      : (it.settleStatus === 'settled') ? '已结清'
+      : (it.settleStatus === 'pending_confirm' || it.settleStatus === 'company_settled') ? '待确认' : ''
     const hay = [it.date, it.typeLabel, it.category, it.target, it.amount, it.note, status]
       .map(v => (v === null || v === undefined) ? '' : String(v)).join(' ').toLowerCase()
     return hay.indexOf(q) !== -1
@@ -2900,7 +3101,7 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
     return groups
   },
 
-  // 详情弹窗用的完整时间（到秒）：前端记账 id=Date.now()，直接取其时分秒；后端自动结清记录从 settleInfo 解析到分钟；都没有则只显示日期
+  // 详情弹窗用的完整时间（到秒）：从 settleInfo 解析到分钟；没有则只显示日期
   _billTimeText(it) {
     if (!it) return ''
     const d = (it.date || '').slice(0, 10)
@@ -2930,15 +3131,21 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
       (item.typeLabel === '垫付' || item.typeLabel === '应付') &&
       item.settleStatus !== 'settled'
     )
-    this.setData({ settleItems: filtered.map(item => ({ ...item })) })
+    const ci = api.getCompanyInfo()
+    this.setData({
+      settleItems: filtered.map(item => ({ ...item })),
+      settleIsBoss: !!(ci && ci.companyRole === 'boss')
+    })
   },
 
   // ---- 自定义分类 ----
   onCustomCategoryEntry() {
+    playTap()
     this.setData({ showCustomCategory: true })
   },
 
   onCustomCategoryBack() {
+    playTap()
     this.setData({ showCustomCategory: false })
   },
 
@@ -2997,10 +3204,12 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
   },
 
   onGotoPersonalLedger() {
+    playTap()
     this.setData({ showLedgerPage: true, ledgerScope: 'personal', ...this._ledgerData('personal') })
   },
 
   onGotoCompanyLedger() {
+    playTap()
     const ci = api.getCompanyInfo()
     if (!(ci && ci.companyRole === 'boss' && ci.companyUid)) {
       wx.showToast({ title: '公司账本仅企业管理员可见', icon: 'none' })
@@ -3009,12 +3218,31 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
     this.setData({ showLedgerPage: true, ledgerScope: 'company', ...this._ledgerData('company') })
   },
 
+  /** 引导中：展示账本演示数据 */
+  _showLedgerDemo() {
+    this.setData({
+      ledgerMonthIncome: '12,500.00',
+      ledgerMonthExpense: '3,200.00',
+      ledgerMonthBalance: '9,300.00',
+      ledgerMonthBalancePos: true,
+      ledgerReceivable: '5,000.00',
+      ledgerPayable: '1,500.00',
+      ledgerNet: '3,500.00',
+      ledgerNetPos: true,
+      ledgerReceivableCount: 2,
+      ledgerPayableCount: 1,
+    })
+  },
+
   onLedgerBack() {
+    playTap()
+    this._onSpotlightAction()
     this.setData({ showLedgerPage: false })
   },
 
   // 往来款下钻 → 结清 Tab（对齐当前账本范围）
   onLedgerGotoSettle() {
+    playTap()
     this.setData({ settleType: this.data.ledgerScope === 'company' ? 1 : 0 })
     this.switchTab({ currentTarget: { dataset: { index: 3 } } })
     this.initSettleItems()
@@ -3025,6 +3253,7 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
   },
 
   onLedgerBudgetSave() {
+    playTap()
     const scope = this.data.ledgerScope
     const val = parseFloat(this.data.ledgerBudgetInput)
     if (isNaN(val) || val < 0) {
@@ -3034,10 +3263,13 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
     api.saveSetting('budget_' + scope, val)
     this.setData(this._ledgerData(scope))
     wx.showToast({ title: '已保存', icon: 'success' })
+    this._onSpotlightAction()
   },
 
   // 简览卡片点击：个人/公司账本卡 → 账本页；图表卡 → 报表页；其余卡 → 明细页
   onOverviewCardTap(e) {
+    playTap()
+    this._onSpotlightAction()
     const { type } = e.currentTarget.dataset
     if (type === 'overview_personal') {
       this.setData({ showOverview: false, currentTab: 4, showLedgerPage: true, ledgerScope: 'personal', ...this._ledgerData('personal') })
@@ -3060,6 +3292,7 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
   },
 
   onAuditEntry() {
+    playTap()
     const saved = api.getCompanyInfo()
     if (!saved || saved.companyRole !== 'boss' || !saved.companyUid) {
       wx.showToast({ title: '请先注册公司', icon: 'none' })
@@ -3069,23 +3302,26 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
   },
 
   onAuditBack() {
+    playTap()
     this.setData({ showAuditPage: false })
   },
 
   onAuditApprove(e) {
+    playTap()
     const { id } = e.currentTarget.dataset
     const list = this.data.auditList.map(item => item.id === id ? { ...item, status: 'approved' } : item)
     api.saveAuditList(list)
     this.setData({ auditList: list })
     this.updateAuditBadge()
     const notifyList = api.getNotifyList()
-    notifyList.unshift({ id: Date.now(), text: '审核通过加入公司', time: new Date().toLocaleDateString(), read: false })
+    notifyList.unshift({ id: api.generateId(), text: '审核通过加入公司', time: new Date().toLocaleDateString(), read: false })
     api.saveNotifyList(notifyList)
     this.updateNotifyBadge()
     wx.showToast({ title: '已通过', icon: 'success' })
   },
 
   onAuditReject(e) {
+    playTap()
     const { id } = e.currentTarget.dataset
     const list = this.data.auditList.map(item => item.id === id ? { ...item, status: 'rejected' } : item)
     api.saveAuditList(list)
@@ -3101,16 +3337,19 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
   },
 
   onNotifyEntry() {
+    playTap()
     const list = api.getNotifyList()
     this.setData({ showNotifyPage: true, notifyList: list })
   },
 
   onNotifyBack() {
+    playTap()
     this.setData({ showNotifyPage: false, notifySwipeId: '' })
     this.updateNotifyBadge()
   },
 
   onNotifyRead(e) {
+    playTap()
     const { id } = e.currentTarget.dataset
     const list = this.data.notifyList.map(item => item.id === id ? { ...item, read: true } : item)
     api.saveNotifyList(list)
@@ -3143,6 +3382,7 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
   },
 
   onNotifyDelete(e) {
+    playTap()
     const { id } = e.currentTarget.dataset
     const list = this.data.notifyList.filter(item => item.id !== id)
     api.saveNotifyList(list)
@@ -3150,21 +3390,24 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
   },
 
   onExportBillEntry() {
+    playTap()
     this.setData({ currentTab: 4, showOverview: false, showExportBill: true })
   },
 
   onExportBillBack() {
+    playTap()
     this.setData({ showExportBill: false })
   },
 
   onExportPersonal() {
+    playTap()
     if (this.data.exportFormatOptions[this.data.exportFormatIndex] !== '.EXCEL') {
       wx.showToast({ title: 'PDF 即将支持，请先选 .EXCEL', icon: 'none' })
       return
     }
     var usage = api.checkUsage('export')
     if (!usage.allowed) {
-      wx.showToast({ title: '本月导出次数已用完（' + usage.used + '/' + usage.limit + '），请升级 VIP', icon: 'none' })
+      this._showVipLimitDialog('export')
       return
     }
     const nick = (this.data.userInfo && this.data.userInfo.nickName) || '个人'
@@ -3173,13 +3416,14 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
   },
 
   onExportCompany() {
+    playTap()
     if (this.data.exportFormatOptions[this.data.exportFormatIndex] !== '.EXCEL') {
       wx.showToast({ title: 'PDF 即将支持，请先选 .EXCEL', icon: 'none' })
       return
     }
     var usage = api.checkUsage('export')
     if (!usage.allowed) {
-      wx.showToast({ title: '本月导出次数已用完（' + usage.used + '/' + usage.limit + '），请升级 VIP', icon: 'none' })
+      this._showVipLimitDialog('export')
       return
     }
     const name = (api.getCompanyInfo && (api.getCompanyInfo() || {}).companyName) || '公司'
@@ -3265,7 +3509,8 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
     // ① 总表（明细）：按日期分组，组首插一条蓝色日期带「笼罩」当组明细
     //   月报表/日报表 → 按天分组(YYYY-MM-DD)；季度/年度报表 → 按月分组(YYYY-MM)。rows 已按日期降序，故组首=区间末
     const statusOf = it => it._voided ? '已作废'
-      : (it.settleStatus === 'settled' || it.settleStatus === 'company_settled') ? '已结清' : '正常'
+      : (it.settleStatus === 'settled') ? '已结清'
+      : (it.settleStatus === 'pending_confirm' || it.settleStatus === 'company_settled') ? '待确认' : '正常'
     const byMonth = this.data.exportPeriod === 1 || this.data.exportPeriod === 2
     const dateKey = it => {
       const d = (it.date || '').slice(0, 10)
@@ -3381,10 +3626,12 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
   },
 
   onContactEntry() {
+    playTap()
     this.setData({ showContactPage: true, contactFeedback: '' })
   },
 
   onContactBack() {
+    playTap()
     this.setData({ showContactPage: false })
   },
 
@@ -3393,6 +3640,7 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
   },
 
   onContactSubmit() {
+    playTap()
     const text = (this.data.contactFeedback || '').trim()
     if (!text) {
       wx.showToast({ title: '请输入您的意见或建议', icon: 'none' })
@@ -3400,13 +3648,14 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
     }
     // 存储反馈
     const feedbackList = api.getFeedbackList()
-    feedbackList.unshift({ id: Date.now(), text, time: new Date().toLocaleString() })
+    feedbackList.unshift({ id: api.generateId(), text, time: new Date().toLocaleString() })
     api.saveFeedbackList(feedbackList)
     wx.showToast({ title: '感谢您的反馈！VIP 会员已赠送', icon: 'success' })
     this.setData({ contactFeedback: '' })
   },
 
   onSettingsEntry() {
+    playTap()
     const saved = api.getCompanyInfo()
     const ledgerRole = saved && saved.companyRole ? saved.companyRole : 'personal'
     const lang = api.getSetting('appLanguage') || 'zh-CN'
@@ -3421,14 +3670,31 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
   },
 
   onSettingsBack() {
+    playTap()
     this.setData({ showSettingsPage: false })
   },
 
+  onTapVolumeChange(e) {
+    playTap()
+    const pct = e.detail.value
+    setVolume(pct / 100)
+    this.setData({ tapVolumePercent: pct })
+  },
+
+  onTapVibrationChange(e) {
+    playTap()
+    const level = e.detail.value
+    wx.setStorageSync('tapVibration', level)
+    this.setData({ tapVibrationLevel: level, tapVibrationLabel: this.data._vibrationLabels[level] })
+  },
+
   onPrivacyBack() {
+    playTap()
     this.setData({ showPrivacyPage: false })
   },
 
   onPrivacyToggle(e) {
+    playTap()
     const { key } = e.currentTarget.dataset
     const field = key === 'allowAnalytics' ? 'privacyAllowAnalytics' : 'privacyAllowCrashReport'
     const val = !this.data[field]
@@ -3438,6 +3704,7 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
   },
 
   onPrivacyClearData() {
+    playTap()
     wx.showModal({
       title: '清除数据',
       content: '此操作将清除所有本地记录，包括账目、分类、设置等。数据不可恢复，确定继续吗？',
@@ -3452,22 +3719,27 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
   },
 
   onPrivacyExportData() {
+    playTap()
     wx.showToast({ title: '数据导出功能开发中', icon: 'none' })
   },
 
   onPrivacyPolicyView() {
+    playTap()
     this.setData({ showPrivacyPolicyPage: true })
   },
 
   onPrivacyPolicyBack() {
+    playTap()
     this.setData({ showPrivacyPolicyPage: false })
   },
 
   onAboutBack() {
+    playTap()
     this.setData({ showAboutPage: false })
   },
 
   onSettingsTap(e) {
+    playTap()
     const { action } = e.currentTarget.dataset
     switch (action) {
       case 'language':
@@ -3594,7 +3866,8 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
           success: (res) => {
             if (res.confirm) {
               api.logout()
-              this.setData({ isLoggedIn: false, userInfo: null, showSettingsPage: false })
+              wx.removeStorageSync('guideCompleted')
+              this.setData({ isLoggedIn: false, userInfo: null, showSettingsPage: false, showGuide: true, guideStep: 0 })
               wx.showToast({ title: '已退出登录', icon: 'success' })
             }
           }
@@ -3604,6 +3877,7 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
   },
 
   onExportPeriodTap(e) {
+    playTap()
     const period = parseInt(e.currentTarget.dataset.period)
     this.setData({ exportPeriod: period, exportDateText: this._exportDateTextFor(period) })
   },
@@ -3622,10 +3896,12 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
   },
 
   onExportFormatChange(e) {
+    playTap()
     this.setData({ exportFormatIndex: parseInt(e.detail.value) })
   },
 
   onExportPickerChange(e) {
+    playTap()
     const val = e.detail.value
     const { exportPeriod } = this.data
     if (exportPeriod === 0) {
@@ -3641,6 +3917,7 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
 
   // 季度多列：列变更只记年份
   onExportQuarterColumnChange(e) {
+    playTap()
     const { column, value } = e.detail
     if (column === 0) {
       const year = this.data.reportQuarterRange[0][value]
@@ -3650,6 +3927,7 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
 
   // 季度多列：确认
   onExportQuarterChange(e) {
+    playTap()
     let [yearIdx, quarterIdx] = e.detail.value
     const year = this.data.reportQuarterRange[0][yearIdx]
     const now = new Date()
@@ -3666,6 +3944,7 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
   },
 
   onExportPersonalToggle(e) {
+    playTap()
     const { key } = e.currentTarget.dataset
     const items = this.data.exportPersonalItems.map(item =>
       item.key === key ? { ...item, checked: !item.checked } : item
@@ -3675,6 +3954,7 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
   },
 
   onExportCompanyToggle(e) {
+    playTap()
     const { key } = e.currentTarget.dataset
     const items = this.data.exportCompanyItems.map(item =>
       item.key === key ? { ...item, checked: !item.checked } : item
@@ -3684,18 +3964,22 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
   },
 
   onExportPersonalAllToggle() {
+    playTap()
     const all = !this.data.exportPersonalAll
     const items = this.data.exportPersonalItems.map(item => ({ ...item, checked: all }))
     this.setData({ exportPersonalAll: all, exportPersonalItems: items })
   },
 
   onExportCompanyAllToggle() {
+    playTap()
     const all = !this.data.exportCompanyAll
     const items = this.data.exportCompanyItems.map(item => ({ ...item, checked: all }))
     this.setData({ exportCompanyAll: all, exportCompanyItems: items })
   },
 
   onCompanyShareEntry() {
+    playTap()
+    this._onSpotlightAction()
     const saved = api.getCompanyInfo()
     if (saved) {
       this.setData({
@@ -3712,6 +3996,7 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
   },
 
   onCompanyShareBack() {
+    playTap()
     const step = this.data.companyShareStep
     if (step === 2) {
       this.setData({ showCompanyShare: false })
@@ -3723,11 +4008,15 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
   },
 
   onBossTap() {
+    playTap()
     this.setData({ companyShareStep: 1, companyRole: 'boss', companyUid: '', companyName: '', companyBossTitle: '' })
+    this._onSpotlightAction()
   },
 
   onEmployeeTap() {
+    playTap()
     this.setData({ companyShareStep: 1, companyRole: 'employee', employeeUid: '' })
+    this._onSpotlightAction()
   },
 
   onEmployeeUidInput(e) {
@@ -3735,6 +4024,7 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
   },
 
   onEmployeeJoin() {
+    playTap()
     const { employeeUid } = this.data
     if (!employeeUid.trim()) {
       wx.showToast({ title: '请输入公司 UID 码', icon: 'none' })
@@ -3758,11 +4048,13 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
   },
 
   onCreateUid() {
+    playTap()
     const uid = 'UID' + Date.now().toString(36).toUpperCase().slice(-8)
     this.setData({ companyUid: uid })
   },
 
   onCompanyCreate() {
+    playTap()
     const { companyUid, companyName, companyBossTitle } = this.data
     if (!companyUid) {
       wx.showToast({ title: '请先生成 UID', icon: 'none' })
@@ -3780,6 +4072,7 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
   },
 
   onShareCompany() {
+    playTap()
     // 占位实现：先做「一键复制 UID」，完整分享功能后续再做
     const uid = this.data.companyUid || ((api.getCompanyInfo() || {}).companyUid) || ''
     if (!uid) {
@@ -3794,6 +4087,7 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
   },
 
   onCatTabChange(e) {
+    playTap()
     const { scope, tab } = e.currentTarget.dataset
     if (scope === 'personal') {
       this.setData({ catTabPersonal: tab })
@@ -3803,6 +4097,7 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
   },
 
   onAddCategory(e) {
+    playTap()
     const { scope } = e.currentTarget.dataset
     this.setData({
       showCatModal: true,
@@ -3813,6 +4108,7 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
   },
 
   onCatModalClose() {
+    playTap()
     this.setData({ showCatModal: false })
   },
 
@@ -3821,10 +4117,12 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
   },
 
   onCatModalPickEmoji(e) {
+    playTap()
     this.setData({ catModalEmoji: e.currentTarget.dataset.emoji })
   },
 
   onCatModalConfirm() {
+    playTap()
     const { catModalScope, catModalName, catModalEmoji } = this.data
     const name = catModalName.trim()
     if (!name) {
@@ -3855,6 +4153,7 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
   },
 
   onDeleteCategory(e) {
+    playTap()
     const { id, scope } = e.currentTarget.dataset
     const that = this
     wx.showModal({
@@ -3873,6 +4172,7 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
 
   // ---- 自定义简览页 ----
   onCustomOverviewEntry() {
+    playTap()
     const saved = api.getOverviewCards()
     const templates = this.data.customTemplates
     this.setData({
@@ -3918,12 +4218,13 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
   },
 
   onExitEditMode() {
+    playTap()
     api.saveOverviewCards(this.data.customCards)
-    this.setData({ showCustomOverview: false, showOverview: false, currentTab: 4, tabSlideDir: 'slide-right' })
-    setTimeout(() => this.setData({ tabSlideDir: '' }), 400)
+    this.setData({ showCustomOverview: false, showOverview: false, currentTab: 4 })
   },
 
   onAddCustomCard(e) {
+    playTap()
     const templateId = e.currentTarget.dataset.id
     const template = this.data.customTemplates.find(t => t.id === templateId)
     if (!template) return
@@ -3933,7 +4234,7 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
     // 计算新卡片位置：放在已有卡片下方
     const maxY = cards.reduce((m, c) => Math.max(m, (c.y || 0) + rowH), 0)
     const newCard = {
-      id: `c_${Date.now()}`,
+      id: `c_${api.generateId()}`,
       templateId: template.id,
       name: template.name,
       subtitle: template.subtitle,
@@ -3981,6 +4282,7 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
   },
 
   onRemoveCustomCard(e) {
+    playTap()
     const id = e.currentTarget.dataset.id
     const idx = this.data.customCards.findIndex(c => c.id === id)
     if (idx < 0) return
@@ -4098,7 +4400,7 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
     }
     if (hover >= 0 && draggingTemplate && showSlotModal) {
       const newCard = {
-        id: `c_${Date.now()}`,
+        id: `c_${api.generateId()}`,
         templateId: draggingTemplate.id,
         name: draggingTemplate.name,
         subtitle: draggingTemplate.subtitle,
@@ -4153,6 +4455,7 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
   },
 
   onSlotConfirm() {
+    playTap()
     const { slotCards } = this.data
     const ordered = []
     for (let i = 0; i < 3; i++) {
@@ -4182,6 +4485,7 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
   },
 
   onSlotCancel() {
+    playTap()
     const empty = [null, null, null]
     this.setData({
       showSlotModal: false,
@@ -4220,6 +4524,7 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
 
   // ---- 模版点击 → 弹窗 + 拖拽 ----
   onTemplateTap(e) {
+    playTap()
     if (this.data.showPopup) return
     const id = e.currentTarget.dataset.id
     if (!id) return
@@ -4324,7 +4629,7 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
           })
           return
         }
-        const newId = `c_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`
+        const newId = `c_${api.generateId()}`
         const newCard = {
           id: newId,
           templateId: template.id,
@@ -4368,6 +4673,7 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
   },
 
   onPopupClose() {
+    playTap()
     this.setData({
       showPopup: false,
       ghostDrag: { visible: false, x: 0, y: 0, templateId: '', name: '', slotHover: -1, template: null },
@@ -4376,13 +4682,239 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
 
   // ---- 登录/注册 ----
   onLoginEntry() {
+    playTap()
     this.setData({ showLoginPage: true })
+    this._onSpotlightAction()
   },
 
   onLoginBack() {
+    playTap()
     this.setData({ showLoginPage: false })
   },
 
+  onWxLogin() {
+    playTap()
+    wx.login({
+      success: (loginRes) => {
+        if (!loginRes.code) {
+          wx.showToast({ title: '登录失败', icon: 'none' })
+          return
+        }
+        api.loginByWechat({ code: loginRes.code }).then(result => {
+          const userInfo = { nickName: result.nickName, avatarUrl: result.avatarUrl, updatedAt: result.updatedAt }
+          this.setData({ isLoggedIn: true, userInfo, showLoginPage: false })
+          if (result.isNew) {
+            this.setData({ showProfileModal: true, profileEditMode: false, profileName: '', profileAvatarLocal: '', profileAvatarUrl: '' })
+          } else {
+            this._refreshAvatarDisplay(userInfo)
+          }
+          wx.showToast({ title: '登录成功', icon: 'success' })
+          api.syncFromCloud().then((syncResult) => {
+            if (syncResult && syncResult.hasConflicts) { this._handleSyncResult(syncResult); return }
+            this.initDetailItems()
+            this._syncOverviewCards()
+            const su = api.getUserInfo()
+            if (su) this.setData({ userInfo: su })
+            this._refreshAvatarDisplay(su)
+            api.getVipStatus().then(function (s) { this.setData({ vipStatus: s, vipTrialDays: this._computeTrialDays(s), vipExpiresText: this._formatVipExpiry(s) }) }.bind(this)).catch(function () {})
+            this.updateNotifyBadge()
+            this.updateAuditBadge()
+          })
+        }).catch((err) => {
+          const msg = (err && err.error) || '登录失败'
+          wx.showToast({ title: msg, icon: 'none', duration: 3000 })
+        })
+      },
+      fail: () => {
+        wx.showToast({ title: '登录失败', icon: 'none' })
+      }
+    })
+  },
+
+  onLogout() {
+    playTap()
+    wx.showModal({
+      title: '退出登录',
+      content: '确定要退出登录吗？',
+      success: (res) => {
+        if (res.confirm) {
+          api.logout().then(() => {
+            this.setData({
+              isLoggedIn: false,
+              userInfo: null,
+              detailItems: [],
+              detailGroups: [],
+              settleItems: [],
+              showGuide: true,
+              guideStep: 0,
+            })
+            wx.clearStorageSync()
+            wx.showToast({ title: '已退出登录', icon: 'none' })
+          })
+        }
+      }
+    })
+  },
+
+  // ========== 聚光引导（product tour） ==========
+  _startSpotlight(type) {
+    const keyMap = { first: 'spotlightFirstSteps', tutorial: 'spotlightTutorialSteps', role: 'spotlightRoleSteps' }
+    const stepsKey = keyMap[type] || 'spotlightTutorialSteps'
+    const steps = this.data[stepsKey] || []
+    const firstCfg = steps[0] || {}
+    const setup = {}
+    if (firstCfg.autoSwitchTab != null) {
+      this._setTabUI(firstCfg.autoSwitchTab, false)
+      this._loadTabData(firstCfg.autoSwitchTab)
+    }
+    if (firstCfg.autoShowCompanyShare) {
+      setup.showCompanyShare = true
+      setup.companyShareStep = 0
+    }
+    this.setData({
+      showSpotlightGuide: true,
+      spotlightType: type,
+      spotlightStep: 0,
+      spotlightTotalSteps: steps.length,
+      spotlightStepConfig: firstCfg,
+      spotlightTargetRect: null,
+      showBookPopup: false,   // 确保引导期间弹窗状态干净
+      ...setup,
+    })
+    // 延迟计算第一个目标的 rect
+    const delay = firstCfg.autoSwitchTab != null ? 500 : 350
+    setTimeout(() => this._calcSpotlightTargetRect(), delay)
+  },
+
+  _advanceSpotlight() {
+    const next = this.data.spotlightStep + 1
+    const keyMap = { first: 'spotlightFirstSteps', tutorial: 'spotlightTutorialSteps', role: 'spotlightRoleSteps' }
+    const stepsKey = keyMap[this.data.spotlightType] || 'spotlightTutorialSteps'
+    const steps = this.data[stepsKey] || []
+    if (next >= steps.length) {
+      this._completeSpotlight()
+      return
+    }
+    const cfg = steps[next] || {}
+    // 如果步骤需要自动切换到指定 tab
+    if (cfg.autoSwitchTab != null) {
+      this._setTabUI(cfg.autoSwitchTab, false)
+      this._loadTabData(cfg.autoSwitchTab)
+      this.setData({ showLedgerPage: false })  // 关闭账本页，切到 tab 内容
+    }
+    // 账本页滚动定位
+    if (cfg.scrollTo) {
+      this.setData({ ledgerScrollTo: cfg.scrollTo })
+      setTimeout(() => this.setData({ ledgerScrollTo: '' }), 600)
+    }
+    // 演示数据
+    if (cfg.setupDemo) {
+      this._showLedgerDemo()
+    }
+    // 自动打开公司身份选择卡片
+    const setup = {}
+    if (cfg.autoShowCompanyShare) {
+      setup.showCompanyShare = true
+      setup.companyShareStep = 0
+    }
+    // 自动打开记账弹窗
+    if (cfg.autoOpenBook) {
+      const now = new Date()
+      const date = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
+      const td = this._getBookTargetDefaults('personal', 'expense')
+      this.setData({
+        showBookPopup: true,
+        bookPhoto: '',
+        'bookForm.type': 'expense',
+        'bookForm.amount': '',
+        'bookForm.category': '',
+        'bookForm.date': date,
+        'bookForm.note': '',
+        'bookForm.target': td.target,
+        'bookForm.targetType': td.targetType,
+        bookTypeLabel: '支出',
+        bookScope: 'personal',
+        bookScopeLabel: '个人',
+      })
+      // 记账弹窗需要渲染时间，延迟计算 rect
+    }
+    this.setData({
+      spotlightStep: next,
+      spotlightStepConfig: cfg,
+      spotlightTargetRect: null,
+      ...setup,
+    })
+    // welcome 页不需要计算 rect
+    if (cfg.type !== 'welcome') {
+      // 带 autoSwitchTab 的步骤延迟更久，等 tab 切换渲染完成
+      const delay = cfg.autoSwitchTab != null ? 500 : (cfg.autoOpenBook ? 450 : (cfg.scrollTo ? 600 : 350))
+      setTimeout(() => this._calcSpotlightTargetRect(), delay)
+    }
+  },
+
+  _calcSpotlightTargetRect() {
+    const cfg = this.data.spotlightStepConfig
+    if (!cfg || !cfg.targetSelector) return
+    const query = wx.createSelectorQuery()
+    query.select(cfg.targetSelector).boundingClientRect((rect) => {
+      if (rect && rect.width > 0) {
+        this.setData({ spotlightTargetRect: rect })
+      }
+    }).exec()
+  },
+
+  onSpotlightNext() {
+    playTap()
+    this._advanceSpotlight()
+  },
+
+  onSpotlightSkip() {
+    playTap()
+    this._completeSpotlight()
+  },
+
+  onSpotlightWelcomeNext() {
+    playTap()
+    this._advanceSpotlight()
+  },
+
+  _completeSpotlight() {
+    const type = this.data.spotlightType
+    if (type === 'tutorial') {
+      wx.setStorageSync('opGuideCompleted', true)
+      // 教程结束 → 进入角色选择（已有引导页）
+      this.setData({
+        showSpotlightGuide: false,
+        spotlightType: '',
+        spotlightStep: 0,
+        spotlightStepConfig: {},
+        spotlightTargetRect: null,
+        showBookPopup: false,
+        showBookCatPanel: false,
+        showGuide: true,
+        guideStep: 2,
+      })
+    } else {
+      this.setData({
+        showSpotlightGuide: false,
+        spotlightType: '',
+        spotlightStep: 0,
+        spotlightStepConfig: {},
+        spotlightTargetRect: null,
+      })
+    }
+  },
+
+  /** 页面侧调用：用户操作了被引导的目标元素，推进引导 */
+  _onSpotlightAction() {
+    const cfg = this.data.spotlightStepConfig
+    if (this.data.showSpotlightGuide && cfg && cfg.showNext === false) {
+      playTap()
+      this._advanceSpotlight()
+    }
+  },
+
+  // ========== 手机号登录（引导中） ==========
   onLoginPhoneInput(e) {
     this.setData({ loginPhone: e.detail.value })
   },
@@ -4419,126 +4951,9 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
     }, 1000)
   },
 
-  onPhoneLogin() {
-    const { loginPhone, loginCode } = this.data
-    if (!/^1[3-9]\d{9}$/.test(loginPhone)) {
-      wx.showToast({ title: '请输入正确的手机号', icon: 'none' })
-      return
-    }
-    if (loginCode.length !== 6) {
-      wx.showToast({ title: '请输入6位验证码', icon: 'none' })
-      return
-    }
-    api.loginByPhone(loginPhone, loginCode).then(result => {
-      const userInfo = { nickName: result.nickName, avatarUrl: result.avatarUrl }
-      this.setData({ isLoggedIn: true, userInfo, showLoginPage: false, loginPhone: '', loginCode: '' })
-      // 用后端 isNew 替代前端脱敏手机号启发式判定
-      if (result.isNew) {
-        this.setData({ showProfileModal: true, profileEditMode: false, profileName: '', profileAvatarLocal: '', profileAvatarUrl: '' })
-      } else {
-        this._refreshAvatarDisplay(userInfo)
-      }
-      wx.showToast({ title: '登录成功', icon: 'success' })
-      // 登录后从云端同步数据（异步，不阻塞后续操作）
-      api.syncFromCloud().then((result) => {
-        if (result && result.hasConflicts) { this._handleSyncResult(result); return }
-        this.initDetailItems()
-        // 后端权威 companyInfo 落地后重建简览卡：boss 此时才会出现公司账本
-        this._syncOverviewCards()
-        // 把拉到的最新 userInfo 刷到页面 + 重新加载头像（跨端改了头像/昵称这里才更新）
-        const su = api.getUserInfo()
-        if (su) this.setData({ userInfo: su })
-        this._refreshAvatarDisplay(su)
-        // 登录后拉取 VIP 状态
-        api.getVipStatus().then(function (s) { this.setData({ vipStatus: s, vipTrialDays: this._computeTrialDays(s), vipExpiresText: this._formatVipExpiry(s) }) }.bind(this)).catch(function () {})
-      })
-    }).catch(() => {
-      wx.showToast({ title: '登录失败', icon: 'none' })
-    })
-  },
-
-  onWxLogin(e) {
-    if (e.detail.userInfo) {
-      api.loginByWechat(e.detail.userInfo).then(result => {
-        const userInfo = { nickName: result.nickName, avatarUrl: result.avatarUrl }
-        this.setData({ isLoggedIn: true, userInfo, showLoginPage: false })
-        if (result.isNew) {
-          this.setData({ showProfileModal: true, profileEditMode: false, profileName: '', profileAvatarLocal: '', profileAvatarUrl: '' })
-        } else {
-          this._refreshAvatarDisplay(userInfo)
-        }
-        wx.showToast({ title: '登录成功', icon: 'success' })
-        // 登录后从云端同步数据（异步，不阻塞后续操作）
-        api.syncFromCloud().then((result) => {
-        if (result && result.hasConflicts) { this._handleSyncResult(result); return }
-          this.initDetailItems()
-          // 后端权威 companyInfo 落地后重建简览卡：boss 此时才会出现公司账本
-          this._syncOverviewCards()
-          // 把拉到的最新 userInfo 刷到页面 + 重新加载头像（跨端改了头像/昵称这里才更新）
-          const su = api.getUserInfo()
-          if (su) this.setData({ userInfo: su })
-          this._refreshAvatarDisplay(su)
-          // 登录后拉取 VIP 状态
-          api.getVipStatus().then(function (s) { this.setData({ vipStatus: s, vipTrialDays: this._computeTrialDays(s), vipExpiresText: this._formatVipExpiry(s) }) }.bind(this)).catch(function () {})
-        })
-      }).catch(() => {
-        wx.showToast({ title: '登录失败', icon: 'none' })
-      })
-    } else {
-      wx.showToast({ title: '授权已取消', icon: 'none' })
-    }
-  },
-
-  onLogout() {
-    wx.showModal({
-      title: '退出登录',
-      content: '确定要退出登录吗？',
-      success: (res) => {
-        if (res.confirm) {
-          api.logout().then(() => {
-            this.setData({
-              isLoggedIn: false,
-              userInfo: null,
-              detailItems: [],
-              detailGroups: [],
-              settleItems: [],
-            })
-            // 清除全部本地数据，防止换号残留
-            wx.clearStorageSync()
-            wx.showToast({ title: '已退出登录', icon: 'none' })
-          })
-        }
-      }
-    })
-  },
-
-  // ========== 首次引导 ==========
-  onGuideNext() {
-    this.setData({ guideStep: this.data.guideStep + 1 })
-  },
-
-  onGuideSkipLogin() {
-    // 移除开发后门
-    
-  },
-
-  onGuideBack() {
-    this.setData({ guideStep: 2, guideRole: '' })
-  },
-
-  onGuideRole(e) {
-    const role = e.currentTarget.dataset.role
-    this.setData({ guideRole: role, guideStep: 3 })
-    if (role === 'boss') {
-      const uid = 'UID' + Date.now().toString(36).toUpperCase().slice(-8)
-      this.setData({ companyUid: uid })
-    }
-  },
-
   onGuidePhoneLogin() {
+    playTap()
     const { loginPhone, loginCode } = this.data
-
-
     if (!/^1[3-9]\d{9}$/.test(loginPhone)) {
       wx.showToast({ title: '请输入正确的手机号', icon: 'none' })
       return
@@ -4556,68 +4971,103 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
         this._refreshAvatarDisplay(userInfo)
       }
       wx.showToast({ title: '登录成功', icon: 'success' })
-      // 异步同步云端数据（不阻塞身份判定）
-      api.syncFromCloud().then((result) => {
-        if (result && result.hasConflicts) { this._handleSyncResult(result); return }
+      api.syncFromCloud().then((syncResult) => {
+        if (syncResult && syncResult.hasConflicts) { this._handleSyncResult(syncResult); return }
         const ci = api.getCompanyInfo()
         if (ci && ci.companyUid) this.setData({ companyUid: ci.companyUid })
         this.initDetailItems()
-        // 后端权威 companyInfo 落地后重建简览卡：boss 此时才会出现公司账本
         this._syncOverviewCards()
-        // 把拉到的最新 userInfo 刷到页面 + 重新加载头像（跨端改了头像/昵称这里才更新）
         const su = api.getUserInfo()
         if (su) this.setData({ userInfo: su })
         this._refreshAvatarDisplay(su)
       })
-      // 同一账号：后端已返回 hasCompany → 跳过身份引导，老用户不再被重复询问
       if (result.hasCompany) {
         this.onGuideComplete()
       } else {
-        this.setData({ guideStep: 2 })
+        this.setData({ showGuide: false })
+        setTimeout(() => this._startSpotlight('tutorial'), 400)
       }
     }).catch(() => {
       wx.showToast({ title: '登录失败', icon: 'none' })
     })
   },
 
-  onGuideWxLogin(e) {
-    if (e.detail.userInfo) {
-      api.loginByWechat(e.detail.userInfo).then(async result => {
-        const userInfo = { nickName: result.nickName, avatarUrl: result.avatarUrl }
-        this.setData({ isLoggedIn: true, userInfo })
-        if (result.isNew) {
-          this.setData({ showProfileModal: true, profileEditMode: false, profileName: '', profileAvatarLocal: '', profileAvatarUrl: '' })
-        } else {
-          this._refreshAvatarDisplay(userInfo)
-        }
-        wx.showToast({ title: '登录成功', icon: 'success' })
-        // 异步同步云端数据（不阻塞身份判定）
-        api.syncFromCloud().then((result) => {
-        if (result && result.hasConflicts) { this._handleSyncResult(result); return }
-          const ci = api.getCompanyInfo()
-          if (ci && ci.companyUid) this.setData({ companyUid: ci.companyUid })
-          this.initDetailItems()
-          // 后端权威 companyInfo 落地后重建简览卡：boss 此时才会出现公司账本
-          this._syncOverviewCards()
-          // 把拉到的最新 userInfo 刷到页面 + 重新加载头像（跨端改了头像/昵称这里才更新）
-          const su = api.getUserInfo()
-          if (su) this.setData({ userInfo: su })
-          this._refreshAvatarDisplay(su)
-        })
-        if (result.hasCompany) {
-          this.onGuideComplete()
-        } else {
-          this.setData({ guideStep: 2 })
-        }
-      }).catch(() => {
-        wx.showToast({ title: '登录失败', icon: 'none' })
-      })
-    } else {
-      wx.showToast({ title: '授权已取消', icon: 'none' })
+  // ========== 首次引导 ==========
+  onGuideNext() {
+    playTap()
+    this.setData({ guideStep: this.data.guideStep + 1 })
+  },
+
+  onGuideSkipLogin() {
+    playTap()
+    // 移除开发后门
+
+  },
+
+  onGuideBack() {
+    playTap()
+    this.setData({ guideStep: 2, guideRole: '' })
+  },
+
+  onGuideRole(e) {
+    playTap()
+    const role = e.currentTarget.dataset.role
+    this.setData({ guideRole: role, guideStep: 3 })
+    if (role === 'boss') {
+      const uid = 'UID' + Date.now().toString(36).toUpperCase().slice(-8)
+      this.setData({ companyUid: uid })
     }
   },
 
+  onGuideWxLogin() {
+    playTap()
+    wx.login({
+      success: (loginRes) => {
+        if (!loginRes.code) {
+          wx.showToast({ title: '登录失败', icon: 'none' })
+          return
+        }
+        api.loginByWechat({ code: loginRes.code }).then(async result => {
+          const userInfo = { nickName: result.nickName, avatarUrl: result.avatarUrl, updatedAt: result.updatedAt }
+          this.setData({ isLoggedIn: true, userInfo })
+          const needProfile = result.isNew || !result.avatarUrl || result.nickName === '微信用户'
+          if (needProfile) {
+            this.setData({ showProfileModal: true, profileEditMode: false, profileName: '', profileAvatarLocal: '', profileAvatarUrl: '' })
+          } else {
+            this._refreshAvatarDisplay(userInfo)
+          }
+          wx.showToast({ title: '登录成功', icon: 'success' })
+          api.syncFromCloud().then((syncResult) => {
+            if (syncResult && syncResult.hasConflicts) { this._handleSyncResult(syncResult); return }
+            const ci = api.getCompanyInfo()
+            if (ci && ci.companyUid) this.setData({ companyUid: ci.companyUid })
+            this.initDetailItems()
+            this._syncOverviewCards()
+            const su = api.getUserInfo()
+            if (su) this.setData({ userInfo: su })
+            this._refreshAvatarDisplay(su)
+            this.updateNotifyBadge()
+            this.updateAuditBadge()
+          })
+          // DEBUG: 始终走完整流程
+          if (!needProfile) {
+            this.setData({ showGuide: false })
+            setTimeout(() => this._startSpotlight('tutorial'), 400)
+          }
+          // needProfile 时由 onProfileSave 触发教程
+        }).catch((err) => {
+          const msg = (err && err.error) || '登录失败'
+          wx.showToast({ title: msg, icon: 'none', duration: 3000 })
+        })
+      },
+      fail: () => {
+        wx.showToast({ title: '登录失败', icon: 'none' })
+      }
+    })
+  },
+
   onGuideCompanyCreate() {
+    playTap()
     const { companyUid, companyName, companyBossTitle } = this.data
     if (!companyUid) {
       wx.showToast({ title: '请先生成 UID', icon: 'none' })
@@ -4634,6 +5084,7 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
   },
 
   onGuideEmployeeJoin() {
+    playTap()
     const { employeeUid } = this.data
     if (!employeeUid.trim()) {
       wx.showToast({ title: '请输入公司 UID', icon: 'none' })
@@ -4649,10 +5100,62 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
   },
 
   onGuideComplete() {
+    playTap()
     wx.setStorageSync('guideCompleted', true)
     this.setData({ showGuide: false })
     this.initDetailItems()
     this._syncOverviewCards()
+    // 引导完成 → 语音记账操作提示
+    if (!wx.getStorageSync('voiceTipShown')) {
+      setTimeout(() => this.setData({ showVoiceTip: true }), 600)
+    }
+  },
+
+  onVoiceTipDismiss() {
+    playTap()
+    wx.setStorageSync('voiceTipShown', true)
+    this.setData({ showVoiceTip: false })
+  },
+
+  /** 弹出 VIP 专享额度弹窗 */
+  _showVipLimitDialog(type) {
+    var label = type === 'asr' ? '语音记账' : (type === 'ocr' ? '凭证扫描' : (type === 'export' ? '账单导出' : '该'))
+    wx.showModal({
+      title: '会员专享额度',
+      content: label + '功能是会员专享额度，当前免费额度已用完，请开通会员享受不限次使用。',
+      confirmText: '订阅升级服务',
+      cancelText: '暂不升级',
+      success: (res) => {
+        if (res.confirm) this.onVipEntry()
+      }
+    })
+  },
+
+  // ========== 操作教程（虚拟账本演示） ==========
+  onOpGuideNext() {
+    playTap()
+    var next = this.data.opGuideStep + 1
+    if (next >= 7) { this.onOpGuideComplete(); return }
+    this.setData({ opGuideStep: next })
+  },
+  onOpGuidePrev() {
+    playTap()
+    if (this.data.opGuideStep > 0) this.setData({ opGuideStep: this.data.opGuideStep - 1 })
+  },
+  onOpGuideSkip() {
+    playTap()
+    this.onOpGuideComplete()
+  },
+  onOpGuideComplete() {
+    playTap()
+    wx.setStorageSync('opGuideCompleted', true)
+    var after = this.data._opGuideAfter
+    if (after === 'role') {
+      // 先切步再关教程，避免闪过登录页
+      this.setData({ guideStep: 2, showOpGuide: false, _opGuideAfter: '' })
+    } else {
+      this.setData({ showOpGuide: false, _opGuideAfter: '' })
+    }
   },
 
   // ---- 拓展菜单 ----
@@ -4660,18 +5163,20 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
   _redrawReportCharts() {
     var d = this.data
     if (d.currentTab !== 1) return
-    if (d.showExpandMenu || d.showCamera || d.scanRecognizing || d.showBookPopup || d.modalItem || d.showAiChat || d.aiRecording || d.searchRecording) return
+    if (d.showExpandMenu || d.showCamera || d.scanRecognizing || d.showBookPopup || d.modalItem || d.showChat || d.chatRecording || d.searchRecording) return
     setTimeout(() => {
       this._drawCurrentChart()
     }, 300)
   },
 
   onExpandMenuTap() {
+    playTap()
     this.setData({ showExpandMenu: !this.data.showExpandMenu })
     if (!this.data.showExpandMenu) this._redrawReportCharts()
   },
 
   onExpandMenuItem(e) {
+    playTap()
     this.setData({ showExpandMenu: false })
     var action = e.currentTarget.dataset.action
     var _this = this
@@ -4680,19 +5185,19 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
     } else if (action === 'category') {
       this.setData({ currentTab: 4, showOverview: false })
       this.onCustomCategoryEntry()
-    } else if (action === 'ai') {
+    } else if (action === 'chat') {
       var greeting = {
-        role: 'ai',
-        text: '你好！我是你的 AI 记账助手\n\n试试对我说：\n• "午餐 25"\n• "打车 15 交通"\n• "收到工资 8000"',
+        role: 'assistant',
+        text: '你好！我是你的 语音记账助手\n\n试试对我说：\n• "午餐 25"\n• "打车 15 交通"\n• "收到工资 8000"',
         time: this._formatChatTime(new Date())
       }
       this.setData({
-        showAiChat: true,
-        aiMessages: [greeting],
-        aiInputText: '',
-        aiThinking: false,
-        aiScrollTop: 999999,
-        aiVoiceMode: false
+        showChat: true,
+        chatMessages: [greeting],
+        chatInputText: '',
+        chatThinking: false,
+        chatScrollTop: 999999,
+        chatVoiceMode: false
       })
     }
   },
@@ -4703,6 +5208,7 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
     this.initDetailItems() // 输入即时过滤明细列表（setData 后 this.data.searchText 已同步更新）
   },
   onHeaderSearch() {
+    playTap()
     // 搜索栏是全局顶栏：点确认跳到明细页(tab 0)并按 searchText 过滤；switchTab 内部会 initDetailItems
     this.switchTab({ currentTarget: { dataset: { index: 0 } } })
   },
@@ -4717,11 +5223,13 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
 
   // ---- 相机扫描 ----
   onCameraClose() {
+    playTap()
     this.setData({ showCamera: false })
     this._redrawReportCharts()
   },
 
   onCameraShoot() {
+    playTap()
     var _this = this
     var ctx = wx.createCameraContext()
     ctx.takePhoto({
@@ -4737,6 +5245,7 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
   },
 
   onCameraAlbum() {
+    playTap()
     var _this = this
     wx.chooseMedia({
       count: 1, mediaType: ['image'], sourceType: ['album'], sizeType: ['compressed'],
@@ -4770,7 +5279,7 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
     }).then((result) => {
       if (!result) throw { error: '识别结果为空' }
       this.setData({ scanRecognizing: false })
-      // 多笔：打开 AI 对话窗，卡片队列逐条确认
+      // 多笔：打开 语音对话窗，卡片队列逐条确认
       if (result.items && result.items.length > 1) {
         this._openOcrReview(result.items, photo)
         return
@@ -4787,12 +5296,16 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
       })
     }).catch((err) => {
       this.setData({ scanRecognizing: false })
-      var msg = (err && err.error) || (err && err.message) || (err && err.errMsg) || '识别失败'
-      wx.showToast({ title: msg, icon: 'none' })
+      if ((err && err.error) === 'usage_limit') {
+        this._showVipLimitDialog('ocr')
+      } else {
+        var msg = (err && err.error) || (err && err.message) || (err && err.errMsg) || '识别失败'
+        wx.showToast({ title: msg, icon: 'none' })
+      }
     })
   },
 
-  // OCR 多笔结果 → AI 卡片队列确认
+  // OCR 多笔结果 → 语音卡片队列确认
   _openOcrReview(items, photo) {
     var that = this
     var now = new Date()
@@ -4802,7 +5315,7 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
 
     // 欢迎语
     msgs.push({
-      role: 'ai',
+      role: 'assistant',
       text: '识别到 ' + items.length + ' 笔账单，请逐笔确认：',
       time: time
     })
@@ -4822,7 +5335,7 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
       var targetIdx = td.target ? this.data.targetOptions.indexOf(td.target) : 2
       if (targetIdx < 0) targetIdx = 2
       msgs.push({
-        role: 'ai',
+        role: 'assistant',
         text: '第 ' + (i + 1) + ' 笔',
         card: {
           category: cat,
@@ -4845,29 +5358,32 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
     }
 
     this.setData({
-      showAiChat: true,
-      aiMessages: msgs,
-      aiInputText: '',
-      aiThinking: false,
-      aiVoiceMode: false,
-      aiScrollTop: 999999
+      showChat: true,
+      chatMessages: msgs,
+      chatInputText: '',
+      chatThinking: false,
+      chatVoiceMode: false,
+      chatScrollTop: 999999
     })
   },
 
   onBookPhotoPreview() {
+    playTap()
     if (this.data.bookPhoto) wx.previewImage({ urls: [this.data.bookPhoto] })
   },
 
   onBookPhotoRemove() {
+    playTap()
     this.setData({ bookPhoto: '' })
   },
 
   onVoucherPreview(e) {
+    playTap()
     var s = e.currentTarget.dataset.src
     if (s) wx.previewImage({ urls: [s] })
   },
 
-  // ---- AI 对话 ----
+  // ---- 语音对话 ----
   // 语音转文字走后端 ASR，前端只负责录音采集 + 上传。
   _ensureRecorder() {
     if (this._recorder) return this._recorder
@@ -4886,10 +5402,10 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
       console.warn('[ASR] 录音错误', JSON.stringify(err))
       that._recorderBusy = false
       var errMsg = (err && err.errMsg) || ''
-      that._aiRecognizeFor = ''
+      that._chatRecognizeFor = ''
       clearTimeout(that._recordTimeout)
       that._recordTimeout = 0
-      that.setData({ aiRecording: false })
+      that.setData({ chatRecording: false })
       if (errMsg.indexOf('auth') >= 0 || errMsg.indexOf('permission') >= 0 || errMsg.indexOf('deny') >= 0) {
         wx.showModal({
           title: '麦克风未授权',
@@ -4914,8 +5430,8 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
     // 防重复调用
     if (this._asrPending) return
     if (!tempFilePath) {
-      this._aiRecognizeFor = ''
-      this.setData({ aiRecording: false })
+      this._chatRecognizeFor = ''
+      this.setData({ chatRecording: false })
       console.log('[ASR] tempFilePath 为空，中止')
       wx.showToast({ title: '没听清，请重试', icon: 'none' })
       return
@@ -4928,10 +5444,14 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
     }).catch(function (err) {
       that._asrPending = false
       console.warn('[ASR] 识别失败', err)
-      that._aiRecognizeFor = ''
-      that.setData({ aiRecording: false })
-      var msg = (err && err.error) || (err && err.message) || (err && err.errMsg) || '识别失败'
-      wx.showToast({ title: msg, icon: 'none' })
+      that._chatRecognizeFor = ''
+      that.setData({ chatRecording: false })
+      if ((err && err.error) === 'usage_limit') {
+        that._showVipLimitDialog('asr')
+      } else {
+        var msg = (err && err.error) || (err && err.message) || (err && err.errMsg) || '识别失败'
+        wx.showToast({ title: msg, icon: 'none' })
+      }
     })
   },
 
@@ -4945,14 +5465,14 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
       return
     }
     var recorder = this._ensureRecorder()
-    this._aiRecognizeFor = forWho
-    this.setData({ aiRecording: true })
+    this._chatRecognizeFor = forWho
+    this.setData({ chatRecording: true })
     // 先检查录音权限，未授权则引导去设置页
     wx.getSetting({
       success: function (s) {
         if (s.authSetting['scope.record'] === false) {
-          that._aiRecognizeFor = ''
-          that.setData({ aiRecording: false })
+          that._chatRecognizeFor = ''
+          that.setData({ chatRecording: false })
           wx.showModal({
             title: '需要录音权限',
             content: '请在设置中开启麦克风权限，否则无法语音记账',
@@ -4982,13 +5502,13 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
       console.log('[ASR] recorder.start 已调用 forWho=' + forWho)
     } catch (e) {
       console.warn('[ASR] recorder.start 异常', e)
-      this._aiRecognizeFor = ''
-      this.setData({ aiRecording: false })
+      this._chatRecognizeFor = ''
+      this.setData({ chatRecording: false })
       return false
     }
     // 手动兜底：15s 后强制停止
     this._recordTimeout = setTimeout(function () {
-      if (that.data.aiRecording) {
+      if (that.data.chatRecording) {
         console.log('[ASR] 15s 兜底超时，强制停止')
         that._stopRecognize()
       }
@@ -5002,7 +5522,7 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
     clearTimeout(this._recordTimeout)
     this._recordTimeout = 0
     // 立即复位 UI，不等 onStop 回调
-    this.setData({ aiRecording: false })
+    this.setData({ chatRecording: false })
     // 尝试停止录音（真机 onStop 回调触发 → ASR 识别 → 打开对话窗）
     if (this._recorder) {
       try { this._recorder.stop() } catch (e) { console.warn('[ASR] stop 异常', e) }
@@ -5010,9 +5530,9 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
     // 兜底：onStop 未触发（开发者工具等）时清理内部状态
     clearTimeout(this._stopFallback)
     this._stopFallback = setTimeout(function () {
-      if (that._aiRecognizeFor) {
+      if (that._chatRecognizeFor) {
         console.log('[ASR] onStop 未触发，残留清理')
-        that._aiRecognizeFor = ''
+        that._chatRecognizeFor = ''
       }
       that._recorderBusy = false
     }, 500)
@@ -5020,17 +5540,17 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
 
   // 识别完成（onStop 异步回调）：按入口分发
   _onRecognizeDone(text) {
-    var who = this._aiRecognizeFor
-    this._aiRecognizeFor = ''
-    this.setData({ aiRecording: false })
+    var who = this._chatRecognizeFor
+    this._chatRecognizeFor = ''
+    this.setData({ chatRecording: false })
     var t = (text || '').trim()
     if (!t) {
       wx.showToast({ title: '没听清，请再说一次', icon: 'none' })
       return
     }
     if (who === 'chat') {
-      this.setData({ aiInputText: t, aiVoiceMode: false })
-      setTimeout(this.onAiSend.bind(this), 200)
+      this.setData({ chatInputText: t })
+      setTimeout(this.onChatSend.bind(this), 200)
     } else {
       console.log('[ASR] tab 入口，打开对话窗')
       this._sendAiUserText(t)
@@ -5041,31 +5561,31 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
   _sendAiUserText(text) {
     const now = new Date()
     const msgs = []
-    if (!this.data.showAiChat || !this.data.aiMessages.length) {
+    if (!this.data.showChat || !this.data.chatMessages.length) {
       msgs.push({
-        role: 'ai',
-        text: '你好！我是你的 AI 记账助手\n\n试试对我说：\n• "午餐 25"\n• "打车 15 交通"\n• "收到工资 8000"',
+        role: 'assistant',
+        text: '你好！我是你的 语音记账助手\n\n试试对我说：\n• "午餐 25"\n• "打车 15 交通"\n• "收到工资 8000"',
         time: this._formatChatTime(now)
       })
     } else {
-      msgs.push.apply(msgs, this.data.aiMessages)
+      msgs.push.apply(msgs, this.data.chatMessages)
     }
     msgs.push({ role: 'user', text, time: this._formatChatTime(now) })
     this.setData({
-      showAiChat: true,
-      aiMessages: msgs,
-      aiInputText: '',
-      aiThinking: true,
-      aiScrollTop: 999999 + (msgs.length - 1)
+      showChat: true,
+      chatMessages: msgs,
+      chatInputText: '',
+      chatThinking: true,
+      chatScrollTop: 999999 + (msgs.length - 1)
     })
     setTimeout(() => {
       const reply = this._mockAiReply(text)
-      const updated = this.data.aiMessages.slice()
+      const updated = this.data.chatMessages.slice()
       updated.push(reply)
       this.setData({
-        aiMessages: updated,
-        aiThinking: false,
-        aiScrollTop: 999999 + (updated.length - 1)
+        chatMessages: updated,
+        chatThinking: false,
+        chatScrollTop: 999999 + (updated.length - 1)
       })
     }, 800)
   },
@@ -5079,24 +5599,24 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
       console.log('[Touch] 判定为长按，打开对话窗 + 开始录音')
       // 打开对话窗
       var greeting = {
-        role: 'ai',
+        role: 'assistant',
         text: '正在聆听…',
         time: that._formatChatTime(new Date())
       }
       that.setData({
-        showAiChat: true,
-        aiMessages: [greeting],
-        aiInputText: '',
-        aiThinking: false,
-        aiScrollTop: 999999,
-        aiVoiceMode: true
+        showChat: true,
+        chatMessages: [greeting],
+        chatInputText: '',
+        chatThinking: false,
+        chatScrollTop: 999999,
+        chatVoiceMode: true
       })
       that._startRecognize('tab')
     }, 250)
   },
 
   onTabCenterTouchEnd() {
-    console.log('[Touch] touchend isHolding=' + this._isHoldingTab + ' timer=' + !!this._tabHoldTimer + ' recording=' + this.data.aiRecording)
+    console.log('[Touch] touchend isHolding=' + this._isHoldingTab + ' timer=' + !!this._tabHoldTimer + ' recording=' + this.data.chatRecording)
     if (this._tabHoldTimer) {
       console.log('[Touch] 短按，切tab')
       clearTimeout(this._tabHoldTimer)
@@ -5105,18 +5625,19 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
     } else if (this._isHoldingTab) {
       console.log('[Touch] 长按松手，停止录音')
       this._isHoldingTab = false
-      if (this.data.aiRecording) this._stopRecognize()
+      if (this.data.chatRecording) this._stopRecognize()
     }
   },
 
-  onAiOverlayTouchEnd() {
+  onChatOverlayTouchEnd() {
     // 录音中任意位置松手 → 立即停止
-    if (this.data.aiRecording) this._stopRecognize()
+    if (this.data.chatRecording) this._stopRecognize()
   },
 
-  onAiOverlayTap() {
+  onChatOverlayTap() {
+    playTap()
     // 录音中点按遮罩 → 停止录音（不关窗口，等识别结果）
-    if (this.data.aiRecording) {
+    if (this.data.chatRecording) {
       this._stopRecognize()
     } else {
       this.onAiChatClose()
@@ -5124,14 +5645,16 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
   },
 
   onAiChatClose() {
-    if (this.data.aiRecording) this._stopRecognize()
-    this.setData({ showAiChat: false, aiRecording: false })
+    playTap()
+    if (this.data.chatRecording) this._stopRecognize()
+    this.setData({ showChat: false, chatRecording: false })
     this._redrawReportCharts()
   },
 
   onAiBillTap(e) {
+    playTap()
     const idx = e.currentTarget.dataset.idx
-    const msg = this.data.aiMessages[idx]
+    const msg = this.data.chatMessages[idx]
     if (!msg || !msg.card) return
     var scope = msg.card.scope || this.data.bookScope || 'personal'
     var items = api.getItems(scope)
@@ -5143,7 +5666,7 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
     }
     var _aiItems = this._buildDetailList(scope, items)
     this.setData({
-      showAiChat: false,
+      showChat: false,
       currentTab: 0,
       showOverview: false,
       detailItems: _aiItems,
@@ -5152,33 +5675,34 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
     })
   },
 
-  onAiInput(e) {
-    this.setData({ aiInputText: e.detail.value })
+  onChatInput(e) {
+    this.setData({ chatInputText: e.detail.value })
   },
 
-  onAiSend() {
-    const text = this.data.aiInputText.trim()
-    if (!text || this.data.aiThinking) return
+  onChatSend() {
+    playTap()
+    const text = this.data.chatInputText.trim()
+    if (!text || this.data.chatThinking) return
 
-    const msgs = this.data.aiMessages.slice()
+    const msgs = this.data.chatMessages.slice()
     const userMsg = { role: 'user', text, time: this._formatChatTime(new Date()) }
     msgs.push(userMsg)
 
     this.setData({
-      aiMessages: msgs,
-      aiInputText: '',
-      aiThinking: true,
-      aiScrollTop: 999999 + msgs.length
+      chatMessages: msgs,
+      chatInputText: '',
+      chatThinking: true,
+      chatScrollTop: 999999 + msgs.length
     })
 
     setTimeout(() => {
       const reply = this._mockAiReply(text)
-      const updated = this.data.aiMessages.slice()
+      const updated = this.data.chatMessages.slice()
       updated.push(reply)
       this.setData({
-        aiMessages: updated,
-        aiThinking: false,
-        aiScrollTop: 999999 + (updated.length - 1)
+        chatMessages: updated,
+        chatThinking: false,
+        chatScrollTop: 999999 + (updated.length - 1)
       })
     }, 800)
   },
@@ -5294,7 +5818,7 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
     } else {
       var cnMatch = text.match(/[一二三四五六七八九十百千万零两廿卅]+(?:点[一二三四五六七八九零两]+)?/)
       if (!cnMatch) {
-        return { role: 'ai', text: '请问金额是多少？', time: time }
+        return { role: 'assistant', text: '请问金额是多少？', time: time }
       }
       var cnStr = cnMatch[0]
       var dotIdx = cnStr.indexOf('点')
@@ -5453,7 +5977,7 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
     var targetIdx = td.target ? this.data.targetOptions.indexOf(td.target) : 2
     if (targetIdx < 0) targetIdx = 2
     return {
-      role: 'ai',
+      role: 'assistant',
       text: '请确认以下记账信息：',
       fields: {
         verb: verb,
@@ -5483,16 +6007,13 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
     }
   },
 
-  _itemIdSeq: 0,
-
   _saveAiRecord(reply) {
     if (!reply.card) return
     var c = reply.card
     var scope = c.scope || this.data.bookScope || 'personal'
     var typeIsIn = c.typeLabel === '收入'
-    this._itemIdSeq++
     var newItem = {
-      id: Date.now() + this._itemIdSeq,
+      id: api.generateId(),
       category: c.category,
       type: typeIsIn ? 'in' : 'out',
       typeLabel: c.typeLabel,
@@ -5512,53 +6033,57 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
 
 
 	  onAiConfirm(e) {
+    playTap()
 	    const idx = e.currentTarget.dataset.idx
-	    const reply = this.data.aiMessages[idx]
+	    const reply = this.data.chatMessages[idx]
 	    if (!reply || !reply.card) return
 	    this._saveAiRecord(reply)
 	    reply.confirmed = true
-	    const updated = this.data.aiMessages.slice()
+	    const updated = this.data.chatMessages.slice()
 	    updated[idx] = reply
-	    this.setData({ aiMessages: updated })
+	    this.setData({ chatMessages: updated })
 	  },
 
-	  onAiReject(e) {
+	  onChatReject(e) {
+    playTap()
 	    const idx = e.currentTarget.dataset.idx
-	    const reply = this.data.aiMessages[idx]
+	    const reply = this.data.chatMessages[idx]
 	    if (!reply) return
 	    reply.confirmed = false
-	    const updated = this.data.aiMessages.slice()
+	    const updated = this.data.chatMessages.slice()
 	    updated[idx] = reply
 	    updated.push({
-	      role: 'ai',
+	      role: 'assistant',
 	      text: '识别有误？换个说法再试一次吧',
 	      time: this._formatChatTime(new Date())
 	    })
 	    const lastIdx = updated.length - 1
 	    this.setData({
-	      aiMessages: updated,
-	      aiScrollTop: 999999 + lastIdx
+	      chatMessages: updated,
+	      chatScrollTop: 999999 + lastIdx
 	    })
 	  },
-  // ---- AI 卡片四字段编辑 ----
+  // ---- 语音卡片四字段编辑 ----
   onAiCardCatChange(e) {
+    playTap()
     const idx = e.currentTarget.dataset.idx
     const selIdx = parseInt(e.detail.value)
     const cat = this.data.catOptions[selIdx]
-    const updated = this.data.aiMessages.slice()
+    const updated = this.data.chatMessages.slice()
     if (updated[idx] && updated[idx].card) {
       updated[idx].card.category = cat
       updated[idx]._catIdx = selIdx
-      this.setData({ aiMessages: updated })
+      this.setData({ chatMessages: updated })
     }
   },
 
   onAiCardTypeChange(e) {
+    playTap()
     const idx = e.currentTarget.dataset.idx
     const selIdx = parseInt(e.detail.value)
     const label = this.data.typeOptions[selIdx]
     var cssTypeMap = { '支出': 'out', '收入': 'in', '垫付': 'payForward', '应付': 'payable' }
-    const updated = this.data.aiMessages.slice()
+    const updated = this.data.chatMessages.slice()
     if (updated[idx] && updated[idx].card) {
       updated[idx].card.typeLabel = label
       updated[idx].card.type = cssTypeMap[label] || 'out'
@@ -5572,49 +6097,51 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
       updated[idx].card.target = td.target
       updated[idx].card.targetType = td.targetType
       updated[idx]._targetIdx = targetIdx
-      this.setData({ aiMessages: updated })
+      this.setData({ chatMessages: updated })
     }
   },
 
   onAiCardTargetChange(e) {
+    playTap()
     const idx = e.currentTarget.dataset.idx
     const selIdx = parseInt(e.detail.value)
     const label = this.data.targetOptions[selIdx]
-    const updated = this.data.aiMessages.slice()
+    const updated = this.data.chatMessages.slice()
     if (updated[idx] && updated[idx].card) {
       var isInternal = label === '公司' || label === '个人'
       updated[idx].card.target = isInternal ? label : ''
       updated[idx].card.targetType = isInternal ? 'internal' : 'external'
       updated[idx]._targetIdx = selIdx
-      this.setData({ aiMessages: updated })
+      this.setData({ chatMessages: updated })
     }
   },
 
   onAiCardAmountInput(e) {
     const idx = e.currentTarget.dataset.idx
     const val = e.detail.value
-    const updated = this.data.aiMessages.slice()
+    const updated = this.data.chatMessages.slice()
     if (updated[idx] && updated[idx].card) {
       updated[idx].card.amount = val
-      this.setData({ aiMessages: updated })
+      this.setData({ chatMessages: updated })
     }
   },
   onAiCardDateChange(e) {
+    playTap()
     const idx = e.currentTarget.dataset.idx
     const val = e.detail.value
-    const updated = this.data.aiMessages.slice()
+    const updated = this.data.chatMessages.slice()
     if (updated[idx] && updated[idx].card) {
       updated[idx].card.date = val
-      this.setData({ aiMessages: updated })
+      this.setData({ chatMessages: updated })
     }
   },
-  onAiCardNoteInput(e) {
+  onChatCardNoteInput(e) {
     const idx = e.currentTarget.dataset.idx
     const val = e.detail.value
-    const updated = this.data.aiMessages.slice()
+    const updated = this.data.chatMessages.slice()
     if (updated[idx] && updated[idx].card) {
       updated[idx].card.note = val
-      this.setData({ aiMessages: updated })
+      this.setData({ chatMessages: updated })
     }
   },
 
@@ -5622,17 +6149,19 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
     return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0')
   },
 
-  onAiToggleMode() {
-    this.setData({ aiVoiceMode: !this.data.aiVoiceMode })
+  onChatToggleMode() {
+    playTap()
+    this.setData({ chatVoiceMode: !this.data.chatVoiceMode })
   },
 
   onAiVoiceStart() {
+    playTap()
     wx.vibrateShort({ type: 'light' })
     this._startRecognize('chat')
   },
 
   onAiVoiceEnd() {
-    if (!this.data.aiRecording) return
+    if (!this.data.chatRecording) return
     this._stopRecognize() // 结果在 onStop → _onRecognizeDone('chat')：填输入框并发送
   },
 
@@ -5656,6 +6185,7 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
   },
 
   onVipEntry() {
+    playTap()
     var that = this
     api.getVipStatus().then(function (status) {
       var isFree = !status || status.vipLevel === 0
@@ -5671,6 +6201,7 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
   },
 
   onActivateTrial() {
+    playTap()
     var that = this
     wx.showModal({
       title: '领取免费试用',
@@ -5694,6 +6225,7 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
   },
 
   onVipBack() {
+    playTap()
     if (this.data.vipDetailId >= 0) {
       this.setData({ vipDetailId: -1, vipSelected: -1, vipEnterpriseSeats: 4 })
     } else {
@@ -5702,22 +6234,26 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
   },
 
   onVipThumbTap(e) {
+    playTap()
     const id = e.currentTarget.dataset.id
     this.setData({ vipDetailId: id, vipSelected: id, vipEnterpriseSeats: 4 })
   },
 
   onVipSelect(e) {
+    playTap()
     const id = e.currentTarget.dataset.id
     this.setData({ vipSelected: this.data.vipSelected === id ? -1 : id })
   },
 
   // 企业版席位调节
   onVipSeatsMinus() {
+    playTap()
     var s = this.data.vipEnterpriseSeats
     if (s <= 4) return
     this.setData({ vipEnterpriseSeats: s - 1 })
   },
   onVipSeatsPlus() {
+    playTap()
     var s = this.data.vipEnterpriseSeats
     if (s >= 20) return
     this.setData({ vipEnterpriseSeats: s + 1 })
@@ -5736,6 +6272,7 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
   },
 
   onVipConfirm() {
+    playTap()
     if (this.data.vipSelected < 0) {
       wx.showToast({ title: '请先选择一个套餐', icon: 'none' })
       return

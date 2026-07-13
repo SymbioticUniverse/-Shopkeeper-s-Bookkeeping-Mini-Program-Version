@@ -1,4 +1,6 @@
 {
-  "usingComponents": {},
+  "usingComponents": {
+    "spotlight-guide": "/components/spotlight-guide/spotlight-guide"
+  },
   "pageOrientation": "portrait"
 }

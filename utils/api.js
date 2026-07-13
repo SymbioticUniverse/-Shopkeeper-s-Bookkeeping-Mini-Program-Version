@@ -10,7 +10,35 @@
 // ==================== 配置 ====================
 
 /** 后端 API 基址（真机调试：电脑局域网 IP，手机需连同一 WiFi；生产环境改为真实域名） */
-const BASE_URL = 'http://8.134.250.114:8080/api'
+const BASE_URL = 'https://symbioticuniverse.xyz/api'
+
+// ==================== ID 生成 ====================
+
+// UUID v7: 48bit 毫秒时间戳前缀（保证时间排序）+ 76bit 随机（不可猜）
+function generateId() {
+  var ms = Date.now()
+  var rand = new Uint8Array(10)
+  if (typeof crypto !== 'undefined' && crypto.getRandomValues) {
+    crypto.getRandomValues(rand)
+  } else {
+    for (var i = 0; i < 10; i++) rand[i] = Math.floor(Math.random() * 256)
+  }
+  var hex = ''
+  // timestamp 48bit MSB-first → 时间排序依靠此前缀
+  for (var i = 5; i >= 0; i--) {
+    hex += ((ms >> (i * 8)) & 0xff).toString(16).padStart(2, '0')
+  }
+  // version 0x7 + rand[0] low nibble
+  hex += (0x70 | (rand[0] & 0x0f)).toString(16)
+  hex += rand[1].toString(16).padStart(2, '0')
+  // variant 0x80 + rand[2] low 6bit
+  hex += (0x80 | (rand[2] & 0x3f)).toString(16)
+  hex += rand[3].toString(16).padStart(2, '0')
+  for (var i = 4; i < 10; i++) {
+    hex += rand[i].toString(16).padStart(2, '0')
+  }
+  return hex
+}
 
 // ==================== Token 管理 ====================
 
@@ -66,7 +94,7 @@ function _saveQueue(queue) {
 /** 将一次失败的操作加入离线队列，待网络恢复后重放 */
 function _enqueue(action, path, data) {
   const queue = _getQueue()
-  queue.push({ id: Date.now(), action, path, data, timestamp: Date.now() })
+  queue.push({ id: generateId(), action, path, data, timestamp: Date.now() })
   _saveQueue(queue)
 }
 
@@ -444,7 +472,7 @@ function sendVerifyCode(phone) {
 async function loginByPhone(phone, code) {
   const result = await _request('POST', '/auth/login-by-phone', { phone, code })
   _setToken(result.token)
-  const userInfo = { nickName: result.nickName, avatarUrl: result.avatarUrl }
+  const userInfo = { nickName: result.nickName, avatarUrl: result.avatarUrl, updatedAt: result.updatedAt }
   _save('userInfo', userInfo)
   return {
     ...userInfo,
@@ -462,7 +490,25 @@ async function loginByPhone(phone, code) {
 async function loginByWechat(wxUserInfo) {
   const result = await _request('POST', '/auth/login-by-wechat', wxUserInfo)
   _setToken(result.token)
-  const userInfo = { nickName: result.nickName, avatarUrl: result.avatarUrl }
+  const userInfo = { nickName: result.nickName, avatarUrl: result.avatarUrl, updatedAt: result.updatedAt }
+  _save('userInfo', userInfo)
+  return {
+    ...userInfo,
+    isNew: result.isNew || false,
+    hasCompany: result.hasCompany || false,
+    companyRole: result.companyRole || null
+  }
+}
+
+/**
+ * 微信手机号一键登录
+ * @param {string} wxCode - wx.login 返回的 code
+ * @param {string} phoneCode - getPhoneNumber 按钮返回的 code
+ */
+async function loginByWechatPhone(wxCode, phoneCode) {
+  const result = await _request('POST', '/auth/login-by-wechat-phone', { code: wxCode, phoneCode })
+  _setToken(result.token)
+  const userInfo = { nickName: result.nickName, avatarUrl: result.avatarUrl, updatedAt: result.updatedAt }
   _save('userInfo', userInfo)
   return {
     ...userInfo,
@@ -507,10 +553,36 @@ function getUserInfo() {
 }
 
 function saveUserInfo(info) {
-  // 打上更新时间戳（毫秒），供跨端 last-write-wins 对比；调用方已带 updatedAt 则沿用
   const stamped = { ...info, updatedAt: info.updatedAt || Date.now() }
   _save('userInfo', stamped)
-  _pushBackend('POST', '/auth/user-info', stamped)
+  if (!_getToken()) return
+  _initNetworkListener()
+  _request('POST', '/auth/user-info', stamped).then(function (result) {
+    // 用服务端返回的 updatedAt 覆写本地，保证下次保存时间戳一致
+    if (result && result.updatedAt) {
+      var cur = getUserInfo()
+      if (cur) { cur.updatedAt = result.updatedAt; _save('userInfo', cur) }
+    }
+  }).catch(function (err) {
+    // 409 冲突：服务端时间戳更新了，用其时间戳重试一次
+    if (err && err.serverUpdatedAt) {
+      var retry = { ...stamped, updatedAt: err.serverUpdatedAt }
+      return _request('POST', '/auth/user-info', retry).then(function (r) {
+        if (r && r.updatedAt) {
+          var cur = getUserInfo()
+          if (cur) { cur.updatedAt = r.updatedAt; _save('userInfo', cur) }
+        }
+      }).catch(function (e2) {
+        console.warn('[API] 保存用户信息重试失败', e2)
+      })
+    }
+    if (err && (err.errMsg && err.errMsg.indexOf('fail') >= 0 || err.errno)) {
+      console.warn('[API] 离线：操作已入队列', 'POST', '/auth/user-info')
+      _enqueue('POST', '/auth/user-info', stamped)
+    } else {
+      console.warn('[API] 后台推送失败（非网络原因，不入队）', '/auth/user-info', err)
+    }
+  })
 }
 
 function removeUserInfo() {
@@ -1304,6 +1376,8 @@ function incrementUsage(type) {
 // ==================== 导出 ====================
 
 module.exports = {
+  generateId,
+
   getItems,
   addItem,
   updateItem,
@@ -1334,6 +1408,7 @@ module.exports = {
   sendVerifyCode,
   loginByPhone,
   loginByWechat,
+  loginByWechatPhone,
   logout,
 
   getUserInfo,

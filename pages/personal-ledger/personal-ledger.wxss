@@ -1,2 +1,2 @@
-page { background: #efefef; }
+page {}
 .page { padding: 40rpx; }

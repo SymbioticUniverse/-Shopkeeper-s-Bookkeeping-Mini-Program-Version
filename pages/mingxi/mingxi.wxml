@@ -1,4 +1,4 @@
-<view class="page {{isDarkMode ? 'page--dark' : ''}} {{tabSlideDir}} {{isTablet ? 'page--tablet' : ''}}">
+<view class="page {{isDarkMode ? 'page--dark' : ''}} {{isTablet ? 'page--tablet' : ''}}">
   <!-- 标题栏 -->
   <view class="header">
     <view class="header-left-group">
@@ -55,11 +55,11 @@
         <text class="expand-menu-arrow">></text>
       </view>
       <view class="expand-menu-divider"></view>
-      <view class="expand-menu-item" bindtap="onExpandMenuItem" data-action="ai">
-        <view class="expand-menu-icon expand-menu-icon--ai">
-          <text class="expand-icon-text expand-icon-text--ai">*</text>
+      <view class="expand-menu-item" bindtap="onExpandMenuItem" data-action="chat">
+        <view class="expand-menu-icon expand-menu-icon--chat">
+          <text class="expand-icon-text expand-icon-text--chat">*</text>
         </view>
-        <text class="expand-menu-label">AI 对话</text>
+        <text class="expand-menu-label">语音对话</text>
         <text class="expand-menu-arrow">></text>
       </view>
     </view>
@@ -455,13 +455,15 @@
               </view>
               <view wx:for="{{group.items}}" wx:key="id" wx:for-item="item" class="bill-row">
                 <view class="bill-actions">
-                  <view wx:if="{{item.typeLabel === '应付' && item.settleStatus !== 'settled'}}" class="bill-act-btn bill-act-settle" catchtap="onBillSettle" data-id="{{item.id}}" data-from="detail">结清</view>
-                  <view wx:elif="{{item.typeLabel === '垫付' && item.settleStatus === 'company_settled'}}" class="bill-act-btn bill-act-confirm" catchtap="onBillSettle" data-id="{{item.id}}" data-from="detail">确认到账</view>
+                  <view wx:if="{{item.typeLabel === '垫付' && (item.settleStatus === 'pending_confirm' || item.settleStatus === 'company_settled')}}" class="bill-act-btn bill-act-confirm" catchtap="onBillSettle" data-id="{{item.id}}" data-from="detail">确认到账</view>
+                  <view wx:elif="{{item.typeLabel === '应付' && (item.settleStatus === 'pending_confirm' || item.settleStatus === 'company_settled') && settleIsBoss}}" class="bill-act-btn bill-act-confirm" catchtap="onBillSettle" data-id="{{item.id}}" data-from="detail">确认收款</view>
+                  <view wx:elif="{{item.typeLabel === '应付' && !item.settleStatus}}" class="bill-act-btn bill-act-settle" catchtap="onBillSettle" data-id="{{item.id}}" data-from="detail">结清</view>
+                  <view wx:elif="{{item.typeLabel === '垫付' && !item.settleStatus && settleIsBoss}}" class="bill-act-btn bill-act-settle" catchtap="onBillSettle" data-id="{{item.id}}" data-from="detail">发起结清</view>
                   <view wx:if="{{!item._autoSettle && item.typeLabel !== '垫付' && item.settleStatus !== 'settled' && item.scope !== 'company'}}" class="bill-act-btn bill-act-delete" catchtap="onBillDelete" data-id="{{item.id}}" data-from="detail">删除</view>
                   <view wx:if="{{!item._autoSettle && !item._voided && item.settleStatus !== 'settled'}}" class="bill-act-btn bill-act-void" catchtap="onBillVoid" data-id="{{item.id}}" data-from="detail">作废</view>
                   <view wx:elif="{{!item._autoSettle && item._voided}}" class="bill-act-btn bill-act-unvoid" catchtap="onBillUnvoid" data-id="{{item.id}}" data-from="detail">恢复</view>
                 </view>
-                <view class="bill-item {{item.typeLabel === '垫付' ? 'bill-item--advance' : ''}} {{item.typeLabel === '应付' ? 'bill-item--payable' : ''}} {{(item._voided || item.settleStatus === 'settled') ? 'bill-item--voided' : ''}} {{item.settleStatus === 'company_settled' ? 'bill-item--pending-confirm' : ''}}"
+                <view class="bill-item {{item.typeLabel === '垫付' ? 'bill-item--advance' : ''}} {{item.typeLabel === '应付' ? 'bill-item--payable' : ''}} {{(item._voided || item.settleStatus === 'settled') ? 'bill-item--voided' : ''}} {{(item.settleStatus === 'pending_confirm' || item.settleStatus === 'company_settled') ? 'bill-item--pending-confirm' : ''}}"
                       bindtouchstart="onBillTouchStart"
                       bindtouchmove="onBillTouchMove"
                       bindtouchend="onBillTouchEnd"
@@ -470,7 +472,7 @@
                       data-from="detail">
                   <text class="bill-icon">{{item._icon}}</text>
                   <text class="bill-type">{{item.typeLabel}}</text>
-                  <text wx:if="{{item.settleStatus === 'company_settled'}}" class="bill-settle-tag bill-settle-tag--pending">待确认</text>
+                  <text wx:if="{{item.settleStatus === 'pending_confirm' || item.settleStatus === 'company_settled'}}" class="bill-settle-tag bill-settle-tag--pending">待确认</text>
                   <text wx:elif="{{item.settleStatus === 'settled'}}" class="bill-settle-tag bill-settle-tag--auto">结清</text>
                   <text wx:if="{{item.target}}" class="bill-target {{item.targetType === 'internal' ? 'bill-target--internal' : 'bill-target--external'}}">{{item.target}}</text>
                   <text class="bill-note-inline">{{item.note || '-'}}</text>
@@ -552,13 +554,13 @@
             <view class="rct-tab {{reportChartType === 2 ? 'rct-tab--active' : ''}}" bindtap="switchReportChart" data-t="{{2}}">饼图</view>
           </view>
           <view class="report-chart-stage">
-            <view wx:if="{{reportChartType === 0 && !showExpandMenu && !showCamera && !scanRecognizing && !showBookPopup && !modalItem && !showAiChat && !aiRecording && !searchRecording}}" class="report-chart-block">
+            <view wx:if="{{reportChartType === 0 && !showExpandMenu && !showCamera && !scanRecognizing && !showBookPopup && !modalItem && !showChat && !chatRecording && !searchRecording}}" class="report-chart-block">
               <canvas type="2d" id="lineChart" class="report-canvas" bindtouchstart="onChartTap"></canvas>
             </view>
-            <view wx:elif="{{reportChartType === 1 && !showExpandMenu && !showCamera && !scanRecognizing && !showBookPopup && !modalItem && !showAiChat && !aiRecording && !searchRecording}}" class="report-chart-block">
+            <view wx:elif="{{reportChartType === 1 && !showExpandMenu && !showCamera && !scanRecognizing && !showBookPopup && !modalItem && !showChat && !chatRecording && !searchRecording}}" class="report-chart-block">
               <canvas type="2d" id="barChart" class="report-canvas"></canvas>
             </view>
-            <view wx:elif="{{reportChartType === 2 && !showExpandMenu && !showCamera && !scanRecognizing && !showBookPopup && !modalItem && !showAiChat && !aiRecording && !searchRecording}}" class="report-pie-block">
+            <view wx:elif="{{reportChartType === 2 && !showExpandMenu && !showCamera && !scanRecognizing && !showBookPopup && !modalItem && !showChat && !chatRecording && !searchRecording}}" class="report-pie-block">
               <view class="report-pie-row">
                 <view class="report-pie-cell">
                   <text class="report-pie-label">收入来源</text>
@@ -664,13 +666,15 @@
         <scroll-view class="settle-list" scroll-y enhanced show-scrollbar="{{false}}">
           <view wx:for="{{settleItems}}" wx:key="id" class="bill-row">
             <view class="bill-actions">
-              <view wx:if="{{item.typeLabel === '应付'}}" class="bill-act-btn bill-act-settle" catchtap="onBillSettle" data-id="{{item.id}}" data-from="settle">结清</view>
-              <view wx:elif="{{item.typeLabel === '垫付' && item.settleStatus === 'company_settled'}}" class="bill-act-btn bill-act-confirm" catchtap="onBillSettle" data-id="{{item.id}}" data-from="settle">确认到账</view>
+              <view wx:if="{{item.typeLabel === '垫付' && (item.settleStatus === 'pending_confirm' || item.settleStatus === 'company_settled')}}" class="bill-act-btn bill-act-confirm" catchtap="onBillSettle" data-id="{{item.id}}" data-from="settle">确认到账</view>
+              <view wx:elif="{{item.typeLabel === '应付' && (item.settleStatus === 'pending_confirm' || item.settleStatus === 'company_settled') && settleIsBoss}}" class="bill-act-btn bill-act-confirm" catchtap="onBillSettle" data-id="{{item.id}}" data-from="settle">确认收款</view>
+              <view wx:elif="{{item.typeLabel === '应付' && !item.settleStatus}}" class="bill-act-btn bill-act-settle" catchtap="onBillSettle" data-id="{{item.id}}" data-from="settle">结清</view>
+              <view wx:elif="{{item.typeLabel === '垫付' && !item.settleStatus && settleIsBoss}}" class="bill-act-btn bill-act-settle" catchtap="onBillSettle" data-id="{{item.id}}" data-from="settle">发起结清</view>
               <view wx:if="{{item.scope !== 'company'}}" class="bill-act-btn bill-act-delete" catchtap="onBillDelete" data-id="{{item.id}}" data-from="settle">删除</view>
               <view wx:if="{{!item._voided}}" class="bill-act-btn bill-act-void" catchtap="onBillVoid" data-id="{{item.id}}" data-from="settle">作废</view>
               <view wx:else class="bill-act-btn bill-act-unvoid" catchtap="onBillUnvoid" data-id="{{item.id}}" data-from="settle">恢复</view>
             </view>
-            <view class="bill-item {{item.typeLabel === '垫付' ? 'bill-item--advance' : ''}} {{item.typeLabel === '应付' ? 'bill-item--payable' : ''}} {{item._voided ? 'bill-item--voided' : ''}} {{item.settleStatus === 'company_settled' ? 'bill-item--pending-confirm' : ''}}"
+            <view class="bill-item {{item.typeLabel === '垫付' ? 'bill-item--advance' : ''}} {{item.typeLabel === '应付' ? 'bill-item--payable' : ''}} {{item._voided ? 'bill-item--voided' : ''}} {{(item.settleStatus === 'pending_confirm' || item.settleStatus === 'company_settled') ? 'bill-item--pending-confirm' : ''}}"
                   bindtouchstart="onBillTouchStart"
                   bindtouchmove="onBillTouchMove"
                   bindtouchend="onBillTouchEnd"
@@ -680,7 +684,7 @@
               <view class="bill-dot"></view>
               <text class="bill-cat">{{item.category}}</text>
               <text class="bill-type">{{item.typeLabel}}</text>
-              <text wx:if="{{item.settleStatus === 'company_settled'}}" class="bill-settle-tag bill-settle-tag--pending">待确认</text>
+              <text wx:if="{{item.settleStatus === 'pending_confirm' || item.settleStatus === 'company_settled'}}" class="bill-settle-tag bill-settle-tag--pending">待确认</text>
               <text wx:if="{{item.target}}" class="bill-target {{item.targetType === 'internal' ? 'bill-target--internal' : 'bill-target--external'}}">{{item.target}}</text>
               <text class="bill-note-inline">{{item.note || '-'}}</text>
               <text class="bill-amount {{item.type === 'in' ? 'bill-amount--in' : 'bill-amount--out'}}">¥{{item.amount}}</text>
@@ -818,8 +822,8 @@
             </scroll-view>
           </view>
         </view>
-        <view class="custom-cat-divider"></view>
-        <view class="custom-cat-company-block">
+        <view class="custom-cat-divider" wx:if="{{canSeeCompanyLedger}}"></view>
+        <view class="custom-cat-company-block" wx:if="{{canSeeCompanyLedger}}">
           <view class="custom-cat-section-hd">
             <text class="custom-cat-section-label">公司分类</text>
             <view class="custom-cat-tabs">
@@ -882,31 +886,7 @@
         <view class="login-body">
           <view class="login-spacer"></view>
           <view class="login-form-wrap">
-            <view class="login-phone-section">
-              <text class="login-label">手机号</text>
-              <view class="login-phone-row">
-                <text class="login-phone-prefix">+86</text>
-                <input class="login-phone-input" type="number" maxlength="11" placeholder="请输入手机号" value="{{loginPhone}}" bindinput="onLoginPhoneInput"/>
-              </view>
-            </view>
-            <view class="login-code-section">
-              <text class="login-label">验证码</text>
-              <view class="login-code-row">
-                <input class="login-code-input" type="number" maxlength="6" placeholder="请输入验证码" value="{{loginCode}}" bindinput="onLoginCodeInput"/>
-                <view class="login-code-btn {{loginCodeSending ? 'login-code-btn--counting' : ''}}" bindtap="onSendCode">
-                  <text>{{loginCodeCountdown > 0 ? loginCodeCountdown + 's' : '获取验证码'}}</text>
-                </view>
-              </view>
-            </view>
-            <view class="login-submit-btn" bindtap="onPhoneLogin">
-              <text>登录 / 注册</text>
-            </view>
-            <view class="login-divider">
-              <view class="login-divider-line"></view>
-              <text class="login-divider-text">其他登录方式</text>
-              <view class="login-divider-line"></view>
-            </view>
-            <button class="login-wx-btn" open-type="getUserInfo" bindgetuserinfo="onWxLogin">
+            <button class="login-wx-btn" bindtap="onWxLogin">
               <view class="login-wx-icon">
                 <view class="login-wx-icon-inner"></view>
               </view>
@@ -1093,7 +1073,7 @@
               </view>
               <view class="export-book-arrow"></view>
             </view>
-            <view class="export-book-card export-book-card--company" hover-class="export-book-card--press" hover-stay-time="60" bindtap="onExportCompany">
+            <view wx:if="{{canSeeCompanyLedger}}" class="export-book-card export-book-card--company" hover-class="export-book-card--press" hover-stay-time="60" bindtap="onExportCompany">
               <view class="export-book-badge"><image class="export-book-icon" src="/assets/icons/gongsizhangben.png" mode="aspectFit"/></view>
               <view class="export-book-info">
                 <text class="export-book-title">公司账本</text>
@@ -1117,10 +1097,10 @@
           <block wx:for="{{auditList}}" wx:key="id">
             <view class="audit-item">
               <view class="audit-item-left">
-                <view class="audit-avatar"></view>
+                <image class="audit-avatar" src="{{item.applicantAvatar}}" mode="aspectFill"/>
                 <view class="audit-info">
-                  <text class="audit-name">{{item.name}}</text>
-                  <text class="audit-time">{{item.time}}</text>
+                  <text class="audit-name">{{item.applicantName}}</text>
+                  <text class="audit-time">{{item.joinedAt}}</text>
                 </view>
               </view>
               <view class="audit-actions" wx:if="{{item.status === 'pending'}}">
@@ -1314,6 +1294,23 @@
             </view>
           </view>
           <view class="settings-group">
+            <view class="settings-group-title">音效与触感</view>
+            <view class="settings-item settings-item--slider">
+              <view class="settings-slider-head">
+                <text class="settings-item-label">点击音量</text>
+                <text class="settings-item-value">{{tapVolumePercent}}%</text>
+              </view>
+              <slider class="settings-slider" min="0" max="100" value="{{tapVolumePercent}}" block-size="18" activeColor="#3a7bfd" backgroundColor="#e0e0e0" bindchange="onTapVolumeChange" show-value="{{false}}"/>
+            </view>
+            <view class="settings-item settings-item--slider settings-item--last">
+              <view class="settings-slider-head">
+                <text class="settings-item-label">震动强度</text>
+                <text class="settings-item-value">{{tapVibrationLabel}}</text>
+              </view>
+              <slider class="settings-slider" min="0" max="4" step="1" value="{{tapVibrationLevel}}" block-size="18" activeColor="#3a7bfd" backgroundColor="#e0e0e0" bindchange="onTapVibrationChange" show-value="{{false}}"/>
+            </view>
+          </view>
+          <view class="settings-group">
             <view class="settings-group-title">{{t.settings_other}}</view>
             <view class="settings-item" bindtap="onSettingsTap" data-action="clearCache">
               <text class="settings-item-label">{{t.settings_clear_cache}}</text>
@@ -1367,33 +1364,69 @@
           <view class="custom-cat-right"><image class="custom-cat-icon" src="{{ledgerScope === 'company' ? '/assets/icons/gongsizhangben.png' : '/assets/icons/gerenzhangben.png'}}" mode="aspectFit"/><text class="custom-cat-title">{{ledgerScope === 'company' ? t.detail_company_ledger : t.detail_personal_ledger}}</text></view>
         </view>
         <view class="custom-cat-divider"></view>
-        <scroll-view class="ledger-scroll" scroll-y enhanced show-scrollbar="{{false}}">
+        <scroll-view class="ledger-scroll" scroll-y enhanced show-scrollbar="{{false}}" scroll-into-view="{{ledgerScrollTo}}">
           <view class="ledger-scroll-inner">
-          <!-- 本月概览（个人账本） -->
-          <view wx:if="{{ledgerScope === 'personal'}}" class="ledger-sec">
-            <view class="ledger-sec-head">
-              <text class="ledger-sec-title">本月概览</text>
-              <text class="ledger-sec-sub">{{ledgerMonthLabel}}</text>
+          <!-- 个人账本：本月概览 + 往来款 -->
+          <view wx:if="{{ledgerScope === 'personal'}}" class="ledger-demo-area" id="ledger-overview">
+            <view class="ledger-sec ledger-overview-sec">
+              <view class="ledger-sec-head">
+                <text class="ledger-sec-title">本月概览</text>
+                <text class="ledger-sec-sub">{{ledgerMonthLabel}}</text>
+              </view>
+              <view class="ledger-stat-row">
+                <view class="ledger-stat">
+                  <text class="ledger-stat-val ledger-stat-val--in">{{ledgerMonthIncome}}</text>
+                  <text class="ledger-stat-label">收入</text>
+                </view>
+                <view class="ledger-stat-sep"></view>
+                <view class="ledger-stat">
+                  <text class="ledger-stat-val ledger-stat-val--out">{{ledgerMonthExpense}}</text>
+                  <text class="ledger-stat-label">支出</text>
+                </view>
+                <view class="ledger-stat-sep"></view>
+                <view class="ledger-stat">
+                  <text class="ledger-stat-val {{ledgerMonthBalancePos ? 'ledger-stat-val--in' : 'ledger-stat-val--out'}}">{{ledgerMonthBalance}}</text>
+                  <text class="ledger-stat-label">结余</text>
+                </view>
+              </view>
             </view>
-            <view class="ledger-stat-row">
-              <view class="ledger-stat">
-                <text class="ledger-stat-val ledger-stat-val--in">{{ledgerMonthIncome}}</text>
-                <text class="ledger-stat-label">收入</text>
+            <!-- 往来款 -->
+            <view class="ledger-sec ledger-due-sec">
+              <view class="ledger-sec-head">
+                <text class="ledger-sec-title">往来款</text>
+                <text class="ledger-sec-sub">未结清</text>
               </view>
-              <view class="ledger-stat-sep"></view>
-              <view class="ledger-stat">
-                <text class="ledger-stat-val ledger-stat-val--out">{{ledgerMonthExpense}}</text>
-                <text class="ledger-stat-label">支出</text>
-              </view>
-              <view class="ledger-stat-sep"></view>
-              <view class="ledger-stat">
-                <text class="ledger-stat-val {{ledgerMonthBalancePos ? 'ledger-stat-val--in' : 'ledger-stat-val--out'}}">{{ledgerMonthBalance}}</text>
-                <text class="ledger-stat-label">结余</text>
-              </view>
+              <block wx:if="{{ledgerReceivableCount > 0 || ledgerPayableCount > 0}}">
+                <view class="ledger-due-row" bindtap="onLedgerGotoSettle">
+                  <view class="ledger-due-left">
+                    <text class="ledger-due-name">应收</text>
+                    <text class="ledger-due-desc">别人欠我 · {{ledgerReceivableCount}} 笔</text>
+                  </view>
+                  <view class="ledger-due-right">
+                    <text class="ledger-due-val ledger-due-val--in">+{{ledgerReceivable}}</text>
+                    <view class="ledger-due-arrow"></view>
+                  </view>
+                </view>
+                <view class="ledger-due-row" bindtap="onLedgerGotoSettle">
+                  <view class="ledger-due-left">
+                    <text class="ledger-due-name">应付</text>
+                    <text class="ledger-due-desc">我欠别人 · {{ledgerPayableCount}} 笔</text>
+                  </view>
+                  <view class="ledger-due-right">
+                    <text class="ledger-due-val ledger-due-val--out">-{{ledgerPayable}}</text>
+                    <view class="ledger-due-arrow"></view>
+                  </view>
+                </view>
+                <view class="ledger-due-net">
+                  <text class="ledger-due-net-label">净往来</text>
+                  <text class="ledger-due-net-val {{ledgerNetPos ? 'ledger-due-val--in' : 'ledger-due-val--out'}}">{{ledgerNetPos ? '+' : ''}}{{ledgerNet}}</text>
+                </view>
+              </block>
+              <view wx:else class="ledger-due-empty">暂无未结清往来款</view>
             </view>
           </view>
 
-          <!-- 资产概览（公司账本） -->
+          <!-- 公司账本：资产概览 -->
           <view wx:if="{{ledgerScope === 'company'}}" class="ledger-sec">
             <view class="ledger-sec-head">
               <text class="ledger-sec-title">资产概览</text>
@@ -1424,8 +1457,8 @@
             </view>
           </view>
 
-          <!-- 往来款（未结清 应收/应付） -->
-          <view class="ledger-sec">
+          <!-- 往来款（公司账本） -->
+          <view wx:if="{{ledgerScope === 'company'}}" class="ledger-sec">
             <view class="ledger-sec-head">
               <text class="ledger-sec-title">往来款</text>
               <text class="ledger-sec-sub">未结清</text>
@@ -1460,7 +1493,7 @@
           </view>
 
           <!-- 月度预算（仅个人账本） -->
-          <view wx:if="{{ledgerScope === 'personal'}}" class="ledger-sec">
+          <view wx:if="{{ledgerScope === 'personal'}}" class="ledger-sec ledger-budget-sec" id="ledger-budget">
             <view class="ledger-sec-head">
               <text class="ledger-sec-title">月度预算</text>
               <text class="ledger-budget-remain {{ledgerOverBudget ? 'ledger-budget-remain--over' : ''}}">{{ledgerBudgetRemainText}}</text>
@@ -1503,7 +1536,7 @@
             </view>
             <view class="my-item-body">
               <text class="my-item-title {{vipStatus && vipStatus.vipLevel > 0 ? 'my-item-title--vip' : ''}}">{{vipStatus && vipStatus.vipLevel > 0 ? vipCards[vipStatus.vipLevel - 1].name : t.vip_title}}</text>
-              <text class="my-item-sub" wx:if="{{!vipStatus || vipStatus.vipLevel === 0}}">{{vipStatus ? 'AI ' + vipStatus.usage.asr + '/' + vipStatus.limits.asr + ' · 导出 ' + vipStatus.usage.export + '/' + vipStatus.limits.export : t.vip_sub}}</text>
+              <text class="my-item-sub" wx:if="{{!vipStatus || vipStatus.vipLevel === 0}}">{{vipStatus ? '' + vipStatus.usage.asr + '/' + vipStatus.limits.asr + ' · 导出 ' + vipStatus.usage.export + '/' + vipStatus.limits.export : t.vip_sub}}</text>
               <view class="my-item-vip-expire" wx:else>
                 <text class="my-item-vip-expire-text">{{vipExpiresText}}</text>
                 <text class="my-item-vip-expire-days" wx:if="{{vipTrialDays > 0}}">剩 {{vipTrialDays}} 天</text>
@@ -1550,7 +1583,7 @@
             </view>
             <text class="my-item-arrow">〉</text>
           </view>
-          <view class="my-item" bindtap="onCompanyShareEntry">
+          <view class="my-item my-share-entry" bindtap="onCompanyShareEntry">
             <image class="my-item-icon" src="/assets/icons/lianjiegongsigongxiangtongyizhangben.png" mode="aspectFit"/>
             <view class="my-item-body">
               <text class="my-item-title">{{t.my_share_ledger}}</text>
@@ -1683,8 +1716,10 @@
       <view class="bill-modal-divider"></view>
       <view class="bill-modal-btns">
         <view wx:if="{{!modalItem._readonly}}" class="bill-modal-btn bill-modal-save" bindtap="onModalSave">保存</view>
-        <view wx:if="{{modalItem.typeLabel === '应付' && modalItem.settleStatus !== 'settled'}}" class="bill-modal-btn bill-modal-settle" bindtap="onBillSettle" data-id="{{modalItem.id}}" data-from="{{modalFrom}}">结清</view>
-        <view wx:elif="{{modalItem.typeLabel === '垫付' && modalItem.settleStatus === 'company_settled'}}" class="bill-modal-btn bill-modal-settle" bindtap="onBillSettle" data-id="{{modalItem.id}}" data-from="{{modalFrom}}">确认到账</view>
+        <view wx:if="{{modalItem.typeLabel === '垫付' && (modalItem.settleStatus === 'pending_confirm' || modalItem.settleStatus === 'company_settled')}}" class="bill-modal-btn bill-modal-settle" bindtap="onBillSettle" data-id="{{modalItem.id}}" data-from="{{modalFrom}}">确认到账</view>
+        <view wx:elif="{{modalItem.typeLabel === '应付' && (modalItem.settleStatus === 'pending_confirm' || modalItem.settleStatus === 'company_settled') && settleIsBoss}}" class="bill-modal-btn bill-modal-settle" bindtap="onBillSettle" data-id="{{modalItem.id}}" data-from="{{modalFrom}}">确认收款</view>
+        <view wx:elif="{{modalItem.typeLabel === '应付' && !modalItem.settleStatus}}" class="bill-modal-btn bill-modal-settle" bindtap="onBillSettle" data-id="{{modalItem.id}}" data-from="{{modalFrom}}">结清</view>
+        <view wx:elif="{{modalItem.typeLabel === '垫付' && !modalItem.settleStatus && settleIsBoss}}" class="bill-modal-btn bill-modal-settle" bindtap="onBillSettle" data-id="{{modalItem.id}}" data-from="{{modalFrom}}">发起结清</view>
         <view wx:if="{{!modalItem._readonly && !modalItem._voided}}" class="bill-modal-btn bill-modal-void" bindtap="onBillVoid" data-id="{{modalItem.id}}" data-from="{{modalFrom}}">作废</view>
         <view wx:elif="{{!modalItem._readonly && modalItem._voided}}" class="bill-modal-btn bill-modal-unvoid" bindtap="onBillUnvoid" data-id="{{modalItem.id}}" data-from="{{modalFrom}}">恢复</view>
         <view wx:if="{{!modalItem._readonly && modalItem.typeLabel !== '垫付' && modalIsPersonal}}" class="bill-modal-btn bill-modal-delete" bindtap="onBillDelete" data-id="{{modalItem.id}}" data-from="{{modalFrom}}">删除</view>
@@ -1694,15 +1729,15 @@
 
   <!-- 底部 TabBar -->
   <!-- 语音录入指示器 -->
-  <view class="ai-voice-indicator {{aiRecording || searchRecording ? 'ai-voice-indicator--show' : ''}}">
-    <view class="ai-voice-wave">
-      <view class="ai-voice-bar"></view>
-      <view class="ai-voice-bar"></view>
-      <view class="ai-voice-bar"></view>
-      <view class="ai-voice-bar"></view>
-      <view class="ai-voice-bar"></view>
+  <view class="chat-voice-indicator {{chatRecording || searchRecording ? 'chat-voice-indicator--show' : ''}}">
+    <view class="chat-voice-wave">
+      <view class="chat-voice-bar"></view>
+      <view class="chat-voice-bar"></view>
+      <view class="chat-voice-bar"></view>
+      <view class="chat-voice-bar"></view>
+      <view class="chat-voice-bar"></view>
     </view>
-    <text class="ai-voice-tip">正在聆听…</text>
+    <text class="chat-voice-tip">正在聆听…</text>
   </view>
 
   <view class="tab-bar-wrapper">
@@ -1711,7 +1746,7 @@
     </view>
     <text class="tab-center-label">{{tabs[2].text}}</text>
     <view class="tab-bar">
-      <view class="tab-item {{index === 1 ? 'tab-item--push-left' : ''}} {{index === 3 ? 'tab-item--push-right' : ''}}" wx:for="{{tabs}}" wx:key="index" data-index="{{index}}" bindtap="switchTab">
+      <view class="tab-item {{index === 1 ? 'tab-item--push-left' : ''}} {{index === 3 ? 'tab-item--push-right' : ''}} {{index === 4 ? 'tab-item-mine' : ''}}" wx:for="{{tabs}}" wx:key="index" data-index="{{index}}" bindtap="switchTab">
         <view wx:if="{{index !== 2}}" class="tab-icon"><image class="tab-icon-img" src="{{item.icon}}" mode="aspectFit"/></view>
         <text wx:if="{{index !== 2}}" class="tab-label {{index === currentTab && !showOverview ? 'tab-label-active' : ''}}">{{item.text}}</text>
       </view>
@@ -1805,138 +1840,134 @@
     </view>
   </view>
 
-  <!-- AI 对话窗口 -->
-  <view class="ai-chat-overlay" wx:if="{{showAiChat}}" catchtap="onAiOverlayTap" bindtouchend="onAiOverlayTouchEnd" bindtouchcancel="onAiOverlayTouchEnd">
-    <view class="ai-chat-card" catchtap="nop">
-      <view class="ai-chat-header">
-        <text class="ai-chat-title">AI 记账助手</text>
-        <view class="ai-chat-close" bindtap="onAiChatClose">×</view>
+  <!-- 语音语音窗口 -->
+  <view class="chat-overlay" wx:if="{{showChat}}" catchtap="onChatOverlayTap" bindtouchend="onChatOverlayTouchEnd" bindtouchcancel="onChatOverlayTouchEnd">
+    <view class="chat-card" catchtap="nop">
+      <view class="chat-header">
+        <text class="chat-title">语音记账助手</text>
+        <view class="chat-close" bindtap="onAiChatClose">×</view>
       </view>
       <!-- 录音中指示器 -->
-      <view class="ai-recording-banner" wx:if="{{aiRecording}}">
-        <view class="ai-recording-pulse"></view>
-        <text class="ai-recording-text">正在聆听… 松开发送</text>
+      <view class="chat-recording-banner" wx:if="{{chatRecording}}">
+        <view class="chat-recording-pulse"></view>
+        <text class="chat-recording-text">正在聆听… 松开发送</text>
       </view>
-      <scroll-view class="ai-chat-messages" scroll-y enhanced show-scrollbar="{{false}}" scroll-top="{{aiScrollTop}}" scroll-with-animation>
-        <view class="ai-msg" wx:for="{{aiMessages}}" wx:key="index" id="ai-msg-{{index}}">
-          <view class="ai-msg-bubble ai-msg-bubble--{{item.role}} {{item.card ? 'ai-msg-bubble--ai-card' : ''}}">
-            <text class="ai-msg-text">{{item.text}}</text>
+      <scroll-view class="chat-messages" scroll-y enhanced show-scrollbar="{{false}}" scroll-top="{{chatScrollTop}}" scroll-with-animation>
+        <view class="chat-msg" wx:for="{{chatMessages}}" wx:key="index" id="chat-msg-{{index}}">
+          <view class="chat-msg-bubble chat-msg-bubble--{{item.role}} {{item.card ? 'chat-msg-bubble--chat-card' : ''}}">
+            <text class="chat-msg-text">{{item.text}}</text>
             <!-- 待确认：3行布局卡片 -->
-            <view wx:if="{{item.card && item.confirmed === undefined}}" class="ai-bill-card ai-bill-card--{{item.card.type}}">
+            <view wx:if="{{item.card && item.confirmed === undefined}}" class="chat-bill-card chat-bill-card--{{item.card.type}}">
               <!-- Row 1: Amount (大) + Type -->
-              <view class="ai-bill-row ai-bill-row--main">
-                <view class="ai-bill-amount-wrap">
-                  <text class="ai-bill-currency">¥</text>
-                  <input class="ai-bill-amount-input" type="digit" value="{{item.card.amount}}" bindinput="onAiCardAmountInput" data-idx="{{index}}" placeholder="0.00"/>
+              <view class="chat-bill-row chat-bill-row--main">
+                <view class="chat-bill-amount-wrap">
+                  <text class="chat-bill-currency">¥</text>
+                  <input class="chat-bill-amount-input" type="digit" value="{{item.card.amount}}" bindinput="onAiCardAmountInput" data-idx="{{index}}" placeholder="0.00"/>
                 </view>
                 <picker mode="selector" range="{{typeOptions}}" value="{{item._typeIdx}}" bindchange="onAiCardTypeChange" data-idx="{{index}}">
-                  <view class="ai-bill-tag-picker ai-bill-tag-picker--{{item.card.type}}">
-                    <text class="ai-bill-tag-text">{{item.card.typeLabel}}</text>
-                    <text class="ai-bill-arrow">▼</text>
+                  <view class="chat-bill-tag-picker chat-bill-tag-picker--{{item.card.type}}">
+                    <text class="chat-bill-tag-text">{{item.card.typeLabel}}</text>
+                    <text class="chat-bill-arrow">▼</text>
                   </view>
                 </picker>
               </view>
               <!-- Row 2: Category + Date + Target -->
-              <view class="ai-bill-row ai-bill-row--fields">
+              <view class="chat-bill-row chat-bill-row--fields">
                 <picker mode="selector" range="{{catOptions}}" value="{{item._catIdx}}" bindchange="onAiCardCatChange" data-idx="{{index}}">
-                  <view class="ai-bill-chip">
-                    <text class="ai-bill-chip-text">{{item.card.category}}</text>
-                    <text class="ai-bill-arrow">▼</text>
+                  <view class="chat-bill-chip">
+                    <text class="chat-bill-chip-text">{{item.card.category}}</text>
+                    <text class="chat-bill-arrow">▼</text>
                   </view>
                 </picker>
                 <picker mode="date" value="{{item.card.date}}" bindchange="onAiCardDateChange" data-idx="{{index}}">
-                  <view class="ai-bill-chip">
-                    <text class="ai-bill-chip-text">{{item.card.date}}</text>
-                    <text class="ai-bill-arrow">▼</text>
+                  <view class="chat-bill-chip">
+                    <text class="chat-bill-chip-text">{{item.card.date}}</text>
+                    <text class="chat-bill-arrow">▼</text>
                   </view>
                 </picker>
                 <picker mode="selector" range="{{targetOptions}}" value="{{item._targetIdx}}" bindchange="onAiCardTargetChange" data-idx="{{index}}">
-                  <view class="ai-bill-chip">
-                    <text class="ai-bill-chip-text">{{item.card.target || '对象'}}</text>
-                    <text class="ai-bill-arrow">▼</text>
+                  <view class="chat-bill-chip">
+                    <text class="chat-bill-chip-text">{{item.card.target || '对象'}}</text>
+                    <text class="chat-bill-arrow">▼</text>
                   </view>
                 </picker>
               </view>
               <!-- Row 3: Note -->
-              <view class="ai-bill-row ai-bill-row--note">
-                <input class="ai-bill-input" value="{{item.card.note}}" bindinput="onAiCardNoteInput" data-idx="{{index}}" placeholder="添加备注..."/>
+              <view class="chat-bill-row chat-bill-row--note">
+                <input class="chat-bill-input" value="{{item.card.note}}" bindinput="onChatCardNoteInput" data-idx="{{index}}" placeholder="添加备注..."/>
               </view>
               <!-- Buttons -->
-              <view class="ai-bill-btns">
-                <view class="ai-bill-btn ai-bill-btn--reject" catchtap="onAiReject" data-idx="{{index}}">取消</view>
-                <view class="ai-bill-btn ai-bill-btn--confirm" catchtap="onAiConfirm" data-idx="{{index}}">确认记账</view>
+              <view class="chat-bill-btns">
+                <view class="chat-bill-btn chat-bill-btn--reject" catchtap="onChatReject" data-idx="{{index}}">取消</view>
+                <view class="chat-bill-btn chat-bill-btn--confirm" catchtap="onAiConfirm" data-idx="{{index}}">确认记账</view>
               </view>
             </view>
             <!-- 已确认：原卡片 + 链接 -->
-            <view wx:elif="{{item.card && item.confirmed === true}}" class="ai-bill-card ai-bill-card--{{item.card.type}}" catchtap="onAiBillTap" data-idx="{{index}}">
-              <view class="ai-bill-row">
-                <view class="ai-bill-dot"></view>
-                <text class="ai-bill-cat">{{item.card.category}}</text>
-                <text class="ai-bill-type">{{item.card.typeLabel}}</text>
-                <text class="ai-bill-link">查看明细 ></text>
+            <view wx:elif="{{item.card && item.confirmed === true}}" class="chat-bill-card chat-bill-card--{{item.card.type}}" catchtap="onAiBillTap" data-idx="{{index}}">
+              <view class="chat-bill-row">
+                <view class="chat-bill-dot"></view>
+                <text class="chat-bill-cat">{{item.card.category}}</text>
+                <text class="chat-bill-type">{{item.card.typeLabel}}</text>
+                <text class="chat-bill-link">查看明细 ></text>
               </view>
-              <view class="ai-bill-row ai-bill-row--bottom">
-                <text class="ai-bill-amount">¥{{item.card.amount}}</text>
-                <text wx:if="{{item.card.target}}" class="ai-bill-target-confirmed">{{item.card.target}}</text>
-                <text class="ai-bill-date">{{item.card.date}}</text>
+              <view class="chat-bill-row chat-bill-row--bottom">
+                <text class="chat-bill-amount">¥{{item.card.amount}}</text>
+                <text wx:if="{{item.card.target}}" class="chat-bill-target-confirmed">{{item.card.target}}</text>
+                <text class="chat-bill-date">{{item.card.date}}</text>
               </view>
             </view>
             <!-- 已取消：灰色 + 重新输入提示 -->
-            <view wx:elif="{{item.card && item.confirmed === false}}" class="ai-bill-card ai-bill-card--rejected">
-              <view class="ai-bill-row">
-                <view class="ai-bill-dot"></view>
-                <text class="ai-bill-cat">{{item.card.category}}</text>
-                <text class="ai-bill-type">{{item.card.typeLabel}}</text>
+            <view wx:elif="{{item.card && item.confirmed === false}}" class="chat-bill-card chat-bill-card--rejected">
+              <view class="chat-bill-row">
+                <view class="chat-bill-dot"></view>
+                <text class="chat-bill-cat">{{item.card.category}}</text>
+                <text class="chat-bill-type">{{item.card.typeLabel}}</text>
               </view>
-              <view class="ai-bill-row ai-bill-row--bottom">
-                <text class="ai-bill-amount">¥{{item.card.amount}}</text>
-                <text class="ai-bill-date">已取消</text>
+              <view class="chat-bill-row chat-bill-row--bottom">
+                <text class="chat-bill-amount">¥{{item.card.amount}}</text>
+                <text class="chat-bill-date">已取消</text>
               </view>
-              <text class="ai-cancel-hint">{{item._ocrIndex !== undefined ? '此笔已跳过' : '识别有误？换个说法再试一次吧'}}</text>
+              <text class="chat-cancel-hint">{{item._ocrIndex !== undefined ? '此笔已跳过' : '识别有误？换个说法再试一次吧'}}</text>
             </view>
           </view>
-          <text class="ai-msg-time ai-msg-time--{{item.role}}">{{item.time}}</text>
+          <text class="chat-msg-time chat-msg-time--{{item.role}}">{{item.time}}</text>
         </view>
-        <view class="ai-msg" wx:if="{{aiThinking}}">
-          <view class="ai-msg-bubble ai-msg-bubble--ai">
-            <view class="ai-thinking-dots">
-              <view class="ai-thinking-dot"></view>
-              <view class="ai-thinking-dot"></view>
-              <view class="ai-thinking-dot"></view>
+        <view class="chat-msg" wx:if="{{chatThinking}}">
+          <view class="chat-msg-bubble chat-msg-bubble--assistant">
+            <view class="chat-thinking-dots">
+              <view class="chat-thinking-dot"></view>
+              <view class="chat-thinking-dot"></view>
+              <view class="chat-thinking-dot"></view>
             </view>
           </view>
         </view>
       </scroll-view>
-      <view class="ai-chat-input-bar">
-        <view class="ai-input-toggle" bindtap="onAiToggleMode">
-          <text class="ai-toggle-label">{{aiVoiceMode ? 'Aa' : 'mic'}}</text>
+      <view class="chat-input-bar">
+        <view class="chat-input-toggle" bindtap="onChatToggleMode">
+          <text class="chat-toggle-label">{{chatVoiceMode ? 'Aa' : 'mic'}}</text>
         </view>
-        <block wx:if="{{aiVoiceMode}}">
-          <view class="ai-voice-btn {{aiRecording ? 'ai-voice-btn--recording' : ''}}"
+        <block wx:if="{{chatVoiceMode}}">
+          <view class="chat-voice-btn {{chatRecording ? 'chat-voice-btn--recording' : ''}}"
                 bindtouchstart="onAiVoiceStart" bindtouchend="onAiVoiceEnd" bindtouchcancel="onAiVoiceEnd">
-            <text class="ai-voice-text">{{aiRecording ? '松开 结束' : '按住 说话'}}</text>
+            <text class="chat-voice-text">{{chatRecording ? '松开 结束' : '按住 说话'}}</text>
           </view>
         </block>
         <block wx:else>
-          <input class="ai-chat-input" placeholder="输入记账内容" value="{{aiInputText}}" bindinput="onAiInput" bindconfirm="onAiSend" confirm-type="send"/>
-          <view class="ai-chat-send {{aiInputText ? 'ai-chat-send--active' : ''}}" bindtap="onAiSend">
-            <text class="ai-send-arrow">↑</text>
+          <input class="chat-input" placeholder="输入记账内容" value="{{chatInputText}}" bindinput="onChatInput" bindconfirm="onChatSend" confirm-type="send"/>
+          <view class="chat-send {{chatInputText ? 'chat-send--active' : ''}}" bindtap="onChatSend">
+            <text class="chat-send-arrow">↑</text>
           </view>
         </block>
       </view>
     </view>
   </view>
 
-  <!-- 首次启动引导 -->
+  <!-- 首次引导弹窗（旧） -->
   <view class="guide-overlay" wx:if="{{showGuide}}">
     <!-- Step 0: 欢迎 -->
     <view class="guide-card" wx:if="{{guideStep === 0}}">
       <view class="guide-logo">
-        <view class="guide-logo-icon">
-          <view class="guide-logo-bar guide-logo-bar--1"></view>
-          <view class="guide-logo-bar guide-logo-bar--2"></view>
-          <view class="guide-logo-bar guide-logo-bar--3"></view>
-        </view>
+        <image class="guide-logo-img" src="/assets/zhangguihuizhang.png" mode="aspectFit"/>
       </view>
       <text class="guide-app-name">掌柜记账</text>
       <text class="guide-slogan">简单好用的智能记账工具</text>
@@ -1951,27 +1982,7 @@
     <!-- Step 1: 登录 -->
     <view class="guide-card" wx:elif="{{guideStep === 1}}">
       <text class="guide-card-title">登录 / 注册</text>
-      <view class="guide-form">
-        <view class="guide-input-row">
-          <text class="guide-prefix">+86</text>
-          <input class="guide-input" placeholder="手机号" type="number" maxlength="11"
-                 value="{{loginPhone}}" bindinput="onLoginPhoneInput"/>
-        </view>
-        <view class="guide-input-row">
-          <input class="guide-input" placeholder="验证码" type="number" maxlength="6"
-                 value="{{loginCode}}" bindinput="onLoginCodeInput"/>
-          <view class="guide-code-btn {{loginCodeSending ? 'guide-code-btn--disabled' : ''}}"
-                bindtap="onSendCode">
-            {{loginCodeSending ? loginCodeCountdown + 's' : '获取验证码'}}
-          </view>
-        </view>
-      </view>
-      <view class="guide-btn" bindtap="onGuidePhoneLogin">登录</view>
-      <view class="guide-divider-row">
-        <view class="guide-divider-line"></view>
-        <text class="guide-divider-text">或</text>
-        <view class="guide-divider-line"></view>
-      </view>
+      <text class="guide-card-desc">微信一键登录，数据云端同步</text>
       <button class="guide-wx-btn" open-type="getUserInfo" bindgetuserinfo="onGuideWxLogin">微信一键登录</button>
       <text class="guide-skip" bindtap="onGuideSkipLogin">跳过登录</text>
       <view class="guide-dots">
@@ -2050,6 +2061,31 @@
     </view>
   </view>
 
+  <!-- 聚光引导（功能教程） -->
+  <spotlight-guide
+    visible="{{showSpotlightGuide}}"
+    stepConfig="{{spotlightStepConfig}}"
+    targetRect="{{spotlightTargetRect}}"
+    totalSteps="{{spotlightTotalSteps}}"
+    currentStep="{{spotlightStep}}"
+    bind:next="onSpotlightNext"
+    bind:skip="onSpotlightSkip"
+    bind:welcomenext="onSpotlightWelcomeNext"
+  />
+
+  <!-- 语音记账操作提示（引导完成后弹出） -->
+  <view class="voice-tip-overlay" wx:if="{{showVoiceTip}}" catchtap="onVoiceTipDismiss">
+    <view class="voice-tip-card" catchtap="nop">
+      <view class="voice-tip-icon">🎤</view>
+      <text class="voice-tip-title">试试语音记账</text>
+      <text class="voice-tip-desc">长按底部 ⊕ 按钮，说出「金额 + 分类 + 类型」就能自动记账</text>
+      <view class="voice-tip-demo">
+        <text class="voice-tip-demo-text">「办公用品 200 元 垫付」</text>
+      </view>
+      <view class="voice-tip-btn" bindtap="onVoiceTipDismiss">知道了</view>
+    </view>
+  </view>
+
   <!-- 资料设置弹窗（新用户引导 + 我的页编辑共用） -->
   <view class="profile-modal-mask" wx:if="{{showProfileModal}}" catchtap="onProfileMaskTap">
     <view class="profile-modal" catchtap="nop">
@@ -2069,7 +2105,7 @@
         <input class="profile-name-input" value="{{profileName}}" placeholder="请输入昵称" placeholder-class="profile-name-ph" maxlength="20" bindinput="onProfileNameInput"/>
       </view>
       <view class="profile-modal-btns">
-        <view class="profile-btn profile-btn--skip" catchtap="onProfileSkip">{{profileEditMode ? '取消' : '跳过'}}</view>
+        <view wx:if="{{profileEditMode}}" class="profile-btn profile-btn--skip" catchtap="onProfileSkip">取消</view>
         <view class="profile-btn profile-btn--save {{profileUploading ? 'is-disabled' : ''}}" catchtap="onProfileSave">完成</view>
       </view>
     </view>
