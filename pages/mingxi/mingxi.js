@@ -1012,9 +1012,9 @@ Page({
     this._syncOverviewCards(true)
     wx.showToast({ title: '已保存', icon: 'success' })
     if (isGuide) {
-      // 资料保存后 → 播操作教程（聚光引导，仅首次）
+      // 资料保存后 → 仅新用户播操作教程
       this.setData({ showGuide: false })
-      if (!wx.getStorageSync('opGuideCompleted')) {
+      if (this.data._profileIsNewUser && !wx.getStorageSync('opGuideCompleted')) {
         setTimeout(() => this._startSpotlight('tutorial'), 300)
       }
     }
@@ -5216,7 +5216,7 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
       const userInfo = { nickName: result.nickName, avatarUrl: result.avatarUrl }
       this.setData({ isLoggedIn: true, userInfo, loginPhone: '', loginCode: '' })
       if (result.isNew) {
-        this.setData({ showProfileModal: true, profileEditMode: false, profileName: '', profileAvatarLocal: '', profileAvatarUrl: '' })
+        this.setData({ showProfileModal: true, profileEditMode: false, profileName: '', profileAvatarLocal: '', profileAvatarUrl: '', _profileIsNewUser: true })
       } else {
         this._refreshAvatarDisplay(userInfo)
       }
@@ -5238,6 +5238,8 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
         if (!wx.getStorageSync('opGuideCompleted')) {
           setTimeout(() => this._startSpotlight('tutorial'), 400)
         }
+      } else {
+        this.onGuideComplete()
       }
     }).catch(() => {
       wx.showToast({ title: '登录失败', icon: 'none' })
@@ -5284,7 +5286,7 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
           this.setData({ isLoggedIn: true, userInfo })
           const needProfile = result.isNew || !result.avatarUrl || result.nickName === '微信用户'
           if (needProfile) {
-            this.setData({ showProfileModal: true, profileEditMode: false, profileName: '', profileAvatarLocal: '', profileAvatarUrl: '' })
+            this.setData({ showProfileModal: true, profileEditMode: false, profileName: '', profileAvatarLocal: '', profileAvatarUrl: '', _profileIsNewUser: result.isNew })
           } else {
             this._refreshAvatarDisplay(userInfo)
           }
@@ -5301,11 +5303,9 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
             this.updateNotifyBadge()
             this.updateAuditBadge()
           })
-          if (!needProfile && result.isNew) {
+          if (!needProfile) {
+            // 老用户资料完整：关引导，不进教程
             this.setData({ showGuide: false })
-            if (!wx.getStorageSync('opGuideCompleted')) {
-              setTimeout(() => this._startSpotlight('tutorial'), 400)
-            }
           }
           // needProfile 时由 onProfileSave 触发教程
         }).catch((err) => {
