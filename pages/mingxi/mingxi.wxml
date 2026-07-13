@@ -2108,7 +2108,14 @@
       <text class="guide-card-title">登录 / 注册</text>
       <text class="guide-card-desc">微信一键登录，数据云端同步</text>
       <button class="guide-wx-btn" open-type="getUserInfo" bindgetuserinfo="onGuideWxLogin">微信一键登录</button>
-      <text class="guide-skip" bindtap="onGuideSkipLogin">跳过登录</text>
+      <view class="guide-input-row" style="margin-top: 24rpx;">
+        <input class="guide-input" placeholder="手机号" value="{{loginPhone}}" bindinput="onLoginPhoneInput" maxlength="11" type="number"/>
+      </view>
+      <view class="guide-input-row">
+        <input class="guide-input" placeholder="验证码" value="{{loginCode}}" bindinput="onLoginCodeInput" maxlength="6" type="number" style="flex: none; width: 240rpx;"/>
+        <view class="guide-code-btn" bindtap="onSendCode">{{loginCodeSending ? (loginCodeCountdown + 's') : '获取验证码'}}</view>
+      </view>
+      <view class="guide-btn" bindtap="onGuidePhoneLogin" style="margin-bottom: 16rpx;">手机号登录</view>
       <view class="guide-dots">
         <view class="guide-dot"></view>
         <view class="guide-dot guide-dot--active"></view>
