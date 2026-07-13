@@ -1014,7 +1014,7 @@ Page({
     if (isGuide) {
       // 资料保存后 → 仅新用户播操作教程
       this.setData({ showGuide: false })
-      if (this.data._profileIsNewUser && !wx.getStorageSync('opGuideCompleted')) {
+      if (this.data._isNewUser) {
         setTimeout(() => this._startSpotlight('tutorial'), 300)
       }
     }
@@ -5131,7 +5131,6 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
   _completeSpotlight() {
     const type = this.data.spotlightType
     if (type === 'tutorial') {
-      wx.setStorageSync('opGuideCompleted', true)
       this._clearLedgerDemo()
       // 教程结束 → 进入角色选择（已有引导页）
       this.setData({
@@ -5214,9 +5213,9 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
     }
     api.loginByPhone(loginPhone, loginCode).then(async result => {
       const userInfo = { nickName: result.nickName, avatarUrl: result.avatarUrl }
-      this.setData({ isLoggedIn: true, userInfo, loginPhone: '', loginCode: '' })
+      this.setData({ isLoggedIn: true, userInfo, loginPhone: '', loginCode: '', _isNewUser: result.isNew })
       if (result.isNew) {
-        this.setData({ showGuide: false, showProfileModal: true, profileEditMode: false, profileName: '', profileAvatarLocal: '', profileAvatarUrl: '', _profileIsNewUser: true })
+        this.setData({ showGuide: false, showProfileModal: true, profileEditMode: false, profileName: '', profileAvatarLocal: '', profileAvatarUrl: '' })
       } else {
         this._refreshAvatarDisplay(userInfo)
       }
@@ -5236,9 +5235,7 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
         this.onGuideComplete()
       } else if (result.isNew) {
         this.setData({ showGuide: false })
-        if (!wx.getStorageSync('opGuideCompleted')) {
-          setTimeout(() => this._startSpotlight('tutorial'), 400)
-        }
+        setTimeout(() => this._startSpotlight('tutorial'), 400)
       } else {
         this.onGuideComplete()
       }
@@ -5284,10 +5281,10 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
         }
         api.loginByWechat({ code: loginRes.code }).then(async result => {
           const userInfo = { nickName: result.nickName, avatarUrl: result.avatarUrl, updatedAt: result.updatedAt }
-          this.setData({ isLoggedIn: true, userInfo })
+          this.setData({ isLoggedIn: true, userInfo, _isNewUser: result.isNew })
           const needProfile = result.isNew || !result.avatarUrl || result.nickName === '微信用户'
           if (needProfile) {
-            this.setData({ showGuide: false, showProfileModal: true, profileEditMode: false, profileName: '', profileAvatarLocal: '', profileAvatarUrl: '', _profileIsNewUser: result.isNew })
+            this.setData({ showGuide: false, showProfileModal: true, profileEditMode: false, profileName: '', profileAvatarLocal: '', profileAvatarUrl: '' })
           } else {
             this._refreshAvatarDisplay(userInfo)
           }
@@ -5403,7 +5400,6 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
   },
   onOpGuideComplete() {
     playTap()
-    wx.setStorageSync('opGuideCompleted', true)
     var after = this.data._opGuideAfter
     if (after === 'role') {
       // 先切步再关教程，避免闪过登录页
