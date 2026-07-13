@@ -5221,6 +5221,7 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
         this._refreshAvatarDisplay(userInfo)
       }
       wx.showToast({ title: '登录成功', icon: 'success' })
+      api.getVipStatus().then(function (s) { this.setData({ vipStatus: s, vipTrialDays: this._computeTrialDays(s), vipExpiresText: this._formatVipExpiry(s) }) }.bind(this)).catch(function () {})
       api.syncFromCloud().then((syncResult) => {
         if (syncResult && syncResult.hasConflicts) { this._handleSyncResult(syncResult); return }
         const ci = api.getCompanyInfo()
@@ -5291,6 +5292,7 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
             this._refreshAvatarDisplay(userInfo)
           }
           wx.showToast({ title: '登录成功', icon: 'success' })
+          api.getVipStatus().then(function (s) { this.setData({ vipStatus: s, vipTrialDays: this._computeTrialDays(s), vipExpiresText: this._formatVipExpiry(s) }) }.bind(this)).catch(function () {})
           api.syncFromCloud().then((syncResult) => {
             if (syncResult && syncResult.hasConflicts) { this._handleSyncResult(syncResult); return }
             const ci = api.getCompanyInfo()
