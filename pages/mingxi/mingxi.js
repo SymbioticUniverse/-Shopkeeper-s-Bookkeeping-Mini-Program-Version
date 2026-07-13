@@ -5233,7 +5233,7 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
       })
       if (result.hasCompany) {
         this.onGuideComplete()
-      } else {
+      } else if (result.isNew) {
         this.setData({ showGuide: false })
         if (!wx.getStorageSync('opGuideCompleted')) {
           setTimeout(() => this._startSpotlight('tutorial'), 400)
@@ -5301,7 +5301,7 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
             this.updateNotifyBadge()
             this.updateAuditBadge()
           })
-          if (!needProfile) {
+          if (!needProfile && result.isNew) {
             this.setData({ showGuide: false })
             if (!wx.getStorageSync('opGuideCompleted')) {
               setTimeout(() => this._startSpotlight('tutorial'), 400)
