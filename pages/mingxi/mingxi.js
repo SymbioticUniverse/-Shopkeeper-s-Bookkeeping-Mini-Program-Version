@@ -5133,7 +5133,7 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
     if (type === 'tutorial') {
       this._tutorialDone = true
       this._clearLedgerDemo()
-      // 教程结束 → 弹资料完善弹窗，之后进入正常使用
+      // 教程结束 → 回到登录引导角色选择
       this.setData({
         showSpotlightGuide: false,
         spotlightType: '',
@@ -5142,11 +5142,8 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
         spotlightTargetRect: null,
         showBookPopup: false,
         showBookCatPanel: false,
-        showProfileModal: true,
-        profileEditMode: false,
-        profileName: this.data.profileName || '',
-        profileAvatarLocal: '',
-        profileAvatarUrl: this.data.profileAvatarUrl || '',
+        showGuide: true,
+        guideStep: 2,
       })
     } else {
       this.setData({
@@ -5378,6 +5375,18 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
     this.setData({ showGuide: false })
     this.initDetailItems()
     this._syncOverviewCards()
+    // 新用户完成引导+教程 → 弹资料完善弹窗
+    if (this.data._isNewUser && this._tutorialDone) {
+      setTimeout(() => {
+        this.setData({
+          showProfileModal: true,
+          profileEditMode: false,
+          profileName: this.data.profileName || '',
+          profileAvatarLocal: '',
+          profileAvatarUrl: this.data.profileAvatarUrl || '',
+        })
+      }, 500)
+    }
     // 引导完成 → 语音记账操作提示
     if (!wx.getStorageSync('voiceTipShown')) {
       setTimeout(() => this.setData({ showVoiceTip: true }), 600)
