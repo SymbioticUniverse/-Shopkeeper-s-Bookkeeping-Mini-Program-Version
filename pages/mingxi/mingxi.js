@@ -2657,6 +2657,101 @@ Page({
     }
   },
 
+  // ASR 多笔记账模式检测：98+23+123、九十八加上六十八、98加23
+  _detectMultiEntryVoice(text) {
+    if (!text) return null
+    var t = text.trim()
+
+    // 1) 纯数学表达式：含 + 或 - 且至少两组数字
+    if (/^[\d\s+*/.\-]+$/.test(t) && /[\+\-]/.test(t) && (t.match(/\d+/g) || []).length >= 2) {
+      var clean = t.replace(/\s+/g, '').replace(/[*\/]/g, '+')
+      if (/[\+\-]/.test(clean)) return clean
+    }
+
+    // 2) 中文/混合运算符模式：九十八加上六十八、九八加六八、98加23减5
+    var hasCNNum = /[一二三四五六七八九十百千万零两廿卅]/.test(t)
+    var hasArabicNum = /\d/.test(t)
+    var hasOp = /加[上]?|减[去]?|和|再|又|跟|与/.test(t)
+    if (!hasOp) return null
+    if (!hasCNNum && !hasArabicNum) return null
+
+    // 把中文运算符替换为分隔符，同时在原文中标记位置
+    var sepText = t
+      .replace(/加上/g, ' + ')
+      .replace(/加/g, ' + ')
+      .replace(/减去/g, ' - ')
+      .replace(/减/g, ' - ')
+      .replace(/和/g, ' + ')
+      .replace(/再/g, ' + ')
+      .replace(/又/g, ' + ')
+      .replace(/跟/g, ' + ')
+      .replace(/与/g, ' + ')
+
+    // 按空格 + / - 切分
+    var tokens = sepText.split(/\s+/)
+    var numbers = []
+    var operators = []
+    for (var i = 0; i < tokens.length; i++) {
+      var tok = tokens[i].trim()
+      if (tok === '+' || tok === '-') {
+        operators.push(tok)
+        continue
+      }
+      if (!tok) continue
+      // 尝试解析数字：先阿拉伯，再中文
+      var n = parseFloat(tok)
+      if (isNaN(n) || n <= 0) {
+        n = this._cnToInt(tok)
+      }
+      if (n > 0) {
+        numbers.push(n)
+      } else if (tok.length > 0 && /[\d一二三四五六七八九十百千万两]/.test(tok)) {
+        // 可能数字嵌在其他文字中，尝试提取
+        n = this._cnToInt(tok)
+        if (n > 0) numbers.push(n)
+      }
+    }
+    if (numbers.length < 2) return null
+
+    // 拼接表达式，默认用 +，只有明确是减的才用 -
+    var expr = String(numbers[0])
+    for (var j = 0; j < numbers.length - 1; j++) {
+      var op = (operators[j] === '-') ? '-' : '+'
+      expr += op + numbers[j + 1]
+    }
+    // 验证至少有一个运算符
+    if (!/[\+\-]/.test(expr)) return null
+    return expr
+  },
+
+  _cnToInt(s) {
+    if (!s) return 0
+    var CN_NUM = { '零': 0, '一': 1, '二': 2, '三': 3, '四': 4, '五': 5, '六': 6, '七': 7, '八': 8, '九': 9, '十': 10, '两': 2, '廿': 20, '卅': 30, '百': 100, '千': 1000, '万': 10000, '亿': 100000000 }
+    // 纯中文数字转换
+    if (CN_NUM[s[0]] >= 20) {
+      var base = CN_NUM[s[0]]
+      return base + (s.length > 1 ? this._cnToInt(s.slice(1)) : 0)
+    }
+    var val = 0, seg = 0
+    for (var i = 0; i < s.length; i++) {
+      var v = CN_NUM[s[i]]
+      if (v === undefined) return 0
+      if (v >= 10000) {
+        val = (val + (seg || (i === 0 ? 1 : 0))) * v
+        seg = 0
+      } else if (v >= 100) {
+        seg = (seg || (i === 0 ? 1 : 0)) * v
+        val += seg
+        seg = 0
+      } else if (v === 10) {
+        seg = (seg || (i === 0 ? 1 : 0)) * 10
+      } else {
+        seg += v
+      }
+    }
+    return val + seg
+  },
+
   onMultiTypeToggle(e) {
     playTap()
     const type = e.currentTarget.dataset.type
@@ -5864,6 +5959,37 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
       msgs.push.apply(msgs, this.data.chatMessages)
     }
     msgs.push({ role: 'user', text, time: this._formatChatTime(now) })
+
+    // ---- 多笔记账语音检测 ----
+    const multiExpr = this._detectMultiEntryVoice(text)
+    if (multiExpr) {
+      const result = this._calcMulti(multiExpr)
+      if (result.multiCount >= 2) {
+        const date = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0')
+        this.setData({
+          showChat: true,
+          chatMessages: msgs,
+          chatInputText: '',
+          chatThinking: false,
+          chatScrollTop: 999999 + (msgs.length - 1),
+          showBookPopup: true,
+          bookMode: 'multi',
+          multiExpression: multiExpr,
+          multiResult: result.multiResult,
+          multiCount: result.multiCount,
+          multiStartDate: date,
+          multiEndDate: date,
+          multiNote: '',
+          multiScope: 'personal',
+          multiScopeLabel: '个人',
+          multiType: 'expense',
+          multiTypeLabel: '支出',
+          multiUseDateRange: false,
+        })
+        return
+      }
+    }
+
     this.setData({
       showChat: true,
       chatMessages: msgs,
@@ -5987,6 +6113,33 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
       chatThinking: true,
       chatScrollTop: 999999 + msgs.length
     })
+
+    // ---- 多笔记账检测 ----
+    const multiExpr = this._detectMultiEntryVoice(text)
+    if (multiExpr) {
+      const result = this._calcMulti(multiExpr)
+      if (result.multiCount >= 2) {
+        const now = new Date()
+        const date = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0')
+        this.setData({
+          chatThinking: false,
+          showBookPopup: true,
+          bookMode: 'multi',
+          multiExpression: multiExpr,
+          multiResult: result.multiResult,
+          multiCount: result.multiCount,
+          multiStartDate: date,
+          multiEndDate: date,
+          multiNote: '',
+          multiScope: 'personal',
+          multiScopeLabel: '个人',
+          multiType: 'expense',
+          multiTypeLabel: '支出',
+          multiUseDateRange: false,
+        })
+        return
+      }
+    }
 
     setTimeout(() => {
       const reply = this._mockAiReply(text)
