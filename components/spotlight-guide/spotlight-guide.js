@@ -11,6 +11,7 @@ Component({
   data: {
     maskReady: false,
     showWelcome: false,
+    showIntro: false,
     holeShape: 'rect',
     bubbleTitle: '',
     bubbleDesc: '',
@@ -32,10 +33,14 @@ Component({
       }
       const cfg = stepConfig || {}
       if (cfg.type === 'welcome') {
-        this.setData({ maskReady: true, showWelcome: true })
+        this.setData({ maskReady: true, showWelcome: true, showIntro: false })
         return
       }
-      this.setData({ showWelcome: false })
+      if (cfg.type === 'intro') {
+        this.setData({ maskReady: true, showWelcome: false, showIntro: true })
+        return
+      }
+      this.setData({ showWelcome: false, showIntro: false })
       if (!targetRect || !targetRect.width) {
         // 等待页面侧计算出 targetRect，不 fallback 到欢迎页
         return
@@ -112,6 +117,10 @@ Component({
 
     onWelcomeNext() {
       this.triggerEvent('welcomenext')
+    },
+
+    onIntroNext() {
+      this.triggerEvent('intronext')
     },
   },
 })

@@ -31,6 +31,42 @@
     <view class="sgl-welcome-btn" bindtap="onWelcomeNext">开始使用</view>
   </view>
 
+  <!-- 介绍页（居中卡片，欢迎页之后） -->
+  <view class="sgl-intro" wx:if="{{showIntro}}">
+    <text class="sgl-intro-title">掌柜记账能做什么？</text>
+    <view class="sgl-intro-list">
+      <view class="sgl-intro-item">
+        <text class="sgl-intro-icon">&#x1F399;</text>
+        <view class="sgl-intro-body">
+          <text class="sgl-intro-label">语音记账</text>
+          <text class="sgl-intro-desc">说一句话，自动识别金额和分类</text>
+        </view>
+      </view>
+      <view class="sgl-intro-item">
+        <text class="sgl-intro-icon">&#x1F3E2;</text>
+        <view class="sgl-intro-body">
+          <text class="sgl-intro-label">个人 / 公司双账本</text>
+          <text class="sgl-intro-desc">独立管理，互不干扰</text>
+        </view>
+      </view>
+      <view class="sgl-intro-item">
+        <text class="sgl-intro-icon">&#x1F4CB;</text>
+        <view class="sgl-intro-body">
+          <text class="sgl-intro-label">垫付追踪 + 往来结清</text>
+          <text class="sgl-intro-desc">记录垫资，跟踪报销状态</text>
+        </view>
+      </view>
+      <view class="sgl-intro-item">
+        <text class="sgl-intro-icon">&#x2601;</text>
+        <view class="sgl-intro-body">
+          <text class="sgl-intro-label">数据云端同步</text>
+          <text class="sgl-intro-desc">多端可用，换手机不丢数据</text>
+        </view>
+      </view>
+    </view>
+    <view class="sgl-welcome-btn" bindtap="onIntroNext">知道了</view>
+  </view>
+
   <!-- 气泡提示 -->
   <view
     class="sgl-bubble sgl-bubble--{{bubblePos}}"

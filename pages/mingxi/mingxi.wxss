@@ -9304,8 +9304,42 @@ page {
   padding: 4rpx 0 8rpx;
 }
 
+.book-keypad--multi {
+  display: flex;
+  flex-direction: column;
+}
+
+.book-keypad-main {
+  display: flex;
+  gap: 12rpx;
+}
+
+.book-keypad-nums {
+  flex: 3;
+  display: flex;
+  flex-direction: column;
+}
+
+.book-keypad-ops {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 12rpx;
+}
+
+.book-key--op-tall {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
 .book-sheet--multi .book-keypad-row {
   gap: 14rpx;
+  margin-bottom: 14rpx;
+}
+
+.book-keypad-nums .book-keypad-row {
   margin-bottom: 14rpx;
 }
 
@@ -9324,13 +9358,6 @@ page {
   font-size: 40rpx;
   font-weight: 700;
   color: #4a90d9;
-}
-
-.book-key--eq {
-  background: linear-gradient(135deg, #4a90d9, #6c5ce7);
-  color: #fff;
-  font-size: 40rpx;
-  font-weight: 700;
 }
 
 .book-key--clear {
@@ -9360,7 +9387,6 @@ page {
 .page--dark .book-mode-tabs { background: #2a2a3a; }
 .page--dark .book-mode-tab--active { background: #3a3a4e; color: #7eb8ff; }
 .page--dark .book-key--op { background: #2a2a4a; color: #7eb8ff; }
-.page--dark .book-key--eq { background: linear-gradient(135deg, #4a90d9, #6c5ce7); color: #fff; }
 .page--dark .book-key--clear { background: #3a2020; }
 .page--dark .multi-scope-toggle,
 .page--dark .multi-type-toggle { background: #2a2a3a; }
