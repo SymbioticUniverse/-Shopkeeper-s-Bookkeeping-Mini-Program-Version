@@ -6475,6 +6475,15 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
     var td = this._getBookTargetDefaults(isCompany ? 'company' : 'personal', typeKey)
     var targetIdx = td.target ? this.data.targetOptions.indexOf(td.target) : 2
     if (targetIdx < 0) targetIdx = 2
+
+    // 测试期：收集语音输入原始日志到学习库
+    var parsed = {
+      amount: amount, category: category, typeLabel: typeLabel,
+      scope: isCompany ? 'company' : 'personal', note: note || input.trim(),
+      verb: verb, externalSubject: externalSubject
+    }
+    api.voiceLog(input.trim(), parsed)
+
     return {
       role: 'assistant',
       text: '请确认以下记账信息：',

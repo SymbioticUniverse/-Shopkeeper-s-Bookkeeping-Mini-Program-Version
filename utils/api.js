@@ -1290,6 +1290,18 @@ function learnUploadCsv(filePath) {
   })
 }
 
+/**
+ * 语音记账原始日志上报（测试期收集训练数据）
+ * @param {string} rawText ASR 识别原文
+ * @param {object} parsedJson 解析结果
+ */
+function voiceLog(rawText, parsedJson) {
+  return _request('POST', '/learn/voice-log', {
+    rawText: rawText,
+    parsedJson: parsedJson || {}
+  }).catch(function () { /* 静默失败，不影响主流程 */ })
+}
+
 // ==================== VIP 订阅与用量 ====================
 
 /** 本地缓存键 */
@@ -1440,6 +1452,7 @@ module.exports = {
   // 标注数据集上传（内部）
   learnUpload,
   learnUploadCsv,
+  voiceLog,
 
   // 离线队列（内部使用，app.js 注册网络监听用）
   _initNetworkListener,
