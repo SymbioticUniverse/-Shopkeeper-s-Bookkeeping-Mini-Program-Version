@@ -2741,6 +2741,20 @@ Page({
     var CN_DIGIT = { '零': 0, '一': 1, '二': 2, '三': 3, '四': 4, '五': 5, '六': 6, '七': 7, '八': 8, '九': 9, '两': 2 }
     var CN_UNIT = { '十': 10, '廿': 20, '卅': 30, '百': 100, '千': 1000, '万': 10000, '亿': 100000000 }
 
+    // 小数点：三点五 → 3.5
+    var dotIdx = s.indexOf('点')
+    if (dotIdx >= 0) {
+      var intPart = this._cnToInt(s.slice(0, dotIdx))
+      var fracStr = s.slice(dotIdx + 1)
+      var frac = 0
+      for (var fi = 0; fi < fracStr.length; fi++) {
+        var fd = CN_DIGIT[fracStr[fi]]
+        if (fd === undefined) break
+        frac = frac * 10 + fd
+      }
+      return intPart + frac / Math.pow(10, fracStr.length)
+    }
+
     // 数字缩写：全是 1-9 中文数字没有单位 → 拼接（三二→32，三四五→345）
     var allDigits = true
     for (var ci = 0; ci < s.length; ci++) {
@@ -2759,24 +2773,34 @@ Page({
       var base = CN_UNIT[s[0]]
       return base + (s.length > 1 ? this._cnToInt(s.slice(1)) : 0)
     }
-    var val = 0, seg = 0
+    var val = 0, seg = 0, lastUnit = 0, sawZeroAfterUnit = false
     for (var i = 0; i < s.length; i++) {
       var dv = CN_DIGIT[s[i]]
       var uv = CN_UNIT[s[i]]
       if (dv === undefined && uv === undefined) return 0
+      if (dv === 0) {
+        // 零：标记后续数字是个位数（三百零二 → 302，不是 320）
+        if (lastUnit >= 100) sawZeroAfterUnit = true
+        continue
+      }
       var v = uv !== undefined ? uv : dv
       if (v >= 10000) {
         val = (val + (seg || (i === 0 ? 1 : 0))) * v
-        seg = 0
+        seg = 0; lastUnit = v; sawZeroAfterUnit = false
       } else if (v >= 100) {
         seg = (seg || (i === 0 ? 1 : 0)) * v
         val += seg
-        seg = 0
-      } else if (v === 10) {
-        seg = (seg || (i === 0 ? 1 : 0)) * 10
+        seg = 0; lastUnit = v; sawZeroAfterUnit = false
+      } else if (v >= 10) {
+        seg = (seg || (i === 0 ? 1 : 0)) * v
+        lastUnit = v; sawZeroAfterUnit = false
       } else {
         seg += v
       }
+    }
+    // 补全缩写：三百二 → 320（尾数后无十位单位，自动升位）
+    if (seg > 0 && seg < 10 && lastUnit >= 100 && !sawZeroAfterUnit) {
+      seg *= (lastUnit / 10)
     }
     return val + seg
   },
