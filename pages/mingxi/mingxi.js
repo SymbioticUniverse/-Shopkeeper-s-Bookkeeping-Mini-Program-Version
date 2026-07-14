@@ -2657,37 +2657,53 @@ Page({
     }
   },
 
-  // ASR 多笔记账模式检测：98+23+123、九十八加上六十八、98加23
+  // ASR 多笔记账模式检测：98+23+123、九十八加上六十八、-32-12-345、减三二扣三三买四五
   _detectMultiEntryVoice(text) {
     if (!text) return null
     var t = text.trim()
 
+    // 0) 前导减号修正：-32-12-345 → 32+12+345
+    var leadingNeg = false
+    if (t[0] === '-') {
+      leadingNeg = true
+      t = t.slice(1)
+    }
+
     // 1) 纯数学表达式：含 + 或 - 且至少两组数字
     if (/^[\d\s+*/.\-]+$/.test(t) && /[\+\-]/.test(t) && (t.match(/\d+/g) || []).length >= 2) {
       var clean = t.replace(/\s+/g, '').replace(/[*\/]/g, '+')
+      // 前导负号 → 全用 + 连接
+      if (leadingNeg) clean = clean.replace(/\-/g, '+')
       if (/[\+\-]/.test(clean)) return clean
     }
 
-    // 2) 中文/混合运算符模式：九十八加上六十八、九八加六八、98加23减5
+    // 2) 中文/混合运算符模式
     var hasCNNum = /[一二三四五六七八九十百千万零两廿卅]/.test(t)
     var hasArabicNum = /\d/.test(t)
-    var hasOp = /加[上]?|减[去]?|和|再|又|跟|与/.test(t)
+    // 扩展运算符：加减 + 记账常用动词
+    var hasOp = /加[上]?|减[去]?|扣[除]?|买[了]?|花[了]?|付[了]?|交[了]?|缴[了]?|充[了]?|收[了到]?|赚[了]?|入[账]?|和|再|又|跟|与/.test(t)
     if (!hasOp) return null
     if (!hasCNNum && !hasArabicNum) return null
 
-    // 把中文运算符替换为分隔符，同时在原文中标记位置
+    // 把中文运算符替换为分隔符
     var sepText = t
-      .replace(/加上/g, ' + ')
-      .replace(/加/g, ' + ')
-      .replace(/减去/g, ' - ')
-      .replace(/减/g, ' - ')
+      .replace(/加上/g, ' + ').replace(/加/g, ' + ')
+      .replace(/减去/g, ' - ').replace(/减/g, ' - ')
+      .replace(/扣除/g, ' - ').replace(/扣/g, ' - ')
+      .replace(/买了/g, ' - ').replace(/买/g, ' - ')
+      .replace(/花了/g, ' - ').replace(/花/g, ' - ')
+      .replace(/付了/g, ' - ').replace(/付/g, ' - ')
+      .replace(/交了/g, ' - ').replace(/交/g, ' - ')
+      .replace(/缴了/g, ' - ').replace(/缴/g, ' - ')
+      .replace(/充了/g, ' - ').replace(/充/g, ' - ')
+      .replace(/收到/g, ' + ').replace(/收了/g, ' + ').replace(/收/g, ' + ')
+      .replace(/赚了/g, ' + ').replace(/赚/g, ' + ')
+      .replace(/入账/g, ' + ').replace(/入/g, ' + ')
       .replace(/和/g, ' + ')
-      .replace(/再/g, ' + ')
-      .replace(/又/g, ' + ')
-      .replace(/跟/g, ' + ')
-      .replace(/与/g, ' + ')
+      .replace(/再/g, ' + ').replace(/又/g, ' + ')
+      .replace(/跟/g, ' + ').replace(/与/g, ' + ')
 
-    // 按空格 + / - 切分
+    // 按空格切分
     var tokens = sepText.split(/\s+/)
     var numbers = []
     var operators = []
@@ -2698,7 +2714,6 @@ Page({
         continue
       }
       if (!tok) continue
-      // 尝试解析数字：先阿拉伯，再中文
       var n = parseFloat(tok)
       if (isNaN(n) || n <= 0) {
         n = this._cnToInt(tok)
@@ -2706,36 +2721,50 @@ Page({
       if (n > 0) {
         numbers.push(n)
       } else if (tok.length > 0 && /[\d一二三四五六七八九十百千万两]/.test(tok)) {
-        // 可能数字嵌在其他文字中，尝试提取
         n = this._cnToInt(tok)
         if (n > 0) numbers.push(n)
       }
     }
     if (numbers.length < 2) return null
 
-    // 拼接表达式，默认用 +，只有明确是减的才用 -
+    // 拼接表达式：全部用 + 连接，每段数字是一笔独立条目
     var expr = String(numbers[0])
-    for (var j = 0; j < numbers.length - 1; j++) {
-      var op = (operators[j] === '-') ? '-' : '+'
-      expr += op + numbers[j + 1]
+    for (var j = 1; j < numbers.length; j++) {
+      expr += '+' + numbers[j]
     }
-    // 验证至少有一个运算符
     if (!/[\+\-]/.test(expr)) return null
     return expr
   },
 
   _cnToInt(s) {
     if (!s) return 0
-    var CN_NUM = { '零': 0, '一': 1, '二': 2, '三': 3, '四': 4, '五': 5, '六': 6, '七': 7, '八': 8, '九': 9, '十': 10, '两': 2, '廿': 20, '卅': 30, '百': 100, '千': 1000, '万': 10000, '亿': 100000000 }
-    // 纯中文数字转换
-    if (CN_NUM[s[0]] >= 20) {
-      var base = CN_NUM[s[0]]
+    var CN_DIGIT = { '零': 0, '一': 1, '二': 2, '三': 3, '四': 4, '五': 5, '六': 6, '七': 7, '八': 8, '九': 9, '两': 2 }
+    var CN_UNIT = { '十': 10, '廿': 20, '卅': 30, '百': 100, '千': 1000, '万': 10000, '亿': 100000000 }
+
+    // 数字缩写：全是 1-9 中文数字没有单位 → 拼接（三二→32，三四五→345）
+    var allDigits = true
+    for (var ci = 0; ci < s.length; ci++) {
+      if (CN_DIGIT[s[ci]] === undefined) { allDigits = false; break }
+    }
+    if (allDigits && s.length >= 2) {
+      var concat = ''
+      for (var cj = 0; cj < s.length; cj++) {
+        concat += CN_DIGIT[s[cj]]
+      }
+      return parseInt(concat, 10) || 0
+    }
+
+    // 标准中文数字转换
+    if (CN_UNIT[s[0]] >= 20) {
+      var base = CN_UNIT[s[0]]
       return base + (s.length > 1 ? this._cnToInt(s.slice(1)) : 0)
     }
     var val = 0, seg = 0
     for (var i = 0; i < s.length; i++) {
-      var v = CN_NUM[s[i]]
-      if (v === undefined) return 0
+      var dv = CN_DIGIT[s[i]]
+      var uv = CN_UNIT[s[i]]
+      if (dv === undefined && uv === undefined) return 0
+      var v = uv !== undefined ? uv : dv
       if (v >= 10000) {
         val = (val + (seg || (i === 0 ? 1 : 0))) * v
         seg = 0
