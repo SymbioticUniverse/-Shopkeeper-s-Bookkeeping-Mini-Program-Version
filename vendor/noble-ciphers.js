@@ -43,7 +43,7 @@ function anumber(n) {
 }
 function abytes(value, length, title = "") {
   const bytes = isBytes(value);
-  const len = value?.length;
+  const len = value == null ? void 0 : value.length;
   const needsLen = length !== void 0;
   if (!bytes || needsLen && len !== length) {
     const prefix = title && `"${title}" `;
@@ -188,7 +188,7 @@ function randomBytes(bytesLength = 32) {
     return result || arr;
   }
   const cr = typeof globalThis === "object" ? globalThis.crypto : null;
-  if (typeof cr?.getRandomValues !== "function")
+  if (cr == null || typeof cr.getRandomValues !== "function")
     throw new Error("crypto.getRandomValues must be defined");
   return cr.getRandomValues(new Uint8Array(bytesLength));
 }
@@ -250,7 +250,7 @@ var GHASH = class {
     this.W = W;
     const bits = 128;
     const windows = bits / W;
-    const windowSize = this.windowSize = 2 ** W;
+    const windowSize = this.windowSize = Math.pow(2, W);
     const items = [];
     for (let w = 0; w < windows; w++) {
       for (let byte = 0; byte < windowSize; byte++) {
@@ -568,7 +568,7 @@ function anumber2(n, title = "") {
 }
 function abytes2(value, length, title = "") {
   const bytes = isBytes2(value);
-  const len = value?.length;
+  const len = value == null ? void 0 : value.length;
   const needsLen = length !== void 0;
   if (!bytes || needsLen && len !== length) {
     const prefix = title && `"${title}" `;
@@ -1000,7 +1000,7 @@ function pbkdf2Init(hash, _password, _salt, _opts) {
     throw new Error("iterations (c) must be >= 1");
   if (dkLen < 1)
     throw new Error('"dkLen" must be >= 1');
-  if (dkLen > (2 ** 32 - 1) * hash.outputLen)
+  if (dkLen > (Math.pow(2, 32) - 1) * hash.outputLen)
     throw new Error("derived key too long");
   const password = kdfInputToBytes(_password, "password");
   const salt = kdfInputToBytes(_salt, "salt");
