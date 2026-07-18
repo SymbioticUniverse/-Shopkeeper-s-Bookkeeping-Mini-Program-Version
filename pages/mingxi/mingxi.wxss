@@ -821,6 +821,7 @@ page {
   align-items: center;
   justify-content: center;
   margin-bottom: 2rpx;
+  position: relative;
 }
 .tab-icon-center-img {
   width: 70rpx;
@@ -838,6 +839,19 @@ page {
 }
 .tab-label-active {
   color: #000;
+}
+
+/* 底部 tab 栏「我的」红点 */
+.tab-badge {
+  position: absolute;
+  top: -4rpx;
+  right: -4rpx;
+  width: 20rpx;
+  height: 20rpx;
+  border-radius: 50%;
+  background: #ff3b30;
+  border: 2rpx solid #fff;
+  box-shadow: 0 0 4rpx rgba(255,59,48,0.5);
 }
 
 /* ---- 我的页面卡片 ---- */
@@ -2873,10 +2887,12 @@ page {
   position: absolute;
   top: -8rpx;
   right: -8rpx;
-  width: 16rpx;
-  height: 16rpx;
+  width: 20rpx;
+  height: 20rpx;
   border-radius: 50%;
   background: #ff3b30;
+  border: 2rpx solid #fff;
+  box-shadow: 0 0 4rpx rgba(255,59,48,0.5);
 }
 
 .notify-text {
@@ -6030,10 +6046,12 @@ page {
   position: absolute;
   top: -8rpx;
   right: -8rpx;
-  width: 16rpx;
-  height: 16rpx;
+  width: 20rpx;
+  height: 20rpx;
   border-radius: 50%;
   background: #ff3b30;
+  border: 2rpx solid #fff;
+  box-shadow: 0 0 4rpx rgba(255,59,48,0.5);
 }
 
 .notify-text {
@@ -9441,6 +9459,8 @@ page {
   justify-content: center;
   margin-bottom: 12rpx;
   overflow: hidden;
+  background: linear-gradient(135deg, #e8f0fe 0%, #d4e4fc 100%);
+  box-shadow: 0 8rpx 28rpx rgba(58,123,253,0.12);
 }
 .guide-logo-img {
   width: 140rpx;
@@ -9461,6 +9481,112 @@ page {
   margin-bottom: 28rpx;
   letter-spacing: 2rpx;
 }
+.guide-card--welcome {
+  padding: 48rpx 40rpx 36rpx;
+  max-width: 620rpx;
+  position: relative;
+}
+.guide-theme-toggle {
+  position: absolute;
+  top: 24rpx;
+  right: 24rpx;
+  width: 60rpx;
+  height: 60rpx;
+  border-radius: 30rpx;
+  background: rgba(0,0,0,0.04);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1;
+}
+.guide-theme-toggle:active {
+  background: rgba(0,0,0,0.1);
+}
+.guide-theme-icon {
+  font-size: 32rpx;
+  line-height: 1;
+}
+.page--dark .guide-theme-toggle {
+  background: rgba(255,255,255,0.08);
+}
+.page--dark .guide-theme-toggle:active {
+  background: rgba(255,255,255,0.16);
+}
+.guide-features {
+  display: flex;
+  flex-direction: column;
+  gap: 12rpx;
+  margin-bottom: 32rpx;
+  padding: 0;
+}
+.guide-feature-card {
+  display: flex;
+  align-items: center;
+  gap: 20rpx;
+  padding: 20rpx 24rpx;
+  background: rgba(0,0,0,0.02);
+  border-radius: 20rpx;
+  border: 1rpx solid rgba(0,0,0,0.04);
+}
+.guide-feature-icon-wrap {
+  width: 72rpx;
+  height: 72rpx;
+  border-radius: 20rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.guide-feature-emoji {
+  font-size: 34rpx;
+  line-height: 1;
+}
+.guide-feature-icon-wrap--boss {
+  background: linear-gradient(135deg, #fff3e0 0%, #ffe0b2 100%);
+}
+.guide-feature-icon-wrap--emp {
+  background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+}
+.guide-feature-icon-wrap--multi {
+  background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);
+}
+.guide-feature-icon-wrap--voice {
+  background: linear-gradient(135deg, #f3e5f5 0%, #e1bee7 100%);
+}
+.guide-feature-icon-wrap--ocr {
+  background: linear-gradient(135deg, #e0f7fa 0%, #b2ebf2 100%);
+}
+.guide-feature-text {
+  font-size: 27rpx;
+  color: #555;
+  line-height: 1.5;
+}
+.guide-feature-bold {
+  font-weight: 700;
+  color: #333;
+}
+.guide-feature-body {
+  flex: 1;
+}
+.guide-feature-sub {
+  display: block;
+  font-size: 22rpx;
+  color: #aaa;
+  margin-top: 4rpx;
+  line-height: 1.4;
+}
+.page--dark .guide-feature-card {
+  background: rgba(255,255,255,0.04);
+  border-color: rgba(255,255,255,0.04);
+}
+.page--dark .guide-feature-text { color: #aaa; }
+.page--dark .guide-feature-sub { color: #777; }
+.page--dark .guide-feature-bold { color: #ddd; }
+.page--dark .guide-feature-icon-wrap--boss { background: rgba(255,152,0,0.15); }
+.page--dark .guide-feature-icon-wrap--emp { background: rgba(58,123,253,0.15); }
+.page--dark .guide-feature-icon-wrap--multi { background: rgba(76,175,80,0.15); }
+.page--dark .guide-feature-icon-wrap--voice { background: rgba(156,39,176,0.15); }
+.page--dark .guide-feature-icon-wrap--ocr { background: rgba(0,188,212,0.15); }
 .guide-card-title {
   font-size: 38rpx;
   font-weight: 700;
@@ -9507,6 +9633,12 @@ page {
   margin-bottom: 16rpx;
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
+.guide-input-icon {
+  font-size: 30rpx;
+  margin-right: 12rpx;
+  flex-shrink: 0;
+  opacity: 0.5;
+}
 .guide-prefix {
   font-size: 30rpx;
   font-weight: 600;
@@ -9549,27 +9681,90 @@ page {
   color: #ccc;
 }
 .guide-wx-btn {
-  width: 100% !important;
-  height: 92rpx;
-  background: linear-gradient(135deg, #1aad5a 0%, #07C160 50%, #06a855 100%) !important;
-  border-radius: 46rpx;
-  color: #fff !important;
-  font-size: 30rpx;
-  font-weight: 600;
+  width: 100%;
+  height: 80rpx;
+  background: #f5f5f5;
+  border-radius: 16rpx;
+  color: #555;
+  font-size: 28rpx;
+  font-weight: 500;
   display: flex;
   align-items: center;
   justify-content: center;
+  gap: 12rpx;
   padding: 0;
   margin: 0;
+  border: 1rpx solid rgba(0,0,0,0.06);
+  line-height: 80rpx;
+  box-sizing: border-box;
+}
+.guide-wx-btn::after {
   border: none;
-  line-height: 92rpx;
-  box-shadow: 0 6rpx 20rpx rgba(7,193,96,0.25);
-  transition: transform 0.15s ease;
+  width: 0;
+  height: 0;
+}
+.guide-wx-icon-wrap {
+  width: 44rpx;
+  height: 44rpx;
+  border-radius: 12rpx;
+  background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.guide-wx-icon-emoji {
+  font-size: 26rpx;
+  line-height: 1;
 }
 .guide-wx-btn:active {
-  transform: scale(0.97);
+  background: #e8e8e8;
 }
-.guide-wx-btn::after { border: none; }
+.guide-wx-icon { flex-shrink: 0; }
+
+/* 登录区 */
+.guide-login-section {
+  margin-bottom: 0;
+}
+
+/* 分隔线 */
+.guide-divider {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+  margin: 28rpx 0;
+}
+.guide-divider-line {
+  flex: 1;
+  height: 1rpx;
+  background: rgba(0,0,0,0.08);
+}
+.guide-divider-text {
+  font-size: 22rpx;
+  color: #bbb;
+  flex-shrink: 0;
+}
+.page--dark .guide-input-row {
+  background: rgba(255,255,255,0.06);
+  border-color: rgba(255,255,255,0.06);
+}
+.page--dark .guide-input-icon {
+  opacity: 0.35;
+}
+.page--dark .guide-input {
+  color: #ddd;
+}
+.page--dark .guide-wx-btn {
+  background: rgba(255,255,255,0.08);
+  color: #aaa;
+  border-color: rgba(255,255,255,0.06);
+}
+.page--dark .guide-wx-btn:active { background: rgba(255,255,255,0.14); }
+.page--dark .guide-wx-icon-wrap {
+  background: rgba(76,175,80,0.15);
+}
+.page--dark .guide-divider-line { background: rgba(255,255,255,0.08); }
+.page--dark .guide-divider-text { color: #666; }
 
 /* Role buttons */
 .guide-role-btn {
@@ -10391,9 +10586,19 @@ page {
   align-items: center;
   box-shadow: 0 16rpx 48rpx rgba(0,0,0,0.5);
 }
-.voice-tip-icon {
-  font-size: 64rpx;
+.voice-tip-icon-wrap {
+  width: 100rpx;
+  height: 100rpx;
+  border-radius: 28rpx;
+  background: rgba(74,138,254,0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
   margin-bottom: 20rpx;
+}
+.voice-tip-emoji {
+  font-size: 50rpx;
+  line-height: 1;
 }
 .voice-tip-title {
   font-size: 36rpx;
@@ -10722,6 +10927,48 @@ page {
 .chat-bill-btn--reject:active {
   background: #e5e5e5;
 }
+.chat-bill-btn--correct {
+  background: #ff9500;
+  color: #fff;
+}
+.chat-bill-btn--correct:active {
+  background: #e08600;
+}
+
+/* 纠正模式 */
+.chat-correct-area {
+  margin-top: 16rpx;
+  padding: 20rpx;
+  background: rgba(255,149,0,0.08);
+  border-radius: 12rpx;
+}
+.chat-correct-hint {
+  display: block;
+  font-size: 26rpx;
+  color: #ff9500;
+  margin-bottom: 12rpx;
+}
+.chat-correct-input {
+  display: block;
+  width: 100%;
+  height: 72rpx;
+  padding: 0 20rpx;
+  box-sizing: border-box;
+  background: rgba(255,255,255,0.9);
+  border-radius: 10rpx;
+  font-size: 28rpx;
+  color: #333;
+  margin-bottom: 14rpx;
+}
+.page--dark .chat-correct-input {
+  background: rgba(255,255,255,0.12);
+  color: #eee;
+}
+.page--dark .chat-bill-btn--correct {
+  background: #ff9500;
+  color: #fff;
+}
+
 /* 已取消卡片 */
 .chat-bill-card--rejected {
   background: rgba(255,255,255,0.05) !important;
@@ -11150,6 +11397,96 @@ page {
   background: rgba(255, 255, 255, 0.18);
 }
 .page--dark .my-avatar--empty { background: rgba(255, 255, 255, 0.1); }
+
+/* ---- 测试版隐私声明弹窗 ---- */
+.privacy-notice-mask {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0, 0, 0, 0.55);
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40rpx;
+  box-sizing: border-box;
+}
+.privacy-notice {
+  width: 100%;
+  max-width: 560rpx;
+  background: #fff;
+  border-radius: 24rpx;
+  padding: 44rpx 36rpx 32rpx;
+  box-sizing: border-box;
+  box-shadow: 0 20rpx 56rpx rgba(0, 0, 0, 0.18);
+}
+.privacy-notice-title {
+  display: block;
+  font-size: 36rpx;
+  font-weight: 700;
+  color: #1a1a2e;
+  text-align: center;
+  margin-bottom: 24rpx;
+}
+.privacy-notice-desc {
+  display: block;
+  font-size: 28rpx;
+  color: #555;
+  line-height: 1.6;
+  margin-bottom: 20rpx;
+}
+.privacy-notice-items {
+  display: flex;
+  flex-direction: column;
+  gap: 10rpx;
+  margin-bottom: 20rpx;
+  padding: 0 8rpx;
+}
+.privacy-notice-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10rpx;
+}
+.privacy-notice-dot {
+  font-size: 28rpx;
+  color: #999;
+  flex-shrink: 0;
+}
+.privacy-notice-text {
+  font-size: 28rpx;
+  color: #555;
+  line-height: 1.5;
+}
+.privacy-notice-expire {
+  display: block;
+  font-size: 24rpx;
+  color: #999;
+  text-align: center;
+  line-height: 1.5;
+  margin-bottom: 28rpx;
+  padding: 0 8rpx;
+}
+.privacy-notice-btn {
+  height: 80rpx;
+  border-radius: 16rpx;
+  background: #4a8afe;
+  color: #fff;
+  font-size: 30rpx;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.privacy-notice-btn:active {
+  background: #3a6fd6;
+}
+.page--dark .privacy-notice {
+  background: #1e1e1e;
+  box-shadow: 0 20rpx 56rpx rgba(0, 0, 0, 0.5);
+}
+.page--dark .privacy-notice-title { color: #fff; }
+.page--dark .privacy-notice-desc { color: #aaa; }
+.page--dark .privacy-notice-text { color: #aaa; }
+.page--dark .privacy-notice-expire { color: #777; }
 
 /* ---- 报表筛选汇总 ---- */
 .report-summary {

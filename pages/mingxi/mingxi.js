@@ -261,6 +261,7 @@ Page({
     userInfo: null,
     avatarDisplay: '',          // 头像实际显示路径（本地临时/带头下载到本地），优先于 userInfo.avatarUrl
     showProfileModal: false,    // 资料设置弹窗（新用户引导 + 我的页编辑共用）
+    showPrivacyNotice: false,   // 测试版隐私声明弹窗
     profileEditMode: false,     // true=我的页编辑（标题/按钮用「编辑/取消」），false=新用户引导（用「完善/跳过」）
     profileName: '',
     profileAvatarLocal: '',     // 弹窗内已选/已传头像的本地预览路径
@@ -278,10 +279,6 @@ Page({
     showGuide: false,
     guideStep: 0,
     guideRole: '',
-    loginPhone: '',
-    loginCode: '',
-    loginCodeSending: false,
-    loginCodeCountdown: 0,
     // 操作教程
     showOpGuide: false,
     opGuideStep: 0,
@@ -390,6 +387,12 @@ Page({
     settingsLanguageLabel: '简体中文',
     settingsDarkMode: 'system', // 深色模式: system/light/dark
     settingsDarkModeLabel: '跟随系统',
+    // E2E 加密
+    showEncryptionSettings: false,
+    encryptionEnabled: false,
+    encryptionAdvancedEnabled: false,
+    encryptionAdvancedKey: '',
+    encryptionAdvancedInput: '',
     tapVolumePercent: Math.round(getVolume() * 100),
     tapVibrationLevel: wx.getStorageSync('tapVibration') || 1,
     tapVibrationLabel: ['关闭', '轻度 ~50ms', '中度 ~150ms', '高度 ~200ms', '最高 ~300ms'][wx.getStorageSync('tapVibration') || 1],
@@ -401,6 +404,7 @@ Page({
     notifyTouchStartX: 0,
     notifyTouchStartY: 0,
     hasUnreadNotify: false,
+    hasMyTabBadge: false,
     exportPeriod: 0, // 0月度/1季度/2年度/3日度
     exportFormatOptions: ['.EXCEL', '.PDF'],
     exportFormatIndex: 0,
@@ -736,6 +740,10 @@ Page({
         }, 800)
       }
     }
+
+    // E2E 加密初始化：检测本地密钥状态 + 尝试从服务端恢复
+    this._initCrypto()
+
     api.migrate()
     const savedPCats = api.getCategories('personal')
     const savedCCats = api.getCategories('company')
@@ -753,6 +761,25 @@ Page({
     }
     this.updateAuditBadge()
     this._throttledSync()
+    // 预加载公开训练库纠错映射（测试期共享纠正数据，提升 ASR 识别准确率）
+    this._loadPublicCorrections()
+  },
+
+  _loadPublicCorrections() {
+    var that = this
+    that._publicCorrections = {}
+    api.publicGetCorrections().then(function (list) {
+      if (list && list.length) {
+        var map = {}
+        for (var i = 0; i < list.length; i++) {
+          if (list[i].wrong && list[i].correct) {
+            map[list[i].wrong] = list[i].correct
+          }
+        }
+        that._publicCorrections = map
+        console.log('[PUBLIC] 加载 ' + list.length + ' 条公开纠错映射')
+      }
+    })
   },
 
   _initTabletScale() {
@@ -763,6 +790,7 @@ Page({
   },
 
   onShow() {
+    this._proactiveRefresh()
     this._throttledSync()
     if (this.data.isLoggedIn && !this._recordAuthRequested) {
       this._recordAuthRequested = true
@@ -774,6 +802,29 @@ Page({
         this.onBookEntry({ currentTarget: { dataset: { type: 'expense' } } })
       }
     }
+  },
+
+  // 页面恢复时主动续期 access token，避免 401 风暴
+  _proactiveRefresh() {
+    var refreshToken = wx.getStorageSync('refreshToken')
+    if (!refreshToken) return
+    // 节流：10 分钟内只主动续一次
+    var now = Date.now()
+    if (now - (this._lastProactiveRefresh || 0) < 10 * 60 * 1000) return
+    this._lastProactiveRefresh = now
+    var that = this
+    wx.request({
+      url: 'https://symbioticuniverse.xyz/api/auth/refresh',
+      method: 'POST',
+      header: { 'Content-Type': 'application/json' },
+      data: { refreshToken: refreshToken },
+      success: function(r) {
+        if (r.statusCode >= 200 && r.statusCode < 300 && r.data && r.data.token) {
+          wx.setStorageSync('authToken', r.data.token)
+          wx.setStorageSync('refreshToken', r.data.refreshToken)
+        }
+      }
+    })
   },
 
   // 进页面节流同步：以后端为准刷新本地缓存（30s 内最多一次）
@@ -799,7 +850,7 @@ Page({
     if (su) this.setData({ userInfo: su })
     this._refreshAvatarDisplay(su)
     // 静默刷新 VIP 状态
-    api.getVipStatus().then(function (s) { this.setData({ vipStatus: s, vipTrialDays: this._computeTrialDays(s), vipExpiresText: this._formatVipExpiry(s) }) }.bind(this)).catch(function () {})
+    api.getVipStatus().then(function (s) { this.setData({ vipStatus: s, vipTrialDays: this._computeTrialDays(s), vipExpiresText: this._formatVipExpiry(s) }); this._checkEncryptionTierAlignment() }.bind(this)).catch(function () {})
     // 公司可见性可能因云端同步到的 companyInfo 改变 → 仅变化时重建简览卡（避免每次重绘图表）
     const ci = api.getCompanyInfo()
     const canSeeCompany = !!(ci && ci.companyRole === 'boss' && ci.companyUid)
@@ -1024,12 +1075,28 @@ Page({
     this._syncOverviewCards(true)
     wx.showToast({ title: '已保存', icon: 'success' })
     if (isGuide) {
-      // 资料保存后 → 仅新用户且未完成教程时触发操作引导
       this.setData({ showGuide: false })
       if (this.data._isNewUser && !this._tutorialDone) {
         setTimeout(() => this._startSpotlight('tutorial'), 300)
+      } else if (this.data._isNewUser && this._tutorialDone && this._afterPrivacyAction) {
+        // 新用户完成引导+教程+资料保存 → 弹隐私声明
+        this.setData({ showPrivacyNotice: true })
       }
     }
+  },
+
+  onPrivacyNoticeConfirm() {
+    if (this._privacyConfirming) return
+    this._privacyConfirming = true
+    playTap()
+    this.setData({ showPrivacyNotice: false })
+    var action = this._afterPrivacyAction
+    this._afterPrivacyAction = null
+    if (action && !action.isNew) {
+      // 老用户：完成引导设置
+      this.onGuideComplete()
+    }
+    // 新用户（action.isNew）：完整引导已在资料保存前完成，无需额外操作
   },
 
   onProfileSkip() {
@@ -1286,22 +1353,20 @@ Page({
     if (now - (this._lastSwitchTab || 0) < 250) return
     this._lastSwitchTab = now
 
-    // Tab 0 双击 → 返回简览页
-    if (index === 0) {
-      var last = this._tab0LastTap || 0
-      this._tab0LastTap = now
-      if (last && now - last < 350) {
-        this._tab0LastTap = 0
-        this._setTabUI(0, true)
-        if (prevTab !== 0) this._loadTabData(0)
-        return
-      }
-      if (prevTab === 0 && !wasOverview) return
-    } else {
-      this._tab0LastTap = 0
+    // Tab 0 重复点击（当前在明细页非简览）→ 返回简览页
+    if (index === 0 && prevTab === 0 && !wasOverview) {
+      this._setTabUI(0, true)
+      return
     }
 
+    this._tab0LastTap = 0
+
     if (index === 4) {
+      // Tab 4 重复点击（当前在二级页面）→ 回退到主我的页
+      if (prevTab === 4) {
+        this._setTabUI(4, false)
+        return
+      }
       this._onSpotlightAction()
     }
     if (index === 2) {
@@ -1309,7 +1374,7 @@ Page({
       return
     }
 
-    if (index === prevTab && !wasOverview) return
+    if (index === prevTab) return
     this._setTabUI(index, false)
     this._loadTabData(index)
     // 同步顶部模式色带
@@ -2892,6 +2957,8 @@ Page({
       multiDateEnd: multiUseDateRange ? multiEndDate : '',
     }
     api.addItem(multiScope, item)
+    // 学习模块挂钩（正式版可移除）
+    try { require('../../utils/learn.js').learnFromItem(item) } catch (_) {}
     const _items = this._buildDetailList(multiScope, api.getItems(multiScope))
     this.setData({
       detailItems: _items,
@@ -3117,6 +3184,8 @@ Page({
     } else {
       api.addItem(scope, newItem)
     }
+    // 学习模块挂钩（正式版可移除）
+    try { require('../../utils/learn.js').learnFromItem(newItem) } catch (_) {}
 
     var _items2497 = this._buildDetailList(scope, api.getItems(scope))
 this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_items2497), showBookPopup: false, bookPhoto: '' })
@@ -3734,7 +3803,8 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
   updateAuditBadge() {
     const list = api.getAuditList()
     const hasPending = list.some(item => item.status === 'pending')
-    this.setData({ hasPendingAudit: hasPending })
+    const hasUnread = api.getNotifyList().some(item => !item.read)
+    this.setData({ hasPendingAudit: hasPending, hasMyTabBadge: hasPending || hasUnread })
   },
 
   onNotifyEntry() {
@@ -3761,7 +3831,8 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
   updateNotifyBadge() {
     const list = api.getNotifyList()
     const hasUnread = list.some(item => !item.read)
-    this.setData({ hasUnreadNotify: hasUnread })
+    const hasPending = api.getAuditList().some(item => item.status === 'pending')
+    this.setData({ hasUnreadNotify: hasUnread, hasMyTabBadge: hasUnread || hasPending })
   },
 
   onNotifyTouchStart(e) {
@@ -4177,7 +4248,7 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
         })
         break
       case 'security':
-        wx.showToast({ title: '账号安全开发中', icon: 'none' })
+        this._onEncryptionTap()
         break
       case 'registerOrJoin':
         if (!this.data.isLoggedIn) {
@@ -5117,7 +5188,7 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
             const su = api.getUserInfo()
             if (su) this.setData({ userInfo: su })
             this._refreshAvatarDisplay(su)
-            api.getVipStatus().then(function (s) { this.setData({ vipStatus: s, vipTrialDays: this._computeTrialDays(s), vipExpiresText: this._formatVipExpiry(s) }) }.bind(this)).catch(function () {})
+            api.getVipStatus().then(function (s) { this.setData({ vipStatus: s, vipTrialDays: this._computeTrialDays(s), vipExpiresText: this._formatVipExpiry(s) }); this._checkEncryptionTierAlignment() }.bind(this)).catch(function () {})
             this.updateNotifyBadge()
             this.updateAuditBadge()
           })
@@ -5128,6 +5199,367 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
       },
       fail: () => {
         wx.showToast({ title: '登录失败', icon: 'none' })
+      }
+    })
+  },
+
+  // ==================== E2E 加密 ====================
+
+  _getCrypto() {
+    try { return require('../../utils/crypto.js') } catch (_) { return null }
+  },
+
+  _initCrypto() {
+    var crypto = this._getCrypto()
+    if (!crypto) return Promise.resolve()
+
+    var masterKey = crypto.exportMasterKey()
+    var hasKey = !!masterKey
+
+    this.setData({
+      encryptionEnabled: hasKey,
+      encryptionAdvancedEnabled: hasKey && crypto.isAdvancedSecurityEnabled()
+    })
+
+    // 已有主密钥 → 无需恢复
+    if (hasKey) return Promise.resolve()
+
+    // 未登录 → 无 token，等登录后重试
+    if (!wx.getStorageSync('authToken')) return Promise.resolve()
+
+    // 查服务端是否有 blob（不管本地 e2e_enabled，那只是本地标记）
+    var that = this
+    return crypto.fetchKeyBlob().then(function (result) {
+      if (!result || !result.blob) {
+        // 服务端无 blob → 首次使用，自动初始化默认加密
+        var phone = wx.getStorageSync('user_phone') || ''
+        if (phone) {
+          return new Promise(function (resolveSetup) {
+            try {
+              var setupResult = crypto.setupEncryption(phone)
+              crypto.uploadKeyBlob(setupResult.encryptedBlob, setupResult.salt, setupResult.tier).then(function () {
+                that.setData({ encryptionEnabled: true, encryptionAdvancedEnabled: false })
+                console.log('[crypto] 默认加密已自动初始化')
+                resolveSetup()
+              }).catch(function () {
+                that.setData({ encryptionEnabled: true, encryptionAdvancedEnabled: false })
+                console.warn('[crypto] 默认加密已初始化但 blob 上传失败')
+                resolveSetup()
+              })
+            } catch (e) {
+              console.error('[crypto] 自动初始化加密失败:', e.message)
+              resolveSetup()
+            }
+          })
+        }
+        // dev 模式无手机号 → 跳过
+        return
+      }
+
+      // 服务端有 blob → 必定开启过加密，需要恢复
+      return new Promise(function (resolveRecover) {
+        function _doRecover(phone) {
+          if (result.tier === 'advanced') {
+            that._showAdvancedKeyInput(function (advancedKey) {
+              var ok = crypto.recoverMasterKeyAdvanced(phone, advancedKey, result.blob, result.salt)
+              if (ok) {
+                that.setData({ encryptionEnabled: true, encryptionAdvancedEnabled: true })
+                wx.showToast({ title: '密钥已恢复', icon: 'success' })
+              } else {
+                wx.showToast({ title: '密钥不正确或手机号不匹配', icon: 'none' })
+              }
+              resolveRecover()
+            })
+          } else {
+            var ok = crypto.recoverMasterKey(phone, result.blob, result.salt)
+            if (ok) {
+              that.setData({ encryptionEnabled: true, encryptionAdvancedEnabled: false })
+              wx.showToast({ title: '密钥已恢复', icon: 'success' })
+            } else {
+              wx.showToast({ title: '密钥恢复失败，手机号可能不匹配', icon: 'none' })
+            }
+            resolveRecover()
+          }
+        }
+
+        var cachedPhone = wx.getStorageSync('user_phone') || ''
+        if (cachedPhone) {
+          _doRecover(cachedPhone)
+        } else {
+          that._promptPhoneForRecovery(function (phone) {
+            if (phone) {
+              wx.setStorageSync('user_phone', phone)
+              _doRecover(phone)
+            } else {
+              resolveRecover()
+            }
+          })
+        }
+      })
+    }).catch(function () {})
+  },
+
+  /** 换设备恢复时，手机号未缓存 → 弹窗让用户输入 */
+  _promptPhoneForRecovery(callback) {
+    wx.showModal({
+      title: '请输入注册手机号以恢复加密数据',
+      editable: true,
+      placeholderText: '请输入手机号',
+      confirmText: '确定',
+      cancelText: '取消',
+      success: function (res) {
+        if (!res.confirm) { callback(''); return }
+        var phone = (res.content || '').trim()
+        callback(phone)
+      }
+    })
+  },
+
+  /** 刷新加密状态到 UI */
+  _refreshEncryptionState() {
+    var crypto = this._getCrypto()
+    if (!crypto) return
+    var hasKey = !!crypto.exportMasterKey()
+    this.setData({
+      encryptionEnabled: hasKey,
+      encryptionAdvancedEnabled: hasKey && crypto.isAdvancedSecurityEnabled()
+    })
+  },
+
+  /** VIP 过期/续费时自动对齐加密 tier */
+  _checkEncryptionTierAlignment() {
+    var crypto = this._getCrypto()
+    if (!crypto) return
+    var masterKey = crypto.exportMasterKey()
+    if (!masterKey) return
+
+    var isAdvanced = crypto.isAdvancedSecurityEnabled()
+    var isVip = api.isVip()
+    var phone = wx.getStorageSync('user_phone') || ''
+    if (!phone) return
+
+    var that = this
+
+    if (isAdvanced && !isVip) {
+      // VIP 过期 → 自动降级 blob 到 personal
+      try {
+        var result = crypto.downgradeToPersonal(phone)
+        crypto.uploadKeyBlob(result.encryptedBlob, result.salt, result.tier).then(function () {
+          wx.setStorageSync('e2e_advanced', false)
+          wx.setStorageSync('e2e_advanced_downgraded', true)
+          that.setData({ encryptionAdvancedEnabled: false })
+          console.log('[crypto] VIP 过期，已自动降级为默认加密')
+        }).catch(function () {
+          // 上传失败 → 保持本地高级标记不变，下次对齐检查会重试
+          console.warn('[crypto] VIP 过期降级 blob 上传失败，下次重试')
+        })
+      } catch (e) {
+        console.error('[crypto] VIP 过期自动降级失败:', e.message)
+      }
+      return
+    }
+
+    if (!isAdvanced && isVip && wx.getStorageSync('e2e_advanced_downgraded')) {
+      // VIP 续费 → 提示用户恢复高级安全
+      wx.showModal({
+        title: 'VIP 已恢复',
+        content: '检测到您之前开启了高级安全加密，是否恢复？',
+        confirmText: '恢复',
+        cancelText: '暂不',
+        success: function (res) {
+          if (res.confirm) {
+            that._enableAdvancedSecurity()
+          }
+          // 无论是否恢复，清除降级标记（不反复提示）
+          wx.removeStorageSync('e2e_advanced_downgraded')
+        }
+      })
+    }
+  },
+
+  /** 点击「数据加密」— 加密为默认开启，不可关闭 */
+  _onEncryptionTap() {
+    var crypto = this._getCrypto()
+    if (!crypto) {
+      wx.showToast({ title: '加密模块加载失败', icon: 'none' })
+      return
+    }
+    var that = this
+    var isVip = api.isVip()
+    var isAdvanced = crypto.isAdvancedSecurityEnabled()
+    var itemList = ['导出主密钥（备份）']
+
+    if (isVip) {
+      itemList.unshift(isAdvanced ? '关闭高级安全' : '开启高级安全（28位密钥）')
+    }
+
+    wx.showActionSheet({
+      itemList: itemList,
+      success: function (res) {
+        switch (itemList[res.tapIndex]) {
+          case '开启高级安全（28位密钥）':
+            that._enableAdvancedSecurity()
+            break
+          case '关闭高级安全':
+            that._disableAdvancedSecurity()
+            break
+          case '导出主密钥（备份）':
+            that._exportMasterKey()
+            break
+        }
+      }
+    })
+  },
+
+  /** 开启高级安全（企业用户） */
+  _enableAdvancedSecurity() {
+    var crypto = this._getCrypto()
+    if (!crypto) return
+    var that = this
+
+    // 生成 28 位密钥
+    var advancedKey = crypto.generateAdvancedKey()
+    this.setData({ encryptionAdvancedKey: advancedKey })
+
+    wx.showModal({
+      title: '高级安全密钥',
+      content: '请务必保存以下 28 位密钥，丢失后将永久无法恢复数据：\n\n' + advancedKey + '\n\n已复制到剪贴板，请妥善保存后再确认。',
+      confirmText: '我已保存',
+      cancelText: '取消',
+      success: function (res) {
+        if (!res.confirm) {
+          that.setData({ encryptionAdvancedKey: '' })
+          return
+        }
+        wx.setClipboardData({ data: advancedKey })
+
+        var phone = wx.getStorageSync('user_phone') || ''
+        if (!phone) {
+          wx.showToast({ title: '请先绑定手机号', icon: 'none' })
+          return
+        }
+        wx.showLoading({ title: '切换高级安全...' })
+        try {
+          var result = crypto.enableAdvancedSecurity(phone, advancedKey)
+          crypto.uploadKeyBlob(result.encryptedBlob, result.salt, result.tier).then(function () {
+            wx.hideLoading()
+            wx.setStorageSync('e2e_advanced', true)
+            wx.removeStorageSync('e2e_advanced_downgraded')
+            that.setData({ encryptionAdvancedEnabled: true, encryptionAdvancedKey: '' })
+            wx.showToast({ title: '高级安全已开启', icon: 'success' })
+          }).catch(function () {
+            wx.hideLoading()
+            wx.showToast({ title: '上传失败，请重试', icon: 'none' })
+          })
+        } catch (e) {
+          wx.hideLoading()
+          wx.showToast({ title: '操作失败: ' + e.message, icon: 'none' })
+        }
+      }
+    })
+  },
+
+  /** 关闭高级安全 */
+  _disableAdvancedSecurity() {
+    var crypto = this._getCrypto()
+    if (!crypto) return
+    var that = this
+
+    wx.showModal({
+      title: '输入高级安全密钥以验证身份',
+      editable: true,
+      placeholderText: '请输入28位密钥',
+      confirmText: '验证',
+      cancelText: '取消',
+      success: function (res) {
+        if (!res.confirm || !res.content) return
+        var key = (res.content || '').trim()
+        if (!crypto.isValidAdvancedKey(key)) {
+          wx.showToast({ title: '密钥格式不正确（需28位）', icon: 'none' })
+          return
+        }
+
+        var phone = wx.getStorageSync('user_phone') || ''
+        if (!phone) {
+          wx.showToast({ title: '请先绑定手机号', icon: 'none' })
+          return
+        }
+        wx.showLoading({ title: '切换默认模式...' })
+        try {
+          var result = crypto.disableAdvancedSecurity(phone, key)
+          crypto.uploadKeyBlob(result.encryptedBlob, result.salt, result.tier).then(function () {
+            wx.hideLoading()
+            wx.setStorageSync('e2e_advanced', false)
+            wx.removeStorageSync('e2e_advanced_downgraded')
+            that.setData({ encryptionAdvancedEnabled: false })
+            wx.showToast({ title: '已切回默认模式', icon: 'success' })
+          }).catch(function () {
+            wx.hideLoading()
+            wx.showToast({ title: '上传失败，请重试', icon: 'none' })
+          })
+        } catch (e) {
+          wx.hideLoading()
+          wx.showToast({ title: '密钥不正确', icon: 'none' })
+        }
+      }
+    })
+  },
+
+  /** 导出主密钥 */
+  _exportMasterKey() {
+    var crypto = this._getCrypto()
+    if (!crypto) return
+    var masterKey = crypto.exportMasterKey()
+    if (!masterKey) {
+      wx.showToast({ title: '无主密钥', icon: 'none' })
+      return
+    }
+    wx.setClipboardData({ data: masterKey })
+    wx.showModal({
+      title: '主密钥已复制',
+      content: '密钥已复制到剪贴板，请妥善保存。\n\n任何人拿到此密钥都可解密您的账单数据，请勿泄露。',
+      showCancel: false,
+      confirmText: '知道了'
+    })
+  },
+
+  /** 手动导入主密钥 */
+  _importMasterKeyDialog() {
+    var crypto = this._getCrypto()
+    if (!crypto) return
+    var that = this
+    wx.showModal({
+      title: '导入主密钥（64位hex）',
+      editable: true,
+      placeholderText: '请输入64位hex密钥',
+      confirmText: '导入',
+      cancelText: '取消',
+      success: function (res) {
+        if (!res.confirm || !res.content) return
+        var hex = (res.content || '').trim()
+        try {
+          crypto.importMasterKey(hex)
+          that.setData({ encryptionEnabled: true })
+          wx.showToast({ title: '密钥已导入', icon: 'success' })
+        } catch (e) {
+          wx.showToast({ title: '密钥格式不正确', icon: 'none' })
+        }
+      }
+    })
+  },
+
+  /** 显示高级安全密钥输入框 */
+  _showAdvancedKeyInput(callback) {
+    wx.showModal({
+      title: '高级安全 — 请输入28位密钥',
+      editable: true,
+      placeholderText: '输入28位密钥以恢复数据',
+      confirmText: '确定',
+      cancelText: '取消',
+      success: function (res) {
+        if (!res.confirm) { callback(''); return }
+        var key = (res.content || '').trim()
+        callback(key)
       }
     })
   },
@@ -5324,98 +5756,18 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
     }
   },
 
-  // ========== 手机号登录（引导中） ==========
-  onLoginPhoneInput(e) {
-    this.setData({ loginPhone: e.detail.value })
-  },
-
-  onLoginCodeInput(e) {
-    this.setData({ loginCode: e.detail.value })
-  },
-
-  async onSendCode() {
-    if (this.data.loginCodeSending) return
-    const phone = this.data.loginPhone
-    if (!/^1[3-9]\d{9}$/.test(phone)) {
-      wx.showToast({ title: '请输入正确的手机号', icon: 'none' })
-      return
-    }
-    this.setData({ loginCodeSending: true, loginCodeCountdown: 60 })
-    try {
-      await api.sendVerifyCode(phone)
-      wx.showToast({ title: '验证码已发送', icon: 'success' })
-    } catch (err) {
-      this.setData({ loginCodeSending: false, loginCodeCountdown: 0 })
-      var msg = (err && err.error) || (err && err.errMsg) || '发送失败，请检查网络'
-      wx.showToast({ title: msg, icon: 'none', duration: 3000 })
-      return
-    }
-    const timer = setInterval(() => {
-      const count = this.data.loginCodeCountdown - 1
-      if (count <= 0) {
-        clearInterval(timer)
-        this.setData({ loginCodeSending: false, loginCodeCountdown: 0 })
-      } else {
-        this.setData({ loginCodeCountdown: count })
-      }
-    }, 1000)
-  },
-
-  onGuidePhoneLogin() {
-    playTap()
-    const { loginPhone, loginCode } = this.data
-    if (!/^1[3-9]\d{9}$/.test(loginPhone)) {
-      wx.showToast({ title: '请输入正确的手机号', icon: 'none' })
-      return
-    }
-    if (loginCode.length !== 6) {
-      wx.showToast({ title: '请输入6位验证码', icon: 'none' })
-      return
-    }
-    api.loginByPhone(loginPhone, loginCode).then(async result => {
-      const userInfo = { nickName: result.nickName, avatarUrl: result.avatarUrl }
-      this.setData({ isLoggedIn: true, userInfo, loginPhone: '', loginCode: '', _isNewUser: result.isNew })
-      if (result.isNew) {
-        // 新用户：不弹资料弹窗，直接用默认昵称进操作引导
-        const defaultName = '新用户'
-        this.setData({
-          showGuide: false,
-          userInfo: { nickName: defaultName, avatarUrl: (userInfo && userInfo.avatarUrl) || '' },
-          avatarDisplay: '',
-          profileName: defaultName, profileAvatarLocal: '', profileAvatarUrl: ''
-        })
-      } else {
-        this._refreshAvatarDisplay(userInfo)
-      }
-      wx.showToast({ title: '登录成功', icon: 'success' })
-      api.getVipStatus().then(function (s) { this.setData({ vipStatus: s, vipTrialDays: this._computeTrialDays(s), vipExpiresText: this._formatVipExpiry(s) }) }.bind(this)).catch(function () {})
-      api.syncFromCloud().then((syncResult) => {
-        if (syncResult && syncResult.hasConflicts) { this._handleSyncResult(syncResult); return }
-        const ci = api.getCompanyInfo()
-        if (ci && ci.companyUid) this.setData({ companyUid: ci.companyUid })
-        this.initDetailItems()
-        this._syncOverviewCards()
-        const su = api.getUserInfo()
-        if (su) this.setData({ userInfo: su })
-        this._refreshAvatarDisplay(su)
-      })
-      if (result.hasCompany) {
-        this.onGuideComplete()
-      } else if (result.isNew) {
-        this.setData({ showGuide: false })
-        setTimeout(() => this._startSpotlight('tutorial'), 400)
-      } else {
-        this.onGuideComplete()
-      }
-    }).catch(() => {
-      wx.showToast({ title: '登录失败', icon: 'none' })
-    })
-  },
-
   // ========== 首次引导 ==========
   onGuideNext() {
     playTap()
     this.setData({ guideStep: this.data.guideStep + 1 })
+  },
+
+  onToggleDarkMode() {
+    playTap()
+    const next = !this.data.isDarkMode
+    const mode = next ? 'dark' : 'light'
+    api.saveSetting('appDarkMode', mode)
+    this.setData({ isDarkMode: next })
   },
 
   onGuideSkipLogin() {
@@ -5439,61 +5791,113 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
     }
   },
 
-  onGuideWxLogin() {
+  // 开发工具兜底：普通微信登录（getRealtimePhoneNumber 在模拟器中不触发）
+  _devLoginFallback() {
     playTap()
+    var sys = wx.getSystemInfoSync()
+    if (sys.platform !== 'devtools') return  // 真机不触发，留给 getRealtimePhoneNumber
+
+    var that = this
     wx.login({
-      success: (loginRes) => {
+      success: function(loginRes) {
         if (!loginRes.code) {
-          wx.showToast({ title: '登录失败', icon: 'none' })
+          wx.showToast({ title: '登录失败，请重试', icon: 'none' })
           return
         }
-        api.loginByWechat({ code: loginRes.code }).then(async result => {
-          const userInfo = { nickName: result.nickName, avatarUrl: result.avatarUrl, updatedAt: result.updatedAt }
-          this.setData({ isLoggedIn: true, userInfo, _isNewUser: result.isNew })
-          const needProfile = !result.isNew && (!result.avatarUrl || result.nickName === '微信用户')
+        api.loginByWechat({ code: loginRes.code }).then(function(result) {
+          var userInfo = { nickName: result.nickName, avatarUrl: result.avatarUrl, updatedAt: result.updatedAt }
+          that.setData({ isLoggedIn: true, userInfo: userInfo, showLoginPage: false, showGuide: false })
           if (result.isNew) {
-            const defaultName = '新用户'
-            this.setData({
-              userInfo: { nickName: defaultName, avatarUrl: result.avatarUrl || '', updatedAt: result.updatedAt },
-              avatarDisplay: '',
-              profileName: defaultName, profileAvatarLocal: '', profileAvatarUrl: ''
-            })
-          } else if (needProfile) {
-            this.setData({ showGuide: false, showProfileModal: true, profileEditMode: false, profileName: '', profileAvatarLocal: '', profileAvatarUrl: '' })
+            that.setData({ showProfileModal: true, profileEditMode: false, profileName: '', profileAvatarLocal: '', profileAvatarUrl: '' })
           } else {
-            this._refreshAvatarDisplay(userInfo)
+            that._refreshAvatarDisplay(userInfo)
           }
-          wx.showToast({ title: '登录成功', icon: 'success' })
-          api.getVipStatus().then(function (s) { this.setData({ vipStatus: s, vipTrialDays: this._computeTrialDays(s), vipExpiresText: this._formatVipExpiry(s) }) }.bind(this)).catch(function () {})
-          api.syncFromCloud().then((syncResult) => {
-            if (syncResult && syncResult.hasConflicts) { this._handleSyncResult(syncResult); return }
-            const ci = api.getCompanyInfo()
-            if (ci && ci.companyUid) this.setData({ companyUid: ci.companyUid })
-            this.initDetailItems()
-            this._syncOverviewCards()
-            const su = api.getUserInfo()
-            if (su) this.setData({ userInfo: su })
-            this._refreshAvatarDisplay(su)
-            this.updateNotifyBadge()
-            this.updateAuditBadge()
+          wx.showToast({ title: '登录成功（开发模式）', icon: 'success' })
+          // 登录后恢复加密密钥，完成后再同步
+          that._initCrypto().then(function () {
+          api.syncFromCloud().then(function(syncResult) {
+            if (syncResult && syncResult.hasConflicts) { that._handleSyncResult(syncResult); return }
+            that.initDetailItems()
+            that._syncOverviewCards()
+            var su = api.getUserInfo()
+            if (su) that.setData({ userInfo: su })
+            that._refreshAvatarDisplay(su)
+            api.getVipStatus().then(function(s) { that.setData({ vipStatus: s, vipTrialDays: that._computeTrialDays(s), vipExpiresText: that._formatVipExpiry(s) }); that._checkEncryptionTierAlignment() }).catch(function() {})
+            that.updateNotifyBadge()
+            that.updateAuditBadge()
           })
-          if (result.isNew) {
-            this.setData({ showGuide: false })
-            setTimeout(() => this._startSpotlight('tutorial'), 400)
-          } else if (!needProfile) {
-            // 老用户资料完整：关引导，不进教程
-            this.setData({ showGuide: false })
-          }
-          // needProfile 时由 onProfileSave 触发教程
-        }).catch((err) => {
-          const msg = (err && err.error) || '登录失败'
+          })
+        }).catch(function(err) {
+          console.error('[微信登录] 开发模式登录失败:', JSON.stringify(err))
+          var msg = (err && err.error) || '登录失败'
           wx.showToast({ title: msg, icon: 'none', duration: 3000 })
         })
       },
-      fail: () => {
-        wx.showToast({ title: '登录失败', icon: 'none' })
+      fail: function() {
+        wx.showToast({ title: '登录失败，请重试', icon: 'none' })
       }
     })
+  },
+
+  // 微信手机号实时验证回调（getRealtimePhoneNumber）
+  onGetRealtimePhoneNumber(e) {
+    playTap()
+    var phoneCode = (e.detail || {}).code
+    if (!phoneCode) {
+      console.log('[微信手机号] 获取失败, errMsg:', e.detail.errMsg, 'errno:', e.detail.errno)
+      wx.showToast({ title: '获取手机号失败，请重试', icon: 'none' })
+      return
+    }
+    // 同时调用 wx.login 获取用户标识 code
+    var that = this
+    wx.login({
+      success: function(loginRes) {
+        if (!loginRes.code) {
+          wx.showToast({ title: '登录失败，请重试', icon: 'none' })
+          return
+        }
+        console.log('[微信手机号] phoneCode 已获取, 开始登录...')
+        api.loginByWechatPhone(loginRes.code, phoneCode).then(function(result) {
+          var userInfo = { nickName: result.nickName, avatarUrl: result.avatarUrl, updatedAt: result.updatedAt }
+          // 存储手机号用于 E2E 加密
+          if (result.phone) wx.setStorageSync('user_phone', result.phone)
+          that.setData({ isLoggedIn: true, userInfo: userInfo, showLoginPage: false, showGuide: false })
+          if (result.isNew) {
+            that.setData({ showProfileModal: true, profileEditMode: false, profileName: '', profileAvatarLocal: '', profileAvatarUrl: '' })
+          } else {
+            that._refreshAvatarDisplay(userInfo)
+          }
+          wx.showToast({ title: '登录成功', icon: 'success' })
+          // 登录后恢复加密密钥，完成后再同步（否则加密数据无法解密）
+          that._initCrypto().then(function () {
+            api.syncFromCloud().then(function(syncResult) {
+            if (syncResult && syncResult.hasConflicts) { that._handleSyncResult(syncResult); return }
+            that.initDetailItems()
+            that._syncOverviewCards()
+            var su = api.getUserInfo()
+            if (su) that.setData({ userInfo: su })
+            that._refreshAvatarDisplay(su)
+            api.getVipStatus().then(function(s) { that.setData({ vipStatus: s, vipTrialDays: that._computeTrialDays(s), vipExpiresText: that._formatVipExpiry(s) }); that._checkEncryptionTierAlignment() }).catch(function() {})
+            that.updateNotifyBadge()
+            that.updateAuditBadge()
+          })
+          })
+        }).catch(function(err) {
+          console.error('[微信手机号] 登录请求失败:', JSON.stringify(err))
+          var msg = (err && err.error) || '登录失败'
+          wx.showToast({ title: msg, icon: 'none', duration: 3000 })
+        })
+      },
+      fail: function() {
+        wx.showToast({ title: '登录失败，请重试', icon: 'none' })
+      }
+    })
+  },
+
+  onGuideWxLogin() {
+    // 已被 getRealtimePhoneNumber 替代，作为兜底
+    playTap()
+    wx.showToast({ title: '请点击上方微信登录按钮', icon: 'none' })
   },
 
   onGuideCompanyCreate() {
@@ -5564,9 +5968,9 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
     var label = type === 'asr' ? '语音记账' : (type === 'ocr' ? '凭证扫描' : (type === 'export' ? '账单导出' : '该'))
     wx.showModal({
       title: '会员专享额度',
-      content: label + '功能是会员专享额度，当前免费额度已用完，请开通会员享受不限次使用。',
-      confirmText: '订阅升级服务',
-      cancelText: '暂不升级',
+      content: label + '免费额度已用完。测试期间可免费领取 VIP 会员，畅享不限次使用。',
+      confirmText: '领取会员',
+      cancelText: '暂不领取',
       success: (res) => {
         if (res.confirm) this.onVipEntry()
       }
@@ -5989,6 +6393,18 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
       wx.showToast({ title: '没听清，请再说一次', icon: 'none' })
       return
     }
+    // 语音使用计数 — 每 3 次提示领取会员
+    var count = (wx.getStorageSync('_asrUseCount') || 0) + 1
+    wx.setStorageSync('_asrUseCount', count)
+    if (count % 3 === 0) {
+      wx.showModal({
+        title: '语音记账',
+        content: '测试期间可免费领取 VIP 会员，畅享不限次语音记账、凭证扫描等高级功能。',
+        confirmText: '领取会员',
+        cancelText: '稍后再说',
+        success: (res) => { if (res.confirm) this.onVipEntry() }
+      })
+    }
     if (who === 'chat') {
       this.setData({ chatInputText: t })
       setTimeout(this.onChatSend.bind(this), 200)
@@ -6224,6 +6640,13 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
     for (var ak in ASR_FIX) {
       if (text.indexOf(ak) >= 0) text = text.replace(ak, ASR_FIX[ak])
     }
+    // 应用公开训练库纠错映射（实时学习，共享纠正）
+    var pubMap = this._publicCorrections
+    if (pubMap) {
+      for (var pk in pubMap) {
+        if (text.indexOf(pk) >= 0) text = text.replace(pk, pubMap[pk])
+      }
+    }
 
     // ---- 长文本断句：按连接词拆成短句，取第一个含金额/数字的短句 ----
     var segments = [text]
@@ -6238,11 +6661,57 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
     }
 
     // ---- 时间词自动匹配 ----
+    var dayOfWeek = now.getDay() // 0=周日, 1=周一, ..., 6=周六
+    var todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+
+    // "X号" / "X日" 提取（必须在金额提取之前，否则数字被当金额）
+    var dayMatch = text.match(/(\d{1,2})\s*[号日]/)
+    if (dayMatch) {
+      var dayNum = parseInt(dayMatch[1])
+      if (dayNum >= 1 && dayNum <= 31) {
+        // 默认当月，如果 day 比今天小很多可能指下月，按当月处理
+        dateStr = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(dayNum).padStart(2, '0')
+        text = text.replace(dayMatch[0], '')
+      }
+    }
+
+    // 星期映射（相对今天的天数偏移）
+    var dayOffsets = { '周一': 1, '周二': 2, '周三': 3, '周四': 4, '周五': 5, '周六': 6, '周日': 0 }
+    // 本周/上周/下周 的周一基准偏移
+    var thisMondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek // 本周一距今天几天
+
+    var weekTimeMap = {}
+    // 具体星期：上周一~上周日, 这周一~这周日, 下周一~下周日, 周一~周日
+    for (var dow in dayOffsets) {
+      // "这周一" → 本周的该天
+      weekTimeMap['这' + dow] = thisMondayOffset + (dayOffsets[dow] - 1)
+      // "上周一" → 上周的该天
+      weekTimeMap['上' + dow] = thisMondayOffset + (dayOffsets[dow] - 1) - 7
+      // "下周一" → 下周的该天
+      weekTimeMap['下' + dow] = thisMondayOffset + (dayOffsets[dow] - 1) + 7
+      // 裸"周一" → 最近的未来该天（含今天）
+      var rawDayOffset = dayOffsets[dow]
+      var rawOffset = rawDayOffset - dayOfWeek
+      if (rawOffset < 0) rawOffset += 7 // 已过则取下周
+      weekTimeMap[dow] = rawOffset
+    }
+    // 周基准
+    weekTimeMap['本周'] = thisMondayOffset
+    weekTimeMap['这周'] = thisMondayOffset
+    weekTimeMap['上周'] = thisMondayOffset - 7
+    weekTimeMap['下周'] = thisMondayOffset + 7
+
     var timeMap = { '今天': 0, '昨天': -1, '前天': -2, '明天': 1, '后天': 2 }
-    for (var tk in timeMap) {
+    // 合并，长 key 优先匹配（"上周一"优先于"上周"优先于"周一"）
+    var allTimeKeys = Object.keys(weekTimeMap).concat(Object.keys(timeMap))
+    allTimeKeys.sort(function(a, b) { return b.length - a.length })
+
+    for (var tki = 0; tki < allTimeKeys.length; tki++) {
+      var tk = allTimeKeys[tki]
       if (text.indexOf(tk) >= 0) {
-        var d = new Date(now)
-        d.setDate(d.getDate() + timeMap[tk])
+        var offset = weekTimeMap[tk] !== undefined ? weekTimeMap[tk] : timeMap[tk]
+        var d = new Date(todayStart)
+        d.setDate(d.getDate() + offset)
         dateStr = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0')
         text = text.replace(tk, '')
         break
@@ -6533,6 +7002,8 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
       targetType: c.targetType || 'external',
     }
     api.addItem(scope, newItem)
+    // 学习模块挂钩（正式版可移除）
+    try { require('../../utils/learn.js').learnFromItem(newItem) } catch (_) {}
     reply.card.itemId = newItem.id
     var _savedItems = this._buildDetailList(scope, api.getItems(scope))
     this.setData({ detailItems: _savedItems, detailGroups: this._buildDetailGroups(_savedItems) })
@@ -6571,6 +7042,103 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
 	      chatScrollTop: 999999 + lastIdx
 	    })
 	  },
+
+  // ---- 纠正模式 ----
+  onChatCorrect(e) {
+    playTap()
+    const idx = e.currentTarget.dataset.idx
+    const reply = this.data.chatMessages[idx]
+    if (!reply || !reply.card) return
+    const updated = this.data.chatMessages.slice()
+    updated[idx] = Object.assign({}, updated[idx], {
+      correcting: true,
+      correctText: ''
+    })
+    this.setData({ chatMessages: updated })
+  },
+
+  onCorrectTextInput(e) {
+    const idx = e.currentTarget.dataset.idx
+    const updated = this.data.chatMessages.slice()
+    updated[idx] = Object.assign({}, updated[idx], {
+      correctText: e.detail.value
+    })
+    this.setData({ chatMessages: updated })
+  },
+
+  onCorrectCancel(e) {
+    playTap()
+    const idx = e.currentTarget.dataset.idx
+    const updated = this.data.chatMessages.slice()
+    updated[idx] = Object.assign({}, updated[idx], {
+      correcting: false,
+      correctText: ''
+    })
+    this.setData({ chatMessages: updated })
+  },
+
+  onCorrectSubmit(e) {
+    playTap()
+    const idx = e.currentTarget.dataset.idx
+    const reply = this.data.chatMessages[idx]
+    if (!reply || !reply.card) return
+    const correctedText = (reply.correctText || '').trim()
+    if (!correctedText) {
+      wx.showToast({ title: '请输入正确的描述', icon: 'none' })
+      return
+    }
+    var originalText = ''
+    for (var i = idx - 1; i >= 0; i--) {
+      if (this.data.chatMessages[i].role === 'user') {
+        originalText = this.data.chatMessages[i].text || ''
+        break
+      }
+    }
+    // 上传原始日志
+    api.voiceLog(originalText, {
+      correctedText: correctedText,
+      original: reply.fields || reply.card,
+      correction: true
+    })
+    // 提取纠正对，提交到公开训练库（共享给所有测试者）
+    this._uploadCorrectionPairs(originalText, correctedText)
+    // 重新解析纠正后的文本
+    const newReply = this._mockAiReply(correctedText)
+    const updated = this.data.chatMessages.slice()
+    updated[idx] = newReply
+    this.setData({
+      chatMessages: updated,
+      chatScrollTop: 999999 + idx
+    })
+    wx.showToast({ title: '已上传至训练集，感谢您的付出', icon: 'none' })
+  },
+
+  // 从原始/纠正文本中提取错词→正确词映射，提交公开库
+  _uploadCorrectionPairs(originalText, correctedText) {
+    if (!originalText || !correctedText || originalText === correctedText) return
+    var pairs = []
+    var rawWords = originalText.replace(/[，。！？、；：""''（）《》【】\s,.!?;:'"()]+/g, ' ').split(' ')
+    var correctWords = correctedText.replace(/[，。！？、；：""''（）《》【】\s,.!?;:'"()]+/g, ' ').split(' ')
+    var len = Math.min(rawWords.length, correctWords.length)
+    for (var i = 0; i < len; i++) {
+      var rw = rawWords[i].trim()
+      var cw = correctWords[i].trim()
+      if (rw && cw && rw !== cw && rw.length <= 10 && cw.length <= 10) {
+        pairs.push({ wrong: rw, correct: cw })
+      }
+    }
+    if (pairs.length === 0 && originalText.length <= 10 && correctedText.length <= 10) {
+      pairs.push({ wrong: originalText.trim(), correct: correctedText.trim() })
+    }
+    if (pairs.length > 0) {
+      api.publicAddCorrectionsBatch(pairs)
+      if (!this._publicCorrections) this._publicCorrections = {}
+      for (var j = 0; j < pairs.length; j++) {
+        this._publicCorrections[pairs[j].wrong] = pairs[j].correct
+      }
+    }
+  },
+
   // ---- 语音卡片四字段编辑 ----
   onAiCardCatChange(e) {
     playTap()
@@ -6723,6 +7291,7 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
           // 刷新状态
           api.getVipStatus().then(function (status) {
             that.setData({ vipStatus: status, showTrialBanner: false, vipTrialDays: that._computeTrialDays(status), vipExpiresText: that._formatVipExpiry(status) })
+            that._checkEncryptionTierAlignment()
           }).catch(function () {})
         }).catch(function (err) {
           wx.hideLoading()
@@ -6818,6 +7387,7 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
             // 刷新页面级 VIP 状态
             api.getVipStatus().then(function (s) {
               that.setData({ showVipPage: false, vipDetailId: -1, vipSelected: -1, vipEnterpriseSeats: 4, vipStatus: s, vipTrialDays: that._computeTrialDays(s), vipExpiresText: that._formatVipExpiry(s) })
+              that._checkEncryptionTierAlignment()
             }).catch(function () {
               that.setData({ showVipPage: false, vipDetailId: -1, vipSelected: -1, vipEnterpriseSeats: 4 })
             })

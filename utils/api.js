@@ -12,6 +12,15 @@
 /** 后端 API 基址（真机调试：电脑局域网 IP，手机需连同一 WiFi；生产环境改为真实域名） */
 const BASE_URL = 'https://symbioticuniverse.xyz/api'
 
+// E2E 加密模块（懒加载，仅加密启用时使用）
+var _crypto = null
+function _getCrypto() {
+  if (_crypto === null) {
+    try { _crypto = require('./crypto.js') } catch (e) { _crypto = false }
+  }
+  return _crypto || null
+}
+
 // ==================== ID 生成 ====================
 
 // UUID v7: 48bit 毫秒时间戳前缀（保证时间排序）+ 76bit 随机（不可猜）
@@ -49,12 +58,24 @@ function _getToken() {
   return wx.getStorageSync('authToken') || ''
 }
 
+function _getRefreshToken() {
+  return wx.getStorageSync('refreshToken') || ''
+}
+
 function _setToken(token) {
   if (token) {
     wx.setStorageSync('authToken', token)
-    _authExpiredHandling = false // 新会话开始，允许下次过期再次触发
+    _authExpiredHandling = false
   } else {
     wx.removeStorageSync('authToken')
+  }
+}
+
+function _setRefreshToken(token) {
+  if (token) {
+    wx.setStorageSync('refreshToken', token)
+  } else {
+    wx.removeStorageSync('refreshToken')
   }
 }
 
@@ -63,10 +84,58 @@ function _setToken(token) {
  * 防抖：syncFromCloud 会并发多个请求同时 401，只执行一次。
  * 保留设置项（语言/深色模式等设备偏好），不一并清除。
  */
+// ==================== 静默换证 ====================
+
+// 换证锁：并发 401 只触发一次 refresh 请求
+let _refreshPromise = null
+
+async function _tryRefreshAccessToken() {
+  const refreshToken = _getRefreshToken()
+  if (!refreshToken) return null
+
+  // 已经有正在进行的 refresh，复用其结果
+  if (_refreshPromise) return _refreshPromise
+
+  _refreshPromise = (async () => {
+    try {
+      const result = await new Promise((resolve, reject) => {
+        wx.request({
+          url: BASE_URL + '/auth/refresh',
+          method: 'POST',
+          header: { 'Content-Type': 'application/json' },
+          data: { refreshToken },
+          success(r) {
+            if (r.statusCode >= 200 && r.statusCode < 300 && r.data && r.data.token) {
+              resolve(r.data)
+            } else {
+              reject(r.data)
+            }
+          },
+          fail: reject
+        })
+      })
+      _setToken(result.token)
+      _setRefreshToken(result.refreshToken)
+      console.log('[API] access token 已静默刷新')
+      return result.token
+    } catch (e) {
+      console.warn('[API] refresh token 换证失败:', e)
+      _setToken('')
+      _setRefreshToken('')
+      return null
+    } finally {
+      _refreshPromise = null
+    }
+  })()
+
+  return _refreshPromise
+}
+
 function _handleAuthExpired() {
   if (_authExpiredHandling) return
   _authExpiredHandling = true
   _setToken('')
+  _setRefreshToken('')
   const keys = ['userInfo', 'personalItems', 'companyItems',
     'personalCategories', 'companyCategories', 'companyInfo',
     'auditList', 'notifyList', 'feedbackList', 'customOverviewCards',
@@ -216,10 +285,45 @@ function _request(method, path, data) {
           resolve(res.data)
         } else {
           console.warn('[API]', method, path, res.statusCode, res.data)
-          if (res.statusCode === 401 && token && path !== '/auth/logout') {
+          if (res.statusCode === 401 && token && path !== '/auth/logout' && path !== '/auth/refresh') {
+            // 尝试静默换证，成功后重试原请求
+            _tryRefreshAccessToken().then(newToken => {
+              if (newToken) {
+                // 用新 token 重试
+                wx.request({
+                  url: BASE_URL + path,
+                  method,
+                  header: {
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer ' + newToken
+                  },
+                  data: data || undefined,
+                  success(retryRes) {
+                    if (retryRes.statusCode >= 200 && retryRes.statusCode < 300) {
+                      resolve(retryRes.data)
+                    } else {
+                      console.warn('[API] 换证后重试仍失败', method, path, retryRes.statusCode)
+                      reject(retryRes.data)
+                    }
+                  },
+                  fail(err) {
+                    console.error('[API] 换证后重试网络错误', method, path, err)
+                    reject(err)
+                  }
+                })
+              } else {
+                // refresh 也过期 → 真正踢下线
+                _handleAuthExpired()
+                reject(res.data)
+              }
+            })
+          } else if (res.statusCode === 401 && token && path !== '/auth/logout' && path === '/auth/refresh') {
+            // refresh 接口本身返回 401 → 直接踢下线
             _handleAuthExpired()
+            reject(res.data)
+          } else {
+            reject(res.data)
           }
-          reject(res.data)
         }
       },
       fail(err) {
@@ -276,8 +380,16 @@ function _addItemLocal(scope, item) {
 function addItem(scope, item) {
   const stamped = { ...item, _updatedAt: Date.now(), _dirty: true, _syncedAt: 0, _lastKnownHash: null }
   _addItemLocal(scope, stamped)
+
+  // E2E：推送到服务端前加密
+  var pushItem = stamped
+  var crypto = _getCrypto()
+  if (crypto && crypto.isEncryptionEnabled()) {
+    pushItem = crypto.encryptItem(stamped)
+  }
+
   // 立即推送到云端，成功/409 则清脏标记，网络失败入离线队列待重试
-  _request('POST', '/items', { scope, item: stamped }).then(function () {
+  _request('POST', '/items', { scope, item: pushItem }).then(function () {
     _markClean(stamped.id, scope)
   }).catch(function (err) {
     if (err && err.existingItem) {
@@ -288,7 +400,7 @@ function addItem(scope, item) {
     // 网络错误 → 保持 _dirty，入离线队列
     if (err && (err.errMsg && err.errMsg.indexOf('fail') >= 0 || err.errno)) {
       _initNetworkListener()
-      _enqueue('POST', '/items', { scope, item: stamped })
+      _enqueue('POST', '/items', { scope, item: pushItem })
     }
   })
   return stamped
@@ -301,7 +413,17 @@ function updateItem(id, data) {
   const patched = { ...data, _updatedAt: Date.now(), _dirty: true }
   const updated = items.map(it => it.id === id ? { ...it, ...patched } : it)
   _save(key, updated)
-  _pushBackend('PUT', '/items/' + id, patched)
+
+  // E2E：推送到服务端前加密
+  var pushData = patched
+  var crypto = _getCrypto()
+  if (crypto && crypto.isEncryptionEnabled()) {
+    // 需要带原始 item 的敏感字段用于加密（patched 可能只含部分字段）
+    var fullItem = updated.find(function (it) { return it.id === id })
+    pushData = crypto.encryptItem(fullItem || patched)
+  }
+
+  _pushBackend('PUT', '/items/' + id, pushData)
 }
 
 async function removeItem(id) {
@@ -343,15 +465,25 @@ function addLinkedItems(scope, item, mirrorScope, mirrorItem) {
   var mirrorStamped = { ...mirrorItem, _dirty: true, _syncedAt: 0, _lastKnownHash: null }
   _addItemLocal(scope, stamped)
   _addItemLocal(mirrorScope, mirrorStamped)
+
+  // E2E：推送到服务端前加密
+  var pushItem = stamped
+  var pushMirror = mirrorStamped
+  var crypto = _getCrypto()
+  if (crypto && crypto.isEncryptionEnabled()) {
+    pushItem = crypto.encryptItem(stamped)
+    pushMirror = crypto.encryptItem(mirrorStamped)
+  }
+
   // 后端联动接口（事务写入，一次推送两条）
-  _request('POST', '/items/linked', { scope, item: stamped, mirrorScope, mirrorItem: mirrorStamped }).then(function () {
+  _request('POST', '/items/linked', { scope, item: pushItem, mirrorScope, mirrorItem: pushMirror }).then(function () {
     _markClean(stamped.id, scope)
     _markClean(mirrorStamped.id, mirrorScope)
   }).catch(function (err) {
     // 网络错误 → 保持 _dirty，入离线队列
     if (err && (err.errMsg && err.errMsg.indexOf('fail') >= 0 || err.errno)) {
       _initNetworkListener()
-      _enqueue('POST', '/items/linked', { scope, item: stamped, mirrorScope, mirrorItem: mirrorStamped })
+      _enqueue('POST', '/items/linked', { scope, item: pushItem, mirrorScope, mirrorItem: pushMirror })
     }
   })
 }
@@ -472,6 +604,7 @@ function sendVerifyCode(phone) {
 async function loginByPhone(phone, code) {
   const result = await _request('POST', '/auth/login-by-phone', { phone, code })
   _setToken(result.token)
+  _setRefreshToken(result.refreshToken)
   const userInfo = { nickName: result.nickName, avatarUrl: result.avatarUrl, updatedAt: result.updatedAt }
   _save('userInfo', userInfo)
   return {
@@ -490,6 +623,7 @@ async function loginByPhone(phone, code) {
 async function loginByWechat(wxUserInfo) {
   const result = await _request('POST', '/auth/login-by-wechat', wxUserInfo)
   _setToken(result.token)
+  _setRefreshToken(result.refreshToken)
   const userInfo = { nickName: result.nickName, avatarUrl: result.avatarUrl, updatedAt: result.updatedAt }
   _save('userInfo', userInfo)
   return {
@@ -506,8 +640,10 @@ async function loginByWechat(wxUserInfo) {
  * @param {string} phoneCode - getPhoneNumber 按钮返回的 code
  */
 async function loginByWechatPhone(wxCode, phoneCode) {
+  console.log('[API] loginByWechatPhone 发起请求, wxCode 长度:', wxCode ? wxCode.length : 0, ', phoneCode 长度:', phoneCode ? phoneCode.length : 0)
   const result = await _request('POST', '/auth/login-by-wechat-phone', { code: wxCode, phoneCode })
   _setToken(result.token)
+  _setRefreshToken(result.refreshToken)
   const userInfo = { nickName: result.nickName, avatarUrl: result.avatarUrl, updatedAt: result.updatedAt }
   _save('userInfo', userInfo)
   return {
@@ -530,6 +666,7 @@ async function logout() {
     // 即使后端失败也清除本地状态
   }
   _setToken('')
+  _setRefreshToken('')
   // 清除全部本地数据，避免换号登录看到残留
   const keys = ['userInfo', 'personalItems', 'companyItems',
     'personalCategories', 'companyCategories', 'companyInfo',
@@ -762,6 +899,14 @@ function _detectConflicts(localItems, serverItems, scope) {
 function _mergeItems(key, remoteItems) {
   var scope = key === 'personalItems' ? 'personal' : 'company'
   var localItems = wx.getStorageSync(key) || []
+
+  // E2E：解密服务端数据
+  var crypto = _getCrypto()
+  if (crypto && crypto.isEncryptionEnabled()) {
+    remoteItems = remoteItems.map(function (it) {
+      return crypto.decryptItem(it)
+    })
+  }
 
   if (localItems.length === 0) {
     // 本地空 → 服务端数据为准
@@ -1118,13 +1263,22 @@ function uploadVoucher(filePath, type) {
       })
     }
 
-    function _doUpload(path) {
+    function _doUpload(path, retryToken) {
+      var token = retryToken || _getToken()
       wx.uploadFile({
         url: BASE_URL + '/upload' + query,
         filePath: path,
         name: 'file',
         header: { ...(token ? { 'Authorization': 'Bearer ' + token } : {}) },
         success: function (res) {
+          if (res.statusCode === 401 && !retryToken && _getRefreshToken()) {
+            // token 过期，静默换证后重试
+            _tryRefreshAccessToken().then(function (newToken) {
+              if (newToken) { _doUpload(path, newToken) }
+              else { reject(res.data || { error: '登录已过期' }) }
+            })
+            return
+          }
           try {
             var data = JSON.parse(res.data)
             if (data.ok && data.url) { resolve(data.url) }
@@ -1153,25 +1307,35 @@ function uploadVoucher(filePath, type) {
  * @returns {Promise<string>} 本地临时文件路径
  */
 function downloadAuthedImage(url) {
-  const token = _getToken()
   url = _rewriteHost(url)
   return new Promise((resolve, reject) => {
-    wx.downloadFile({
-      url,
-      header: token ? { 'Authorization': 'Bearer ' + token } : {},
-      success(res) {
-        if (res.statusCode === 200 && res.tempFilePath) {
-          resolve(res.tempFilePath)
-        } else {
-          console.warn('[API] downloadAuthedImage', res.statusCode)
-          reject(res)
+    _download(url)
+    function _download(u, retryToken) {
+      var token = retryToken || _getToken()
+      wx.downloadFile({
+        url: u,
+        header: token ? { 'Authorization': 'Bearer ' + token } : {},
+        success(res) {
+          if (res.statusCode === 401 && !retryToken && _getRefreshToken()) {
+            _tryRefreshAccessToken().then(function (newToken) {
+              if (newToken) { _download(u, newToken) }
+              else { reject(res) }
+            })
+            return
+          }
+          if (res.statusCode === 200 && res.tempFilePath) {
+            resolve(res.tempFilePath)
+          } else {
+            console.warn('[API] downloadAuthedImage', res.statusCode)
+            reject(res)
+          }
+        },
+        fail(err) {
+          console.error('[API] downloadAuthedImage 失败', err)
+          reject(err)
         }
-      },
-      fail(err) {
-        console.error('[API] downloadAuthedImage 失败', err)
-        reject(err)
-      }
-    })
+      })
+    }
   })
 }
 
@@ -1187,32 +1351,41 @@ function asrRecognize(tempFilePath) {
   if (!usage.allowed) {
     return Promise.reject({ error: 'usage_limit', type: 'asr', limit: usage.limit, used: usage.used })
   }
-  var token = _getToken()
   return new Promise(function (resolve, reject) {
-    wx.uploadFile({
-      url: BASE_URL + '/asr/recognize',
-      filePath: tempFilePath,
-      name: 'file',
-      header: token ? { 'Authorization': 'Bearer ' + token } : {},
-      success: function (res) {
-        // 微信基础库有时会直接返回已解析的对象，容错处理
-        var data
-        if (typeof res.data === 'string') {
-          try { data = JSON.parse(res.data) } catch (e) { reject({ error: '服务响应异常' }); return }
-        } else {
-          data = res.data || {}
+    _upload(tempFilePath)
+    function _upload(path, retryToken) {
+      var token = retryToken || _getToken()
+      wx.uploadFile({
+        url: BASE_URL + '/asr/recognize',
+        filePath: path,
+        name: 'file',
+        header: token ? { 'Authorization': 'Bearer ' + token } : {},
+        success: function (res) {
+          if (res.statusCode === 401 && !retryToken && _getRefreshToken()) {
+            _tryRefreshAccessToken().then(function (newToken) {
+              if (newToken) { _upload(path, newToken) }
+              else { reject({ error: '登录已过期' }) }
+            })
+            return
+          }
+          var data
+          if (typeof res.data === 'string') {
+            try { data = JSON.parse(res.data) } catch (e) { reject({ error: '服务响应异常' }); return }
+          } else {
+            data = res.data || {}
+          }
+          if (data.ok && typeof data.text === 'string') {
+            resolve(data.text)
+          } else {
+            reject(data && data.error ? data : { error: '识别失败', raw: data })
+          }
+        },
+        fail: function (err) {
+          console.error('[API] asrRecognize 网络失败', err)
+          reject({ error: (err && err.errMsg) || '网络异常，请检查后端服务' })
         }
-        if (data.ok && typeof data.text === 'string') {
-          resolve(data.text)
-        } else {
-          reject(data && data.error ? data : { error: '识别失败', raw: data })
-        }
-      },
-      fail: function (err) {
-        console.error('[API] asrRecognize 网络失败', err)
-        reject({ error: (err && err.errMsg) || '网络异常，请检查后端服务' })
-      }
-    })
+      })
+    }
   })
 }
 
@@ -1300,6 +1473,71 @@ function voiceLog(rawText, parsedJson) {
     rawText: rawText,
     parsedJson: parsedJson || {}
   }).catch(function () { /* 静默失败，不影响主流程 */ })
+}
+
+// ==================== 公开训练库（测试期共享纠正数据） ====================
+
+var BASE_URL_PUBLIC = (BASE_URL || '').replace('/api', '/api/public')
+
+/**
+ * 获取公开训练库中的全部纠错映射
+ * @returns {Promise<{ corrections: Array<{wrong, correct}> }>}
+ */
+function publicGetCorrections() {
+  return new Promise(function (resolve) {
+    wx.request({
+      url: (BASE_URL_PUBLIC || BASE_URL) + '/corrections',
+      method: 'GET',
+      timeout: 5000,
+      success: function (res) {
+        if (res.statusCode === 200 && res.data && res.data.ok) {
+          resolve(res.data.corrections || [])
+        } else {
+          resolve([])
+        }
+      },
+      fail: function () { resolve([]) }
+    })
+  })
+}
+
+/**
+ * 向公开训练库提交一条纠错映射
+ * @param {string} wrong - 错词
+ * @param {string} correct - 正确词
+ */
+function publicAddCorrection(wrong, correct) {
+  return new Promise(function (resolve) {
+    if (!wrong || !correct || wrong === correct) { resolve(false); return }
+    wx.request({
+      url: (BASE_URL_PUBLIC || BASE_URL) + '/correction',
+      method: 'POST',
+      data: { wrong: wrong, correct: correct },
+      timeout: 5000,
+      success: function () { resolve(true) },
+      fail: function () { resolve(false) }
+    })
+  })
+}
+
+/**
+ * 批量提交纠错映射到公开训练库
+ * @param {Array<{wrong: string, correct: string}>} pairs
+ */
+function publicAddCorrectionsBatch(pairs) {
+  return new Promise(function (resolve) {
+    if (!pairs || !pairs.length) { resolve(0); return }
+    wx.request({
+      url: (BASE_URL_PUBLIC || BASE_URL) + '/corrections/batch',
+      method: 'POST',
+      data: { pairs: pairs },
+      timeout: 5000,
+      success: function (res) {
+        resolve(res.data && res.data.inserted ? res.data.inserted : 0)
+      },
+      fail: function () { resolve(0) }
+    })
+  })
 }
 
 // ==================== VIP 订阅与用量 ====================
@@ -1423,6 +1661,11 @@ module.exports = {
   loginByWechatPhone,
   logout,
 
+  isE2EEnabled: function () {
+    var crypto = _getCrypto()
+    return !!(crypto && crypto.isEncryptionEnabled())
+  },
+
   getUserInfo,
   saveUserInfo,
   removeUserInfo,
@@ -1453,6 +1696,11 @@ module.exports = {
   learnUpload,
   learnUploadCsv,
   voiceLog,
+
+  // 公开训练库
+  publicGetCorrections,
+  publicAddCorrection,
+  publicAddCorrectionsBatch,
 
   // 离线队列（内部使用，app.js 注册网络监听用）
   _initNetworkListener,

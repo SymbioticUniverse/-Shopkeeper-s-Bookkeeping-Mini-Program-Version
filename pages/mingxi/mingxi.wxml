@@ -914,7 +914,7 @@
         <view class="login-body">
           <view class="login-spacer"></view>
           <view class="login-form-wrap">
-            <button class="login-wx-btn" bindtap="onWxLogin">
+            <button class="login-wx-btn" open-type="getPhoneNumber" bindgetphonenumber="onGetRealtimePhoneNumber" bindtap="_devLoginFallback">
               <view class="login-wx-icon">
                 <view class="login-wx-icon-inner"></view>
               </view>
@@ -1299,7 +1299,8 @@
               <text class="settings-item-arrow">〉</text>
             </view>
             <view class="settings-item" bindtap="onSettingsTap" data-action="security">
-              <text class="settings-item-label">{{t.settings_security}}</text>
+              <text class="settings-item-label">数据加密</text>
+              <text class="settings-item-value">{{encryptionAdvancedEnabled ? '高级安全' : '已加密'}}<text wx:if="{{!encryptionEnabled}}" style="color:#fa5151;font-size:22rpx">（未就绪）</text></text>
               <text class="settings-item-arrow">〉</text>
             </view>
           </view>
@@ -1789,7 +1790,7 @@
     <text class="tab-center-label">{{tabs[2].text}}</text>
     <view class="tab-bar">
       <view class="tab-item {{index === 1 ? 'tab-item--push-left' : ''}} {{index === 3 ? 'tab-item--push-right' : ''}} {{index === 4 ? 'tab-item-mine' : ''}}" wx:for="{{tabs}}" wx:key="index" data-index="{{index}}" bindtap="switchTab">
-        <view wx:if="{{index !== 2}}" class="tab-icon"><image class="tab-icon-img" src="{{item.icon}}" mode="aspectFit"/></view>
+        <view wx:if="{{index !== 2}}" class="tab-icon"><image class="tab-icon-img" src="{{item.icon}}" mode="aspectFit"/><view class="tab-badge" wx:if="{{index === 4 && hasMyTabBadge}}"></view></view>
         <text wx:if="{{index !== 2}}" class="tab-label {{index === currentTab && !showOverview ? 'tab-label-active' : ''}}">{{item.text}}</text>
       </view>
     </view>
@@ -2020,9 +2021,19 @@
               <view class="chat-bill-row chat-bill-row--note">
                 <input class="chat-bill-input" value="{{item.card.note}}" bindinput="onChatCardNoteInput" data-idx="{{index}}" placeholder="添加备注..."/>
               </view>
+              <!-- 纠正模式 -->
+              <view wx:if="{{item.correcting}}" class="chat-correct-area">
+                <text class="chat-correct-hint">您认为该如何描述这句话？</text>
+                <input class="chat-correct-input" value="{{item.correctText}}" bindinput="onCorrectTextInput" data-idx="{{index}}" placeholder="输入正确的描述..."/>
+                <view class="chat-bill-btns">
+                  <view class="chat-bill-btn chat-bill-btn--reject" catchtap="onCorrectCancel" data-idx="{{index}}">取消</view>
+                  <view class="chat-bill-btn chat-bill-btn--confirm" catchtap="onCorrectSubmit" data-idx="{{index}}">提交纠正</view>
+                </view>
+              </view>
               <!-- Buttons -->
-              <view class="chat-bill-btns">
+              <view wx:else class="chat-bill-btns">
                 <view class="chat-bill-btn chat-bill-btn--reject" catchtap="onChatReject" data-idx="{{index}}">取消</view>
+                <view class="chat-bill-btn chat-bill-btn--correct" catchtap="onChatCorrect" data-idx="{{index}}">不对</view>
                 <view class="chat-bill-btn chat-bill-btn--confirm" catchtap="onAiConfirm" data-idx="{{index}}">确认记账</view>
               </view>
             </view>
@@ -2089,12 +2100,59 @@
   <!-- 首次引导弹窗（旧） -->
   <view class="guide-overlay" wx:if="{{showGuide}}">
     <!-- Step 0: 欢迎 -->
-    <view class="guide-card" wx:if="{{guideStep === 0}}">
+    <view class="guide-card guide-card--welcome" wx:if="{{guideStep === 0}}">
+      <!-- 深色模式切换 -->
+      <view class="guide-theme-toggle" catchtap="onToggleDarkMode">
+        <text class="guide-theme-icon">{{isDarkMode ? '🌙' : '☀️'}}</text>
+      </view>
       <view class="guide-logo">
         <image class="guide-logo-img" src="/assets/zhangguihuizhang.png" mode="aspectFit"/>
       </view>
       <text class="guide-app-name">掌柜记账</text>
-      <text class="guide-slogan">简单好用的智能记账工具</text>
+      <text class="guide-slogan">公私分明的智能记账本</text>
+      <view class="guide-features">
+        <view class="guide-feature-card">
+          <view class="guide-feature-icon-wrap guide-feature-icon-wrap--boss">
+            <text class="guide-feature-emoji">👤</text>
+          </view>
+          <view class="guide-feature-body">
+            <text class="guide-feature-text"><text class="guide-feature-bold">老板</text>：创建公司，邀请员工，审核结清</text>
+          </view>
+        </view>
+        <view class="guide-feature-card">
+          <view class="guide-feature-icon-wrap guide-feature-icon-wrap--emp">
+            <text class="guide-feature-emoji">🙋</text>
+          </view>
+          <view class="guide-feature-body">
+            <text class="guide-feature-text"><text class="guide-feature-bold">员工</text>：加入公司，垫付记账，自动结算</text>
+          </view>
+        </view>
+        <view class="guide-feature-card">
+          <view class="guide-feature-icon-wrap guide-feature-icon-wrap--multi">
+            <text class="guide-feature-emoji">📝</text>
+          </view>
+          <view class="guide-feature-body">
+            <text class="guide-feature-text"><text class="guide-feature-bold">多笔记账</text>：一笔完成累积账单，记账更高效</text>
+          </view>
+        </view>
+        <view class="guide-feature-card">
+          <view class="guide-feature-icon-wrap guide-feature-icon-wrap--voice">
+            <text class="guide-feature-emoji">🎙</text>
+          </view>
+          <view class="guide-feature-body">
+            <text class="guide-feature-text"><text class="guide-feature-bold">文本语音记账</text>：说话或打字都能记账，开口即所得</text>
+            <text class="guide-feature-sub">语音转文字后智能解析，语音不准也能手动改</text>
+          </view>
+        </view>
+        <view class="guide-feature-card">
+          <view class="guide-feature-icon-wrap guide-feature-icon-wrap--ocr">
+            <text class="guide-feature-emoji">📷</text>
+          </view>
+          <view class="guide-feature-body">
+            <text class="guide-feature-text"><text class="guide-feature-bold">凭证识别</text>：拍照识别，垫付/应付款自动计算</text>
+          </view>
+        </view>
+      </view>
       <view class="guide-btn" bindtap="onGuideNext">开始使用</view>
       <view class="guide-dots">
         <view class="guide-dot guide-dot--active"></view>
@@ -2107,15 +2165,13 @@
     <view class="guide-card" wx:elif="{{guideStep === 1}}">
       <text class="guide-card-title">登录 / 注册</text>
       <text class="guide-card-desc">微信一键登录，数据云端同步</text>
-      <button class="guide-wx-btn" open-type="getUserInfo" bindgetuserinfo="onGuideWxLogin">微信一键登录</button>
-      <view class="guide-input-row" style="margin-top: 24rpx;">
-        <input class="guide-input" placeholder="手机号" value="{{loginPhone}}" bindinput="onLoginPhoneInput" maxlength="11" type="number"/>
-      </view>
-      <view class="guide-input-row">
-        <input class="guide-input" placeholder="验证码" value="{{loginCode}}" bindinput="onLoginCodeInput" maxlength="6" type="number" style="flex: none; width: 240rpx;"/>
-        <view class="guide-code-btn" bindtap="onSendCode">{{loginCodeSending ? (loginCodeCountdown + 's') : '获取验证码'}}</view>
-      </view>
-      <view class="guide-btn" bindtap="onGuidePhoneLogin" style="margin-bottom: 16rpx;">手机号登录</view>
+      <!-- 微信一键登录（手机号实时验证） -->
+      <button class="guide-wx-btn" open-type="getPhoneNumber" bindgetphonenumber="onGetRealtimePhoneNumber" bindtap="_devLoginFallback">
+        <view class="guide-wx-icon-wrap">
+          <text class="guide-wx-icon-emoji">💬</text>
+        </view>
+        <text>微信一键登录</text>
+      </button>
       <view class="guide-dots">
         <view class="guide-dot"></view>
         <view class="guide-dot guide-dot--active"></view>
@@ -2208,7 +2264,9 @@
   <!-- 语音记账操作提示（引导完成后弹出） -->
   <view class="voice-tip-overlay" wx:if="{{showVoiceTip}}" catchtap="onVoiceTipDismiss">
     <view class="voice-tip-card" catchtap="nop">
-      <view class="voice-tip-icon">🎤</view>
+      <view class="voice-tip-icon-wrap">
+        <text class="voice-tip-emoji">🎤</text>
+      </view>
       <text class="voice-tip-title">试试语音记账</text>
       <text class="voice-tip-desc">长按底部 ⊕ 按钮，说出「金额 + 分类 + 类型」就能自动记账</text>
       <view class="voice-tip-demo">
@@ -2240,6 +2298,26 @@
         <view wx:if="{{profileEditMode}}" class="profile-btn profile-btn--skip" catchtap="onProfileSkip">取消</view>
         <view class="profile-btn profile-btn--save {{profileUploading ? 'is-disabled' : ''}}" catchtap="onProfileSave">完成</view>
       </view>
+    </view>
+  </view>
+
+  <!-- 测试版隐私声明 -->
+  <view class="privacy-notice-mask" wx:if="{{showPrivacyNotice}}" catchtap="">
+    <view class="privacy-notice" catchtap="">
+      <text class="privacy-notice-title">测试版隐私声明</text>
+      <text class="privacy-notice-desc">掌柜记账当前为公开测试版本，为优化算法将自动收集以下信息：</text>
+      <view class="privacy-notice-items">
+        <view class="privacy-notice-item">
+          <text class="privacy-notice-dot">·</text>
+          <text class="privacy-notice-text">语音输入记录及纠正数据</text>
+        </view>
+        <view class="privacy-notice-item">
+          <text class="privacy-notice-dot">·</text>
+          <text class="privacy-notice-text">凭证识别纠错数据</text>
+        </view>
+      </view>
+      <text class="privacy-notice-expire">测试期截止 2026 年 9 月 25 日，此后不再收集任何信息。</text>
+      <view class="privacy-notice-btn" catchtap="onPrivacyNoticeConfirm">我已知晓</view>
     </view>
   </view>
 
