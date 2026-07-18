@@ -1,3 +1,15 @@
+// Polyfill: DataView.setBigUint64 for environments without BigInt (WeChat mini-program)
+if (typeof DataView !== 'undefined' && typeof DataView.prototype.setBigUint64 !== 'function') {
+  DataView.prototype.setBigUint64 = function(byteOffset, value, littleEndian) {
+    if (littleEndian) {
+      this.setUint32(byteOffset, Number(value), true);
+      this.setUint32(byteOffset + 4, 0, true);
+    } else {
+      this.setUint32(byteOffset, 0, false);
+      this.setUint32(byteOffset + 4, Number(value), false);
+    }
+  };
+}
 var __defProp = Object.defineProperty;
 var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
 var __getOwnPropNames = Object.getOwnPropertyNames;
@@ -169,8 +181,8 @@ function u64Lengths(dataLength, aadLength, isLE2) {
   abool(isLE2);
   const num = new Uint8Array(16);
   const view = createView(num);
-  view.setBigUint64(0, BigInt(aadLength), isLE2);
-  view.setBigUint64(8, BigInt(dataLength), isLE2);
+  view.setBigUint64(0, aadLength, isLE2);
+  view.setBigUint64(8, dataLength, isLE2);
   return num;
 }
 function isAligned32(bytes) {
@@ -510,7 +522,7 @@ var gcm = /* @__PURE__ */ wrapCipher({ blockSize: 16, nonceLength: 12, tagLength
     } else {
       const nonceLen = EMPTY_BLOCK.slice();
       const view = createView(nonceLen);
-      view.setBigUint64(8, BigInt(nonce.length * 8), false);
+      view.setBigUint64(8, nonce.length * 8, false);
       const g = ghash.create(authKey).update(nonce).update(nonceLen);
       g.digestInto(counter);
       g.destroy();
@@ -714,7 +726,7 @@ var HashMD = class {
     }
     for (let i = pos; i < blockLen; i++)
       buffer[i] = 0;
-    view.setBigUint64(blockLen - 8, BigInt(this.length * 8), isLE2);
+    view.setBigUint64(blockLen - 8, this.length * 8, isLE2);
     this.process(view, 0);
     const oview = createView2(out);
     const len = this.outputLen;
@@ -735,7 +747,7 @@ var HashMD = class {
     return res;
   }
   _cloneInto(to) {
-    to ||= new this.constructor();
+    to = to || new this.constructor();
     to.set(...this.get());
     const { blockLen, buffer, length, finished, destroyed, pos } = this;
     to.destroyed = destroyed;
@@ -962,7 +974,7 @@ var _HMAC = class {
     return out;
   }
   _cloneInto(to) {
-    to ||= Object.create(Object.getPrototypeOf(this), {});
+    to = to || Object.create(Object.getPrototypeOf(this), {});
     const { oHash, iHash, finished, destroyed, blockLen, outputLen } = this;
     to = to;
     to.finished = finished;
