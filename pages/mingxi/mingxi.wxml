@@ -2021,19 +2021,9 @@
               <view class="chat-bill-row chat-bill-row--note">
                 <input class="chat-bill-input" value="{{item.card.note}}" bindinput="onChatCardNoteInput" data-idx="{{index}}" placeholder="添加备注..."/>
               </view>
-              <!-- 纠正模式 -->
-              <view wx:if="{{item.correcting}}" class="chat-correct-area">
-                <text class="chat-correct-hint">您认为该如何描述这句话？</text>
-                <input class="chat-correct-input" value="{{item.correctText}}" bindinput="onCorrectTextInput" data-idx="{{index}}" placeholder="输入正确的描述..."/>
-                <view class="chat-bill-btns">
-                  <view class="chat-bill-btn chat-bill-btn--reject" catchtap="onCorrectCancel" data-idx="{{index}}">取消</view>
-                  <view class="chat-bill-btn chat-bill-btn--confirm" catchtap="onCorrectSubmit" data-idx="{{index}}">提交纠正</view>
-                </view>
-              </view>
               <!-- Buttons -->
-              <view wx:else class="chat-bill-btns">
+              <view class="chat-bill-btns">
                 <view class="chat-bill-btn chat-bill-btn--reject" catchtap="onChatReject" data-idx="{{index}}">取消</view>
-                <view class="chat-bill-btn chat-bill-btn--correct" catchtap="onChatCorrect" data-idx="{{index}}">不对</view>
                 <view class="chat-bill-btn chat-bill-btn--confirm" catchtap="onAiConfirm" data-idx="{{index}}">确认记账</view>
               </view>
             </view>

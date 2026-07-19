@@ -6732,22 +6732,30 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
         var base = CN_NUM[s[0]]
         return base + (s.length > 1 ? cnToInt(s.slice(1)) : 0)
       }
-      var val = 0, seg = 0
+      var val = 0, seg = 0, lastUnit = 0, sawZero = false
       for (var i = 0; i < s.length; i++) {
         var v = CN_NUM[s[i]]
         if (v === undefined) continue
         if (v >= 10000) {
           val = (val + (seg || (i === 0 ? 1 : 0))) * v
-          seg = 0
+          seg = 0; lastUnit = v; sawZero = false
         } else if (v >= 100) {
           seg = (seg || (i === 0 ? 1 : 0)) * v
           val += seg
-          seg = 0
+          seg = 0; lastUnit = v; sawZero = false
         } else if (v === 10) {
           seg = (seg || (i === 0 ? 1 : 0)) * 10
+          lastUnit = 10; sawZero = false
+        } else if (v === 0) {
+          sawZero = true
         } else {
           seg += v
         }
+      }
+      // 缩写补全：一百八→180, 三千二→3200（无零时尾数进位）
+      if (!sawZero && seg > 0 && seg < 10) {
+        if (lastUnit === 100) seg *= 10
+        else if (lastUnit === 1000) seg *= 100
       }
       return val + seg
     }
