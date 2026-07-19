@@ -2789,48 +2789,49 @@ Page({
     return expr
   },
 
-  // 检测文本中是否有隐式多笔（多个金额无连接词），拆成多笔卡片
+  // 检测文本中是否有隐式多笔（多个金额无连接词），返回切分后的文本段
   _detectImplicitMulti(text) {
     if (!text) return null
-    // 提取所有中文金额：XX元/块
-    var cnPats = text.match(/[一二三四五六七八九十百千万零两廿卅]+[元块]?/g) || []
-    var nums = []
-    for (var ci = 0; ci < cnPats.length; ci++) {
-      var fullMatch = cnPats[ci]
-      var idx = text.indexOf(fullMatch)
-      // 排除日期中的数字：前面是"月"或后面是"月"/"日"/"号"
-      if (fullMatch.length === 1 && /^[一二三四五六七八九]$/.test(fullMatch)) {
-        if ((idx > 0 && text[idx - 1] === '月') || (idx + 1 < text.length && /[月日号]/.test(text[idx + 1]))) {
-          continue
-        }
+    // 收集所有金额匹配：{ value, start, end }
+    var hits = []
+    // 中文金额
+    var cnRegex = /[一二三四五六七八九十百千万零两廿卅]+[元块]?/g
+    var m
+    while ((m = cnRegex.exec(text)) !== null) {
+      var idx = m.index
+      var full = m[0]
+      if (full.length === 1 && /^[一二三四五六七八九]$/.test(full)) {
+        if ((idx > 0 && text[idx - 1] === '月') || (idx + full.length < text.length && /[月日号]/.test(text[idx + full.length]))) continue
       }
-      var cn = fullMatch.replace(/[元块]$/, '')
-      var n = this._cnToInt(cn)
-      if (n > 0) nums.push(n)
+      var n = this._cnToInt(full.replace(/[元块]$/, ''))
+      if (n > 0) hits.push({ value: n, start: idx, end: idx + full.length })
     }
-    // 也匹配阿拉伯数字金额（排除日期）
-    var arPats = text.match(/\d+(?:\.\d{1,2})?\s*[元块]?/g) || []
-    for (var ai = 0; ai < arPats.length; ai++) {
-      var fullAr = arPats[ai]
-      var arIdx = text.indexOf(fullAr)
-      // 排除日期格式：数字后跟日/号/月，或前有年/月
-      if (arIdx >= 0) {
-        var afterChar = arIdx + fullAr.length < text.length ? text[arIdx + fullAr.length] : ''
-        var beforeChar = arIdx > 0 ? text[arIdx - 1] : ''
-        if (/[日号月]/.test(afterChar) || /[年月]/.test(beforeChar)) continue
-      }
-      var ar = fullAr.replace(/[元块]$/, '')
-      var an = parseFloat(ar)
+    // 阿拉伯数字金额
+    var arRegex = /\d+(?:\.\d{1,2})?\s*[元块]?/g
+    while ((m = arRegex.exec(text)) !== null) {
+      var arIdx = m.index
+      var afterChar = arIdx + m[0].length < text.length ? text[arIdx + m[0].length] : ''
+      var beforeChar = arIdx > 0 ? text[arIdx - 1] : ''
+      if (/[日号月]/.test(afterChar) || /[年月]/.test(beforeChar)) continue
+      var an = parseFloat(m[0].replace(/[元块]$/, ''))
       if (an > 0 && an < 1000000) {
         var dup = false
-        for (var ni = 0; ni < nums.length; ni++) {
-          if (Math.abs(nums[ni] - an) < 0.01) { dup = true; break }
+        for (var hi = 0; hi < hits.length; hi++) {
+          if (Math.abs(hits[hi].value - an) < 0.01) { dup = true; break }
         }
-        if (!dup) nums.push(an)
+        if (!dup) hits.push({ value: an, start: arIdx, end: arIdx + m[0].length })
       }
     }
-    if (nums.length < 2) return null
-    return { amounts: nums, count: nums.length }
+    if (hits.length < 2) return null
+    // 按位置排序后切分文本
+    hits.sort(function (a, b) { return a.start - b.start })
+    var segments = []
+    for (var i = 0; i < hits.length; i++) {
+      var segStart = i === 0 ? 0 : hits[i - 1].end
+      var segEnd = hits[i].end
+      segments.push(text.substring(segStart, segEnd).trim())
+    }
+    return { amounts: hits.map(function (h) { return h.value }), count: hits.length, segments: segments }
   },
 
   _cnToInt(s) {
@@ -6463,10 +6464,6 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
 
     // ---- 多笔记账语音检测 ----
     var multiExpr = this._detectMultiEntryVoice(text)
-    if (!multiExpr) {
-      var imp = this._detectImplicitMulti(text)
-      if (imp && imp.count >= 2) multiExpr = imp.amounts.join('+')
-    }
     if (multiExpr) {
       const result = this._calcMulti(multiExpr)
       if (result.multiCount >= 2) {
@@ -6493,6 +6490,27 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
         })
         return
       }
+    }
+
+    // ---- 隐式多笔 ----
+    var imp_ocr = this._detectImplicitMulti(text)
+    if (imp_ocr && imp_ocr.count >= 2) {
+      for (var si = 0; si < imp_ocr.segments.length; si++) {
+        const reply = this._mockAiReply(imp_ocr.segments[si])
+        if (reply.card) {
+          reply.card._impIdx = si + 1
+          reply.card._impTotal = imp_ocr.segments.length
+        }
+        msgs.push(reply)
+      }
+      this.setData({
+        showChat: true,
+        chatMessages: msgs,
+        chatInputText: '',
+        chatThinking: false,
+        chatScrollTop: 999999 + (msgs.length - 1)
+      })
+      return
     }
 
     this.setData({
@@ -6621,10 +6639,6 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
 
     // ---- 多笔记账检测 ----
     var multiExpr = this._detectMultiEntryVoice(text)
-    if (!multiExpr) {
-      var imp = this._detectImplicitMulti(text)
-      if (imp && imp.count >= 2) multiExpr = imp.amounts.join('+')
-    }
     if (multiExpr) {
       const result = this._calcMulti(multiExpr)
       if (result.multiCount >= 2) {
@@ -6648,6 +6662,27 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
         })
         return
       }
+    }
+
+    // ---- 隐式多笔：每段独立解析，生成多张卡片 ----
+    var imp = this._detectImplicitMulti(text)
+    if (imp && imp.count >= 2) {
+      const updated = this.data.chatMessages.slice()
+      for (var si = 0; si < imp.segments.length; si++) {
+        const reply = this._mockAiReply(imp.segments[si])
+        // 追加段序号标记
+        if (reply.card) {
+          reply.card._impIdx = si + 1
+          reply.card._impTotal = imp.segments.length
+        }
+        updated.push(reply)
+      }
+      this.setData({
+        chatMessages: updated,
+        chatThinking: false,
+        chatScrollTop: 999999 + (updated.length - 1)
+      })
+      return
     }
 
     setTimeout(() => {
@@ -6897,7 +6932,7 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
     var catList = [
       { keys: ['咖啡', '奶茶', '柠檬茶', '可乐', '饮料', '牛奶', '豆浆', '果汁', '奶昔'], cat: '饮品' },
       { keys: ['红包', '借款', '借给', '垫付', '代付', '代购', '代垫', '垫资', '还给', '欠款', '应付'], cat: '人情' },
-      { keys: ['午餐', '晚餐', '早餐', '外卖', '吃饭', '聚餐', '火锅', '烧烤', '米粉', '面条','面','饺子','水饺','盒饭','快餐','麻辣烫','麻辣拌','米线','盖饭','盖浇饭','小吃','买菜','菜','榴莲'], cat: '餐饮' },
+      { keys: ['午餐', '晚餐', '早餐', '外卖', '吃饭', '聚餐', '火锅', '烧烤', '米粉', '面条','面','饺子','水饺','盒饭','快餐','麻辣烫','麻辣拌','米线','盖饭','盖浇饭','小吃','买菜','菜','榴莲','夜宵','宵夜'], cat: '餐饮' },
       { keys: ['打车', '滴滴', '出租', '地铁', '公交', '加油', '高铁', '火车票', '机票', '停车', '高铁票', '火车','差旅费','交通费','打的','报销'], cat: '交通' },
       { keys: ['水果', '零食', '西瓜', '榴莲', '水果篮', '超市', '购物券','采购','超市采购','礼物','口红','化妆品'], cat: '购物' },
       { keys: ['话费', '充值', '流量', '宽带'], cat: '通讯' },
