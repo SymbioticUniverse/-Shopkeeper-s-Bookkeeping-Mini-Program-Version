@@ -761,26 +761,8 @@ Page({
     }
     this.updateAuditBadge()
     this._throttledSync()
-    // 预加载公开训练库纠错映射（测试期共享纠正数据，提升 ASR 识别准确率）
-    this._loadPublicCorrections()
   },
 
-  _loadPublicCorrections() {
-    var that = this
-    that._publicCorrections = {}
-    api.publicGetCorrections().then(function (list) {
-      if (list && list.length) {
-        var map = {}
-        for (var i = 0; i < list.length; i++) {
-          if (list[i].wrong && list[i].correct) {
-            map[list[i].wrong] = list[i].correct
-          }
-        }
-        that._publicCorrections = map
-        console.log('[PUBLIC] 加载 ' + list.length + ' 条公开纠错映射')
-      }
-    })
-  },
 
   _initTabletScale() {
     const info = wx.getSystemInfoSync()
@@ -6646,14 +6628,6 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
     for (var ak in ASR_FIX) {
       if (text.indexOf(ak) >= 0) text = text.replace(ak, ASR_FIX[ak])
     }
-    // 应用公开训练库纠错映射（实时学习，共享纠正）
-    var pubMap = this._publicCorrections
-    if (pubMap) {
-      for (var pk in pubMap) {
-        if (text.indexOf(pk) >= 0) text = text.replace(pk, pubMap[pk])
-      }
-    }
-
     // ---- 长文本断句：按连接词拆成短句，取第一个含金额/数字的短句 ----
     var segments = [text]
     var connectors = /然后|并且|还有|对了|接着|另外/
@@ -7143,68 +7117,6 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
       correctText: ''
     })
     this.setData({ chatMessages: updated })
-  },
-
-  onCorrectSubmit(e) {
-    playTap()
-    const idx = e.currentTarget.dataset.idx
-    const reply = this.data.chatMessages[idx]
-    if (!reply || !reply.card) return
-    const correctedText = (reply.correctText || '').trim()
-    if (!correctedText) {
-      wx.showToast({ title: '请输入正确的描述', icon: 'none' })
-      return
-    }
-    var originalText = ''
-    for (var i = idx - 1; i >= 0; i--) {
-      if (this.data.chatMessages[i].role === 'user') {
-        originalText = this.data.chatMessages[i].text || ''
-        break
-      }
-    }
-    // 上传原始日志
-    api.voiceLog(originalText, {
-      correctedText: correctedText,
-      original: reply.fields || reply.card,
-      correction: true
-    })
-    // 提取纠正对，提交到公开训练库（共享给所有测试者）
-    this._uploadCorrectionPairs(originalText, correctedText)
-    // 重新解析纠正后的文本
-    const newReply = this._mockAiReply(correctedText)
-    const updated = this.data.chatMessages.slice()
-    updated[idx] = newReply
-    this.setData({
-      chatMessages: updated,
-      chatScrollTop: 999999 + idx
-    })
-    wx.showToast({ title: '已上传至训练集，感谢您的付出', icon: 'none' })
-  },
-
-  // 从原始/纠正文本中提取错词→正确词映射，提交公开库
-  _uploadCorrectionPairs(originalText, correctedText) {
-    if (!originalText || !correctedText || originalText === correctedText) return
-    var pairs = []
-    var rawWords = originalText.replace(/[，。！？、；：""''（）《》【】\s,.!?;:'"()]+/g, ' ').split(' ')
-    var correctWords = correctedText.replace(/[，。！？、；：""''（）《》【】\s,.!?;:'"()]+/g, ' ').split(' ')
-    var len = Math.min(rawWords.length, correctWords.length)
-    for (var i = 0; i < len; i++) {
-      var rw = rawWords[i].trim()
-      var cw = correctWords[i].trim()
-      if (rw && cw && rw !== cw && rw.length <= 10 && cw.length <= 10) {
-        pairs.push({ wrong: rw, correct: cw })
-      }
-    }
-    if (pairs.length === 0 && originalText.length <= 10 && correctedText.length <= 10) {
-      pairs.push({ wrong: originalText.trim(), correct: correctedText.trim() })
-    }
-    if (pairs.length > 0) {
-      api.publicAddCorrectionsBatch(pairs)
-      if (!this._publicCorrections) this._publicCorrections = {}
-      for (var j = 0; j < pairs.length; j++) {
-        this._publicCorrections[pairs[j].wrong] = pairs[j].correct
-      }
-    }
   },
 
   // ---- 语音卡片四字段编辑 ----

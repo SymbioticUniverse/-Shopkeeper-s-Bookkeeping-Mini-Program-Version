@@ -1479,66 +1479,8 @@ function voiceLog(rawText, parsedJson) {
 
 var BASE_URL_PUBLIC = (BASE_URL || '').replace('/api', '/api/public')
 
-/**
- * 获取公开训练库中的全部纠错映射
- * @returns {Promise<{ corrections: Array<{wrong, correct}> }>}
- */
-function publicGetCorrections() {
-  return new Promise(function (resolve) {
-    wx.request({
-      url: (BASE_URL_PUBLIC || BASE_URL) + '/corrections',
-      method: 'GET',
-      timeout: 5000,
-      success: function (res) {
-        if (res.statusCode === 200 && res.data && res.data.ok) {
-          resolve(res.data.corrections || [])
-        } else {
-          resolve([])
-        }
-      },
-      fail: function () { resolve([]) }
-    })
-  })
-}
 
-/**
- * 向公开训练库提交一条纠错映射
- * @param {string} wrong - 错词
- * @param {string} correct - 正确词
- */
-function publicAddCorrection(wrong, correct) {
-  return new Promise(function (resolve) {
-    if (!wrong || !correct || wrong === correct) { resolve(false); return }
-    wx.request({
-      url: (BASE_URL_PUBLIC || BASE_URL) + '/correction',
-      method: 'POST',
-      data: { wrong: wrong, correct: correct },
-      timeout: 5000,
-      success: function () { resolve(true) },
-      fail: function () { resolve(false) }
-    })
-  })
-}
 
-/**
- * 批量提交纠错映射到公开训练库
- * @param {Array<{wrong: string, correct: string}>} pairs
- */
-function publicAddCorrectionsBatch(pairs) {
-  return new Promise(function (resolve) {
-    if (!pairs || !pairs.length) { resolve(0); return }
-    wx.request({
-      url: (BASE_URL_PUBLIC || BASE_URL) + '/corrections/batch',
-      method: 'POST',
-      data: { pairs: pairs },
-      timeout: 5000,
-      success: function (res) {
-        resolve(res.data && res.data.inserted ? res.data.inserted : 0)
-      },
-      fail: function () { resolve(0) }
-    })
-  })
-}
 
 /**
  * 提交字段级纠错映射到公开训练库
@@ -1718,9 +1660,6 @@ module.exports = {
   voiceLog,
 
   // 公开训练库
-  publicGetCorrections,
-  publicAddCorrection,
-  publicAddCorrectionsBatch,
   publicAddFieldCorrections,
 
   // 离线队列（内部使用，app.js 注册网络监听用）
