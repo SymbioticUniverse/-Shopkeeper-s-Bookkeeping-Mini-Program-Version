@@ -2789,6 +2789,50 @@ Page({
     return expr
   },
 
+  // 检测文本中是否有隐式多笔（多个金额无连接词），拆成多笔卡片
+  _detectImplicitMulti(text) {
+    if (!text) return null
+    // 提取所有中文金额：XX元/块
+    var cnPats = text.match(/[一二三四五六七八九十百千万零两廿卅]+[元块]?/g) || []
+    var nums = []
+    for (var ci = 0; ci < cnPats.length; ci++) {
+      var fullMatch = cnPats[ci]
+      var idx = text.indexOf(fullMatch)
+      // 排除日期中的数字：前面是"月"或后面是"月"/"日"/"号"
+      if (fullMatch.length === 1 && /^[一二三四五六七八九]$/.test(fullMatch)) {
+        if ((idx > 0 && text[idx - 1] === '月') || (idx + 1 < text.length && /[月日号]/.test(text[idx + 1]))) {
+          continue
+        }
+      }
+      var cn = fullMatch.replace(/[元块]$/, '')
+      var n = this._cnToInt(cn)
+      if (n > 0) nums.push(n)
+    }
+    // 也匹配阿拉伯数字金额（排除日期）
+    var arPats = text.match(/\d+(?:\.\d{1,2})?\s*[元块]?/g) || []
+    for (var ai = 0; ai < arPats.length; ai++) {
+      var fullAr = arPats[ai]
+      var arIdx = text.indexOf(fullAr)
+      // 排除日期格式：数字后跟日/号/月，或前有年/月
+      if (arIdx >= 0) {
+        var afterChar = arIdx + fullAr.length < text.length ? text[arIdx + fullAr.length] : ''
+        var beforeChar = arIdx > 0 ? text[arIdx - 1] : ''
+        if (/[日号月]/.test(afterChar) || /[年月]/.test(beforeChar)) continue
+      }
+      var ar = fullAr.replace(/[元块]$/, '')
+      var an = parseFloat(ar)
+      if (an > 0 && an < 1000000) {
+        var dup = false
+        for (var ni = 0; ni < nums.length; ni++) {
+          if (Math.abs(nums[ni] - an) < 0.01) { dup = true; break }
+        }
+        if (!dup) nums.push(an)
+      }
+    }
+    if (nums.length < 2) return null
+    return { amounts: nums, count: nums.length }
+  },
+
   _cnToInt(s) {
     if (!s) return 0
     var CN_DIGIT = { '零': 0, '一': 1, '二': 2, '三': 3, '四': 4, '五': 5, '六': 6, '七': 7, '八': 8, '九': 9, '两': 2 }
@@ -6418,7 +6462,11 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
     msgs.push({ role: 'user', text, time: this._formatChatTime(now) })
 
     // ---- 多笔记账语音检测 ----
-    const multiExpr = this._detectMultiEntryVoice(text)
+    var multiExpr = this._detectMultiEntryVoice(text)
+    if (!multiExpr) {
+      var imp = this._detectImplicitMulti(text)
+      if (imp && imp.count >= 2) multiExpr = imp.amounts.join('+')
+    }
     if (multiExpr) {
       const result = this._calcMulti(multiExpr)
       if (result.multiCount >= 2) {
@@ -6572,7 +6620,11 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
     })
 
     // ---- 多笔记账检测 ----
-    const multiExpr = this._detectMultiEntryVoice(text)
+    var multiExpr = this._detectMultiEntryVoice(text)
+    if (!multiExpr) {
+      var imp = this._detectImplicitMulti(text)
+      if (imp && imp.count >= 2) multiExpr = imp.amounts.join('+')
+    }
     if (multiExpr) {
       const result = this._calcMulti(multiExpr)
       if (result.multiCount >= 2) {
