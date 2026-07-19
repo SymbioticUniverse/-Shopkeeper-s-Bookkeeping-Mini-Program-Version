@@ -1358,6 +1358,12 @@ Page({
       this._setTabUI(0, true)
       return
     }
+    // Tab 0 重复点击（当前在简览页）→ 进入明细页
+    if (index === 0 && prevTab === 0 && wasOverview) {
+      this._setTabUI(0, false)
+      this._loadTabData(0)
+      return
+    }
 
     this._tab0LastTap = 0
 
@@ -6953,6 +6959,19 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
     }
     api.voiceLog(input.trim(), parsed)
 
+    // 保存原始解析字段（用于后续字段级纠错比对）
+    var originalCard = {
+      category: category,
+      amount: amount,
+      typeLabel: typeLabel,
+      type: isIncome ? 'in' : 'out',
+      date: dateStr,
+      note: note || input.trim(),
+      scope: isCompany ? 'company' : 'personal',
+      target: td.target,
+      targetType: td.targetType
+    }
+
     return {
       role: 'assistant',
       text: '请确认以下记账信息：',
@@ -6976,6 +6995,7 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
         target: td.target,
         targetType: td.targetType
       },
+      _originalCard: originalCard,
       confirmed: undefined,
       _catIdx: catIdx,
       _typeIdx: typeIdx,
@@ -7016,11 +7036,51 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
 	    const idx = e.currentTarget.dataset.idx
 	    const reply = this.data.chatMessages[idx]
 	    if (!reply || !reply.card) return
+	    // 用户编辑了卡片字段 → 提取字段级纠错
+	    this._uploadFieldCorrections(reply)
 	    this._saveAiRecord(reply)
 	    reply.confirmed = true
 	    const updated = this.data.chatMessages.slice()
 	    updated[idx] = reply
 	    this.setData({ chatMessages: updated })
+	  },
+
+	  // 字段级纠错：比较 AI 原始解析 vs 用户编辑后的卡片字段
+	  _uploadFieldCorrections(reply) {
+	    var card = reply.card
+	    var orig = reply._originalCard
+	    if (!card || !orig) return
+	    var rawText = ''
+	    for (var i = this.data.chatMessages.length - 1; i >= 0; i--) {
+	      if (this.data.chatMessages[i].role === 'user') {
+	        rawText = this.data.chatMessages[i].text || ''
+	        break
+	      }
+	    }
+	    if (!rawText) return
+	    var corrections = []
+	    var fields = ['amount', 'date', 'category', 'typeLabel', 'note', 'target']
+	    for (var fi = 0; fi < fields.length; fi++) {
+	      var f = fields[fi]
+	      var oldVal = orig[f] != null ? String(orig[f]) : ''
+	      var newVal = card[f] != null ? String(card[f]) : ''
+	      if (oldVal !== newVal && newVal !== '') {
+	        corrections.push({ field: f, wrong: oldVal, correct: newVal, rawText: rawText })
+	      }
+	    }
+	    if (corrections.length > 0) {
+	      for (var ci = 0; ci < corrections.length; ci++) {
+	        var c = corrections[ci]
+	        api.voiceLog(rawText, {
+	          rawText: rawText,
+	          original: orig,
+	          corrected: card,
+	          correction: { field: c.field, wrong: c.wrong, correct: c.correct }
+	        })
+	      }
+	      api.publicAddFieldCorrections(corrections)
+	      console.log('[CORRECT] 字段级纠错 ' + corrections.length + ' 条:', corrections)
+	    }
 	  },
 
 	  onChatReject(e) {

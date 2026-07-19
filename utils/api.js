@@ -1540,6 +1540,26 @@ function publicAddCorrectionsBatch(pairs) {
   })
 }
 
+/**
+ * 提交字段级纠错映射到公开训练库
+ * @param {Array<{field: string, wrong: string, correct: string, rawText: string}>} corrections
+ */
+function publicAddFieldCorrections(corrections) {
+  return new Promise(function (resolve) {
+    if (!corrections || !corrections.length) { resolve(0); return }
+    wx.request({
+      url: (BASE_URL_PUBLIC || BASE_URL) + '/corrections/field',
+      method: 'POST',
+      data: { corrections: corrections },
+      timeout: 5000,
+      success: function (res) {
+        resolve(res.data && res.data.inserted ? res.data.inserted : 0)
+      },
+      fail: function () { resolve(0) }
+    })
+  })
+}
+
 // ==================== VIP 订阅与用量 ====================
 
 /** 本地缓存键 */
@@ -1701,6 +1721,7 @@ module.exports = {
   publicGetCorrections,
   publicAddCorrection,
   publicAddCorrectionsBatch,
+  publicAddFieldCorrections,
 
   // 离线队列（内部使用，app.js 注册网络监听用）
   _initNetworkListener,
