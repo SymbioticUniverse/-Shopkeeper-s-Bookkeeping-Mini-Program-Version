@@ -131,7 +131,7 @@ async function _tryRefreshAccessToken() {
   return _refreshPromise
 }
 
-function _handleAuthExpired() {
+function _handleAuthExpired(msg) {
   if (_authExpiredHandling) return
   _authExpiredHandling = true
   _setToken('')
@@ -142,7 +142,7 @@ function _handleAuthExpired() {
     'guideCompleted', '_syncMeta',
     '_pendingConflicts', '_pendingServerData']
   for (const k of keys) wx.removeStorageSync(k)
-  wx.showToast({ title: '登录已过期，请重新登录', icon: 'none' })
+  wx.showToast({ title: msg || '登录已过期，请重新登录', icon: 'none', duration: 3000 })
   setTimeout(() => {
     wx.reLaunch({ url: '/pages/mingxi/mingxi' })
   }, 800)
@@ -286,6 +286,12 @@ function _request(method, path, data) {
         } else {
           console.warn('[API]', method, path, res.statusCode, res.data)
           if (res.statusCode === 401 && token && path !== '/auth/logout' && path !== '/auth/refresh') {
+            // 被挤下线 → 跳过换证，直接踢出
+            if (res.data && res.data.code === 'SESSION_KICKED') {
+              _handleAuthExpired(res.data.error || '您的账号已在另一台设备登录')
+              reject(res.data)
+              return
+            }
             // 尝试静默换证，成功后重试原请求
             _tryRefreshAccessToken().then(newToken => {
               if (newToken) {
@@ -459,6 +465,12 @@ async function removeItem(id) {
   }
 }
 
+/** 注销个人账本：清理服务端所有 personal scope 账单 */
+function deletePersonalItems() {
+  if (!_getToken()) return Promise.resolve()
+  return _pushBackend('DELETE', '/items/personal')
+}
+
 function addLinkedItems(scope, item, mirrorScope, mirrorItem) {
   // 先写本地 Storage
   var stamped = { ...item, _dirty: true, _syncedAt: 0, _lastKnownHash: null }
@@ -545,7 +557,44 @@ async function joinCompany(info) {
 
 function removeCompanyInfo() {
   wx.removeStorageSync('companyInfo')
+  // 清除旧公司密钥（换公司 = 换公钥）
+  var crypto = _getCrypto()
+  if (crypto && crypto.clearCompanyKeys) crypto.clearCompanyKeys()
   _pushBackend('DELETE', '/company')
+}
+
+/** 员工是否已通过公司审核（boss 永远为 true） */
+function isCompanyApproved() {
+  var info = getCompanyInfo()
+  if (!info) return false
+  if (info.companyRole === 'boss') return true
+  return info.companyStatus === 'approved'
+}
+
+/** 通过公司 UID 获取公钥（员工加入公司时调用，透明无感） */
+function fetchCompanyPublicKey(uid) {
+  return _request('GET', '/company/public-key?uid=' + encodeURIComponent(uid))
+}
+
+/** 老板上传公司公钥（创建公司后调用） */
+function uploadCompanyPublicKey(publicKey, keyId) {
+  return _request('PUT', '/company/public-key', {
+    public_key: publicKey,
+    key_id: keyId
+  })
+}
+
+/** 老板上传加密后的公司私钥（用个人主密钥加密后的 blob） */
+function uploadCompanyEncryptedPrivateKey(encryptedPrivateKey, keyId) {
+  return _request('PUT', '/company/private-key', {
+    encrypted_private_key: encryptedPrivateKey,
+    key_id: keyId
+  })
+}
+
+/** 老板取回加密后的公司私钥（换设备恢复时调用） */
+function fetchCompanyEncryptedPrivateKey() {
+  return _request('GET', '/company/private-key')
 }
 
 // ==================== 审核 ====================
@@ -605,13 +654,14 @@ async function loginByPhone(phone, code) {
   const result = await _request('POST', '/auth/login-by-phone', { phone, code })
   _setToken(result.token)
   _setRefreshToken(result.refreshToken)
-  const userInfo = { nickName: result.nickName, avatarUrl: result.avatarUrl, updatedAt: result.updatedAt }
+  const userInfo = { nickName: result.nickName, avatarUrl: result.avatarUrl, phone: result.phone || '', updatedAt: result.updatedAt }
   _save('userInfo', userInfo)
   return {
     ...userInfo,
     isNew: result.isNew || false,
     hasCompany: result.hasCompany || false,
-    companyRole: result.companyRole || null
+    companyRole: result.companyRole || null,
+	    companyStatus: result.companyStatus || null
   }
 }
 
@@ -624,13 +674,14 @@ async function loginByWechat(wxUserInfo) {
   const result = await _request('POST', '/auth/login-by-wechat', wxUserInfo)
   _setToken(result.token)
   _setRefreshToken(result.refreshToken)
-  const userInfo = { nickName: result.nickName, avatarUrl: result.avatarUrl, updatedAt: result.updatedAt }
+  const userInfo = { nickName: result.nickName, avatarUrl: result.avatarUrl, phone: result.phone || '', updatedAt: result.updatedAt }
   _save('userInfo', userInfo)
   return {
     ...userInfo,
     isNew: result.isNew || false,
     hasCompany: result.hasCompany || false,
-    companyRole: result.companyRole || null
+    companyRole: result.companyRole || null,
+	    companyStatus: result.companyStatus || null
   }
 }
 
@@ -644,13 +695,14 @@ async function loginByWechatPhone(wxCode, phoneCode) {
   const result = await _request('POST', '/auth/login-by-wechat-phone', { code: wxCode, phoneCode })
   _setToken(result.token)
   _setRefreshToken(result.refreshToken)
-  const userInfo = { nickName: result.nickName, avatarUrl: result.avatarUrl, updatedAt: result.updatedAt }
+  const userInfo = { nickName: result.nickName, avatarUrl: result.avatarUrl, phone: result.phone || '', updatedAt: result.updatedAt }
   _save('userInfo', userInfo)
   return {
     ...userInfo,
     isNew: result.isNew || false,
     hasCompany: result.hasCompany || false,
-    companyRole: result.companyRole || null
+    companyRole: result.companyRole || null,
+	    companyStatus: result.companyStatus || null
   }
 }
 
@@ -722,10 +774,11 @@ function saveUserInfo(info) {
   })
 }
 
-function removeUserInfo() {
-  wx.removeStorageSync('userInfo')
-  _pushBackend('DELETE', '/auth/user-info')
-}
+// [已注释] 未使用
+// function removeUserInfo() {
+//   wx.removeStorageSync('userInfo')
+//   _pushBackend('DELETE', '/auth/user-info')
+// }
 
 // ==================== 设置 ====================
 
@@ -738,10 +791,11 @@ function saveSetting(key, value) {
   _pushBackend('POST', '/settings', { key, value })
 }
 
-function removeSetting(key) {
-  wx.removeStorageSync(key)
-  _pushBackend('DELETE', '/settings?key=' + encodeURIComponent(key))
-}
+// [已注释] 未使用
+// function removeSetting(key) {
+//   wx.removeStorageSync(key)
+//   _pushBackend('DELETE', '/settings?key=' + encodeURIComponent(key))
+// }
 
 // ==================== 自定义简览 ====================
 
@@ -1115,10 +1169,10 @@ async function syncFromCloud() {
   }
 }
 
-/** 获取待解决的冲突列表 */
-function getPendingConflicts() {
-  return wx.getStorageSync(PENDING_CONFLICTS_KEY) || []
-}
+// [已注释] 未使用，调用方直接用 _pendingConflicts key
+// function getPendingConflicts() {
+//   return wx.getStorageSync(PENDING_CONFLICTS_KEY) || []
+// }
 
 /**
  * 应用用户冲突裁决，完成同步。
@@ -1564,11 +1618,11 @@ function isVip() {
   return !!(status && status.vipLevel > 0)
 }
 
-/** 获取当前 VIP 等级 */
-function getVipLevel() {
-  var status = wx.getStorageSync(VIP_STATUS_KEY)
-  return status ? status.vipLevel : 0
-}
+// [已注释] 未使用，调用方直接读 vipStatus.vipLevel
+// function getVipLevel() {
+//   var status = wx.getStorageSync(VIP_STATUS_KEY)
+//   return status ? status.vipLevel : 0
+// }
 
 /**
  * 记录一次用量（用于纯前端操作如导出，需主动上报）
@@ -1594,6 +1648,7 @@ module.exports = {
   addItem,
   updateItem,
   removeItem,
+  deletePersonalItems,
   addLinkedItems,
   settleItem,
   settleConfirm,
@@ -1606,6 +1661,11 @@ module.exports = {
   saveCompanyInfo,
   joinCompany,
   removeCompanyInfo,
+  isCompanyApproved,
+  fetchCompanyPublicKey,
+  uploadCompanyPublicKey,
+  uploadCompanyEncryptedPrivateKey,
+  fetchCompanyEncryptedPrivateKey,
 
   getAuditList,
   saveAuditList,
@@ -1623,18 +1683,19 @@ module.exports = {
   loginByWechatPhone,
   logout,
 
-  isE2EEnabled: function () {
-    var crypto = _getCrypto()
-    return !!(crypto && crypto.isEncryptionEnabled())
-  },
+  // [已注释] 未使用，内部直接调 crypto.isEncryptionEnabled()
+  // isE2EEnabled: function () {
+  //   var crypto = _getCrypto()
+  //   return !!(crypto && crypto.isEncryptionEnabled())
+  // },
 
   getUserInfo,
   saveUserInfo,
-  removeUserInfo,
+  // removeUserInfo,  // [已注释] 未使用
 
   getSetting,
   saveSetting,
-  removeSetting,
+  // removeSetting,  // [已注释] 未使用
 
   getOverviewCards,
   saveOverviewCards,
@@ -1664,10 +1725,10 @@ module.exports = {
 
   // 离线队列（内部使用，app.js 注册网络监听用）
   _initNetworkListener,
-  _replayQueue,
+  // _replayQueue — 仅内部使用，不导出
 
   // 冲突检测 & 裁决
-  getPendingConflicts,
+  // getPendingConflicts,  // [已注释] 未使用
   resolveConflicts,
 
   // VIP 订阅与用量
@@ -1676,6 +1737,6 @@ module.exports = {
   activateTrial,
   checkUsage,
   isVip,
-  getVipLevel,
+  // getVipLevel,  // [已注释] 未使用
   incrementUsage,
 }

@@ -88,6 +88,10 @@
       {
         "value": ".DS_Store",
         "type": "file"
+      },
+      {
+        "value": "assets/screenshot.png",
+        "type": "file"
       }
     ],
     "include": []

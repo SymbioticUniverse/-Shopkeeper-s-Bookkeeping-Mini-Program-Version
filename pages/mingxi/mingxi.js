@@ -136,6 +136,99 @@ function getLangLabel(lang) {
   return map[lang] || '简体中文'
 }
 
+// ==================== 企业加密辅助函数 ====================
+
+function _encryptWithMasterKey(crypto, plainHex) {
+  var masterKey = crypto.exportMasterKey()
+  if (!masterKey) throw new Error('无主密钥')
+  var noble = require('../../vendor/noble-ciphers.js')
+  var keyBytes = _hexToBytesLocal(masterKey)
+  var iv = noble.randomBytes(12)
+  var cipher = noble.gcm(keyBytes, iv)
+  var plainBytes = _hexToBytesLocal(plainHex)
+  var encrypted = cipher.encrypt(plainBytes)
+  var combined = new Uint8Array(12 + encrypted.length)
+  combined.set(iv, 0)
+  combined.set(encrypted, 12)
+  return _toBase64Local(combined)
+}
+
+function _decryptWithMasterKey(crypto, base64Cipher) {
+  var masterKey = crypto.exportMasterKey()
+  if (!masterKey) throw new Error('无主密钥')
+  var noble = require('../../vendor/noble-ciphers.js')
+  var combined = _fromBase64Local(base64Cipher)
+  var iv = combined.slice(0, 12)
+  var encrypted = combined.slice(12)
+  var keyBytes = _hexToBytesLocal(masterKey)
+  var decipher = noble.gcm(keyBytes, iv)
+  var decrypted = decipher.decrypt(encrypted)
+  return _bytesToHexLocal(decrypted)
+}
+
+function _hexToBytesLocal(hex) {
+  var bytes = new Uint8Array(hex.length / 2)
+  for (var i = 0; i < bytes.length; i++) {
+    bytes[i] = parseInt(hex.substr(i * 2, 2), 16)
+  }
+  return bytes
+}
+
+function _bytesToHexLocal(bytes) {
+  var hex = ''
+  for (var i = 0; i < bytes.length; i++) {
+    hex += (bytes[i] < 16 ? '0' : '') + bytes[i].toString(16)
+  }
+  return hex
+}
+
+function _toBase64Local(uint8) {
+  if (typeof wx !== 'undefined' && wx.arrayBufferToBase64) {
+    return wx.arrayBufferToBase64(uint8.buffer.slice(uint8.byteOffset, uint8.byteOffset + uint8.byteLength))
+  }
+  var binary = ''
+  for (var i = 0; i < uint8.length; i++) { binary += String.fromCharCode(uint8[i]) }
+  if (typeof btoa !== 'undefined') return btoa(binary)
+  var chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/'
+  var result = ''
+  for (var j = 0; j < uint8.length; j += 3) {
+    var a = uint8[j], b = uint8[j + 1] || 0, c = uint8[j + 2] || 0
+    result += chars[a >> 2]
+    result += chars[((a & 3) << 4) | (b >> 4)]
+    result += j + 1 < uint8.length ? chars[((b & 15) << 2) | (c >> 6)] : '='
+    result += j + 2 < uint8.length ? chars[c & 63] : '='
+  }
+  return result
+}
+
+function _fromBase64Local(b64) {
+  if (typeof wx !== 'undefined' && wx.base64ToArrayBuffer) {
+    return new Uint8Array(wx.base64ToArrayBuffer(b64))
+  }
+  if (typeof atob !== 'undefined') {
+    var bin = atob(b64)
+    var bytes = new Uint8Array(bin.length)
+    for (var i = 0; i < bin.length; i++) { bytes[i] = bin.charCodeAt(i) }
+    return bytes
+  }
+  var chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/'
+  var out = []
+  var pad = 0
+  for (var i = 0; i < b64.length; i++) {
+    if (b64[i] === '=') { pad++; continue }
+    out.push(chars.indexOf(b64[i]))
+  }
+  var len = (out.length * 3 / 4) | 0
+  var result = new Uint8Array(len)
+  var p = 0
+  for (var j = 0; j < out.length; j += 4) {
+    result[p++] = (out[j] << 2) | (out[j + 1] >> 4)
+    if (p < len) result[p++] = ((out[j + 1] & 15) << 4) | (out[j + 2] >> 2)
+    if (p < len) result[p++] = ((out[j + 2] & 3) << 6) | out[j + 3]
+  }
+  return result
+}
+
 Page({
   data: {
     t: {},
@@ -274,6 +367,7 @@ Page({
     companyUid: '',
     companyName: '',
     companyBossTitle: '',
+    companyStatus: '',  // '' | 'pending' | 'approved'
     employeeUid: '',
     // 首次引导
     showGuide: false,
@@ -387,12 +481,17 @@ Page({
     settingsLanguageLabel: '简体中文',
     settingsDarkMode: 'system', // 深色模式: system/light/dark
     settingsDarkModeLabel: '跟随系统',
+    settingsCompanyStatus: '',
+    settingsPhone: '',
     // E2E 加密
     showEncryptionSettings: false,
     encryptionEnabled: false,
     encryptionAdvancedEnabled: false,
     encryptionAdvancedKey: '',
     encryptionAdvancedInput: '',
+    // 企业加密
+    encryptionCompanyKeyReady: false,
+    encryptionCompanyIsBoss: false,
     tapVolumePercent: Math.round(getVolume() * 100),
     tapVibrationLevel: wx.getStorageSync('tapVibration') || 1,
     tapVibrationLabel: ['关闭', '轻度 ~50ms', '中度 ~150ms', '高度 ~200ms', '最高 ~300ms'][wx.getStorageSync('tapVibration') || 1],
@@ -685,7 +784,7 @@ Page({
     ],
   },
 
-  onLoad() {
+  async onLoad() {
     // 首次启动引导检测
     if (wx.getStorageSync('tapVolume') === '') wx.setStorageSync('tapVolume', 1)
     if (wx.getStorageSync('tapVibration') === '') wx.setStorageSync('tapVibration', 1)
@@ -724,25 +823,28 @@ Page({
     this.setData({ isDarkMode: isDark })
     this._initTabletScale()
     const savedUser = api.getUserInfo()
+    const hasProfile = savedUser && savedUser.nickName && savedUser.nickName !== '新用户' && savedUser.avatarUrl
     if (savedUser) {
       this.setData({ isLoggedIn: true, userInfo: savedUser })
       this._refreshAvatarDisplay(savedUser)
-      // 已注册但资料不完整 → 强制弹资料完善弹窗
-      if (!savedUser.nickName || savedUser.nickName === '新用户' || !savedUser.avatarUrl) {
-        setTimeout(() => {
-          this.setData({
-            showProfileModal: true,
-            profileEditMode: false,
-            profileName: savedUser.nickName || '',
-            profileAvatarLocal: '',
-            profileAvatarUrl: savedUser.avatarUrl || '',
-          })
-        }, 800)
-      }
+    }
+
+    // 引导检测
+    if (!wx.getStorageSync('guideCompleted')) {
+      // 未完成引导 → 从头开始
+      this.setData({ showGuide: true, guideStep: 0 })
+    } else if (savedUser && !hasProfile) {
+      // 已登录但资料不完整 → 强制操作引导
+      wx.removeStorageSync('guideCompleted')
+      this.setData({ _isNewUser: true, showGuide: false })
+      this._startSpotlight('tutorial')
     }
 
     // E2E 加密初始化：检测本地密钥状态 + 尝试从服务端恢复
-    this._initCrypto()
+    await this._initCrypto()
+
+    // 同步公司显示数据到「我的」页
+    this._syncCompanyDisplayData()
 
     api.migrate()
     const savedPCats = api.getCategories('personal')
@@ -772,6 +874,7 @@ Page({
   },
 
   onShow() {
+    this._syncCompanyDisplayData()
     this._proactiveRefresh()
     this._throttledSync()
     if (this.data.isLoggedIn && !this._recordAuthRequested) {
@@ -2643,9 +2746,15 @@ Page({
   onBookScopeToggle(e) {
     playTap()
     const scope = e.currentTarget.dataset.scope
-    if (scope === 'company' && !api.getCompanyInfo()) {
-      wx.showToast({ title: '请先注册公司', icon: 'none' })
-      return
+    if (scope === 'company') {
+      if (!api.getCompanyInfo()) {
+        wx.showToast({ title: '请先注册公司', icon: 'none' })
+        return
+      }
+      if (!api.isCompanyApproved()) {
+        wx.showToast({ title: '您暂时还未加入公司，请申请或通过审核后重试', icon: 'none', duration: 2500 })
+        return
+      }
     }
     const td = this._getBookTargetDefaults(scope, this.data.bookForm.type)
     this.setData({
@@ -2915,9 +3024,15 @@ Page({
   onMultiScopeToggle(e) {
     playTap()
     const scope = e.currentTarget.dataset.scope
-    if (scope === 'company' && !api.getCompanyInfo()) {
-      wx.showToast({ title: '请先注册公司', icon: 'none' })
-      return
+    if (scope === 'company') {
+      if (!api.getCompanyInfo()) {
+        wx.showToast({ title: '请先注册公司', icon: 'none' })
+        return
+      }
+      if (!api.isCompanyApproved()) {
+        wx.showToast({ title: '您暂时还未加入公司，请申请或通过审核后重试', icon: 'none', duration: 2500 })
+        return
+      }
     }
     this.setData({
       multiScope: scope,
@@ -2991,7 +3106,8 @@ Page({
     }
     api.addItem(multiScope, item)
     // 学习模块挂钩（正式版可移除）
-    try { require('../../utils/learn.js').learnFromItem(item) } catch (_) {}
+    // [已注释] learn.js 不存在，暂时禁用
+// try { require('../../utils/learn.js').learnFromItem(item) } catch (_) {}
     const _items = this._buildDetailList(multiScope, api.getItems(multiScope))
     this.setData({
       detailItems: _items,
@@ -3218,7 +3334,8 @@ Page({
       api.addItem(scope, newItem)
     }
     // 学习模块挂钩（正式版可移除）
-    try { require('../../utils/learn.js').learnFromItem(newItem) } catch (_) {}
+    // [已注释] learn.js 不存在，暂时禁用
+// try { require('../../utils/learn.js').learnFromItem(newItem) } catch (_) {}
 
     var _items2497 = this._buildDetailList(scope, api.getItems(scope))
 this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_items2497), showBookPopup: false, bookPhoto: '' })
@@ -3840,9 +3957,29 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
     this.setData({ hasPendingAudit: hasPending, hasMyTabBadge: hasPending || hasUnread })
   },
 
+  _formatNotifyTime(t) {
+    if (!t) return ''
+    // ISO 8601 format from server: 2026-07-20T08:19:33.682Z
+    // toLocaleDateString from client: 2026/7/20
+    if (typeof t === 'string' && t.indexOf('T') !== -1) {
+      var d = new Date(t)
+      if (isNaN(d.getTime())) return t
+      var month = d.getMonth() + 1
+      var day = d.getDate()
+      var hours = d.getHours().toString().padStart(2, '0')
+      var mins = d.getMinutes().toString().padStart(2, '0')
+      return d.getFullYear() + '/' + month + '/' + day + ' ' + hours + ':' + mins
+    }
+    return t
+  },
+
   onNotifyEntry() {
     playTap()
-    const list = api.getNotifyList()
+    var list = api.getNotifyList()
+    var self = this
+    list = list.map(function (item) {
+      return { ...item, _timeText: self._formatNotifyTime(item.time) }
+    })
     this.setData({ showNotifyPage: true, notifyList: list })
   },
 
@@ -4159,10 +4296,25 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
     this.setData({ contactFeedback: '' })
   },
 
+  _syncCompanyDisplayData() {
+    const saved = api.getCompanyInfo()
+    const ledgerRole = saved && saved.companyRole ? saved.companyRole : 'personal'
+    const companyStatus = saved && saved.companyStatus ? saved.companyStatus : ''
+    this.setData({
+      settingsLedgerRole: ledgerRole,
+      settingsCompanyStatus: companyStatus,
+      companyName: (saved && saved.companyName) || '',
+      companyBossTitle: (saved && saved.companyBossTitle) || '',
+    })
+  },
+
   onSettingsEntry() {
     playTap()
     const saved = api.getCompanyInfo()
     const ledgerRole = saved && saved.companyRole ? saved.companyRole : 'personal'
+    const companyStatus = saved && saved.companyStatus ? saved.companyStatus : ''
+    const userInfo = api.getUserInfo()
+    const phoneNumber = userInfo && userInfo.phone ? userInfo.phone : ''
     const lang = api.getSetting('appLanguage') || 'zh-CN'
     const langLabel = getLangLabel(lang)
     const darkMode = api.getSetting('appDarkMode') || 'system'
@@ -4171,7 +4323,7 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
     const storageInfo = wx.getStorageInfoSync()
     const cacheSize = (storageInfo.currentSize / 1024).toFixed(1) + 'MB'
     this._applyLanguage(lang)
-    this.setData({ showSettingsPage: true, settingsLedgerRole: ledgerRole, settingsLanguage: lang, settingsLanguageLabel: langLabel, settingsDarkMode: darkMode, settingsDarkModeLabel: darkLabel, cacheSize })
+    this.setData({ showSettingsPage: true, settingsLedgerRole: ledgerRole, settingsCompanyStatus: companyStatus, settingsPhone: phoneNumber, settingsLanguage: lang, settingsLanguageLabel: langLabel, settingsDarkMode: darkMode, settingsDarkModeLabel: darkLabel, cacheSize })
   },
 
   onSettingsBack() {
@@ -4364,6 +4516,65 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
       case 'about':
         this.setData({ showAboutPage: true })
         break
+      case 'deactivateLedger': {
+        const role = this.data.settingsLedgerRole
+        const isBoss = role === 'boss'
+        const isEmployee = role === 'employee'
+        wx.showModal({
+          title: '注销账本',
+          content: isBoss
+            ? '将清除公司密钥、个人密钥、登录状态和所有本地数据。公司将被解散。\n\n适用于：丢失高级安全密钥、重置公司账本等场景。\n\n此操作不可撤销，确定继续吗？'
+            : '将清除个人密钥、登录状态和本地个人数据。' + (isEmployee ? '公司关系保留。' : '') + '\n\n适用于：丢失高级安全密钥、重置个人账本等场景。\n\n此操作不可撤销，确定继续吗？',
+          confirmText: '确定注销',
+          confirmColor: '#fa5151',
+          success: (res) => {
+            if (res.confirm) {
+              // 1. 清理服务端个人数据（必须先于 clearStorage，token 在 Storage 里）
+              api.deletePersonalItems()
+              // 2. 清空加密密钥（员工只清个人，不动公司）
+              if (isBoss) crypto.clearCompanyKeys()
+              try { wx.removeStorageSync('e2e_master_key') } catch (_) {}
+              try { wx.removeStorageSync('e2e_enabled') } catch (_) {}
+              try { wx.removeStorageSync('e2e_advanced') } catch (_) {}
+              try { wx.removeStorageSync('e2e_advanced_downgraded') } catch (_) {}
+              // 3. 保留用户设置 + 公司信息（员工保公司关系）
+              const lang = api.getSetting('appLanguage')
+              const darkMode = api.getSetting('appDarkMode')
+              const privacyAnalytics = api.getSetting('privacy_allowAnalytics')
+              const privacyCrash = api.getSetting('privacy_allowCrashReport')
+              const companyInfo = isEmployee ? api.getCompanyInfo() : null
+              // 4. 全量清除
+              wx.clearStorageSync()
+              // 5. 恢复
+              if (lang) api.saveSetting('appLanguage', lang)
+              if (darkMode) api.saveSetting('appDarkMode', darkMode)
+              if (privacyAnalytics !== undefined) api.saveSetting('privacy_allowAnalytics', privacyAnalytics)
+              if (privacyCrash !== undefined) api.saveSetting('privacy_allowCrashReport', privacyCrash)
+              if (companyInfo) api.saveCompanyInfo(companyInfo)
+              // 6. boss 解散公司后端（同时 void 所有公司账目）
+              if (isBoss) api.removeCompanyInfo()
+              // 7. 重置页面状态
+              this.setData({
+                isLoggedIn: false,
+                userInfo: null,
+                showSettingsPage: false,
+                showGuide: true,
+                guideStep: 0,
+                settingsLedgerRole: isEmployee ? 'employee' : 'personal',
+                encryptionEnabled: false,
+                encryptionAdvancedEnabled: false,
+                encryptionTier: '',
+                encryptionCompanyIsBoss: false,
+                encryptionCompanyKeyReady: false,
+                hasPendingAudit: false
+              })
+              this.initDetailItems()
+              wx.showToast({ title: '账本已注销', icon: 'success' })
+            }
+          }
+        })
+        break
+      }
       case 'logout':
         wx.showModal({
           title: '退出登录',
@@ -4504,10 +4715,12 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
     playTap()
     const step = this.data.companyShareStep
     if (step === 2) {
+      this._syncCompanyDisplayData()
       this.setData({ showCompanyShare: false })
     } else if (step === 1) {
       this.setData({ companyShareStep: 0 })
     } else {
+      this._syncCompanyDisplayData()
       this.setData({ showCompanyShare: false })
     }
   },
@@ -4535,10 +4748,12 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
       wx.showToast({ title: '请输入公司 UID 码', icon: 'none' })
       return
     }
-    const info = { companyUid: employeeUid.trim(), companyRole: 'employee' }
+    const info = { companyUid: employeeUid.trim(), companyRole: 'employee', companyStatus: 'pending' }
+    var that = this
     api.joinCompany(info).then(() => {
       wx.showToast({ title: '已提交申请，等待审核', icon: 'success' })
-      this.setData({ companyShareStep: 2 })
+      that.setData({ companyShareStep: 2 })
+      that._syncCompanyKeys()
     }).catch(err => {
       wx.showToast({ title: (err && err.error) || '加入失败，请检查 UID', icon: 'none' })
     })
@@ -4572,6 +4787,7 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
     const info = { companyUid, companyName: companyName.trim(), companyBossTitle: companyBossTitle.trim() || 'BOSS', companyRole: 'boss' }
     api.saveCompanyInfo(info)
     this._syncOverviewCards()
+    this._setupBossCompanyKeys()
     wx.showToast({ title: '创建成功', icon: 'success' })
     this.setData({ companyShareStep: 2, companyName: info.companyName, companyBossTitle: info.companyBossTitle, companyUid: info.companyUid })
   },
@@ -5207,24 +5423,29 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
         }
         api.loginByWechat({ code: loginRes.code }).then(result => {
           const userInfo = { nickName: result.nickName, avatarUrl: result.avatarUrl, updatedAt: result.updatedAt }
+          if (result.phone) wx.setStorageSync('user_phone', result.phone)
           this.setData({ isLoggedIn: true, userInfo, showLoginPage: false })
           if (result.isNew) {
-            this.setData({ showProfileModal: true, profileEditMode: false, profileName: '', profileAvatarLocal: '', profileAvatarUrl: '' })
+            wx.removeStorageSync('guideCompleted')
+            this.setData({ _isNewUser: true, showGuide: false })
+            this._startSpotlight('tutorial')
           } else {
             this._refreshAvatarDisplay(userInfo)
           }
           wx.showToast({ title: '登录成功', icon: 'success' })
-          api.syncFromCloud().then((syncResult) => {
-            if (syncResult && syncResult.hasConflicts) { this._handleSyncResult(syncResult); return }
-            this.initDetailItems()
-            this._syncOverviewCards()
-            const su = api.getUserInfo()
-            if (su) this.setData({ userInfo: su })
-            this._refreshAvatarDisplay(su)
-            api.getVipStatus().then(function (s) { this.setData({ vipStatus: s, vipTrialDays: this._computeTrialDays(s), vipExpiresText: this._formatVipExpiry(s) }); this._checkEncryptionTierAlignment() }.bind(this)).catch(function () {})
-            this.updateNotifyBadge()
-            this.updateAuditBadge()
-          })
+          this._initCrypto().then(() => {
+            api.syncFromCloud().then((syncResult) => {
+              if (syncResult && syncResult.hasConflicts) { this._handleSyncResult(syncResult); return }
+              this.initDetailItems()
+              this._syncOverviewCards()
+              const su = api.getUserInfo()
+              if (su) this.setData({ userInfo: su })
+              this._refreshAvatarDisplay(su)
+              api.getVipStatus().then(function (s) { this.setData({ vipStatus: s, vipTrialDays: this._computeTrialDays(s), vipExpiresText: this._formatVipExpiry(s) }); this._checkEncryptionTierAlignment() }.bind(this)).catch(function () {})
+              this.updateNotifyBadge()
+              this.updateAuditBadge()
+            })
+          }).catch(function () {})
         }).catch((err) => {
           const msg = (err && err.error) || '登录失败'
           wx.showToast({ title: msg, icon: 'none', duration: 3000 })
@@ -5254,8 +5475,8 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
       encryptionAdvancedEnabled: hasKey && crypto.isAdvancedSecurityEnabled()
     })
 
-    // 已有主密钥 → 无需恢复
-    if (hasKey) return Promise.resolve()
+    // 已有主密钥 → 无需恢复，同步公司密钥后返回
+    if (hasKey) return this._syncCompanyKeys()
 
     // 未登录 → 无 token，等登录后重试
     if (!wx.getStorageSync('authToken')) return Promise.resolve()
@@ -5283,7 +5504,7 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
               console.error('[crypto] 自动初始化加密失败:', e.message)
               resolveSetup()
             }
-          })
+          }).then(function () { return that._syncCompanyKeys() })
         }
         // dev 模式无手机号 → 跳过
         return
@@ -5328,8 +5549,150 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
             }
           })
         }
+      }).then(function () { return that._syncCompanyKeys() })
+    }).catch(function (err) {
+      console.warn('[crypto] fetchKeyBlob 失败，加密初始化推迟:', (err && err.message) || err)
+    })
+  },
+
+  /** 同步公司加密密钥状态 */
+  _syncCompanyKeys() {
+    var crypto = this._getCrypto()
+    if (!crypto) return Promise.resolve()
+
+    var ci = api.getCompanyInfo()
+    if (!ci || !ci.companyUid) {
+      // 未加入公司 → 清除旧密钥
+      crypto.clearCompanyKeys()
+      this.setData({ encryptionCompanyKeyReady: false, encryptionCompanyIsBoss: false })
+      return Promise.resolve()
+    }
+
+    var isBoss = ci.companyRole === 'boss'
+    var hasPriv = crypto.getCompanyPrivateKey()
+    var hasPub = crypto.getCompanyPublicKey()
+
+    // 已有密钥 → 检查是否就绪
+    if (isBoss && hasPriv) {
+      this.setData({ encryptionCompanyKeyReady: true, encryptionCompanyIsBoss: true })
+      return Promise.resolve()
+    }
+    if (!isBoss && hasPub) {
+      this.setData({ encryptionCompanyKeyReady: true, encryptionCompanyIsBoss: false })
+      return Promise.resolve()
+    }
+
+    var that = this
+
+    if (isBoss) {
+      // 老板缺失私钥 → 尝试从服务端恢复
+      return api.fetchCompanyEncryptedPrivateKey().then(function (result) {
+        if (result && result.encrypted_private_key) {
+          var masterKey = crypto.exportMasterKey()
+          if (!masterKey) {
+            console.warn('[crypto] 公司私钥备份存在但本地无主密钥，无法解密')
+            that.setData({ encryptionCompanyKeyReady: false, encryptionCompanyIsBoss: true })
+            return
+          }
+          try {
+            var privHex = _decryptWithMasterKey(crypto, result.encrypted_private_key)
+            crypto.setCompanyPrivateKey(privHex)
+            if (result.key_id) {
+              crypto.setCompanyPublicKey(result.public_key || '', result.key_id)
+            }
+            that.setData({ encryptionCompanyKeyReady: true, encryptionCompanyIsBoss: true })
+            console.log('[crypto] 公司私钥已从服务端恢复')
+          } catch (e) {
+            console.error('[crypto] 公司私钥恢复失败:', e.message)
+            that.setData({ encryptionCompanyKeyReady: false, encryptionCompanyIsBoss: true })
+          }
+        } else {
+          // 新创建的公司在等后端部署 → 暂时标记未就绪
+          that.setData({ encryptionCompanyKeyReady: false, encryptionCompanyIsBoss: true })
+        }
+      }).catch(function () {
+        that.setData({ encryptionCompanyKeyReady: false, encryptionCompanyIsBoss: true })
       })
-    }).catch(function () {})
+    } else {
+      // 员工缺失公钥 → 从服务端获取
+      return api.fetchCompanyPublicKey(ci.companyUid).then(function (result) {
+        if (result && result.public_key) {
+          crypto.setCompanyPublicKey(result.public_key, result.key_id || '')
+          that.setData({ encryptionCompanyKeyReady: true, encryptionCompanyIsBoss: false })
+        } else {
+          that.setData({ encryptionCompanyKeyReady: false, encryptionCompanyIsBoss: false })
+        }
+      }).catch(function () {
+        that.setData({ encryptionCompanyKeyReady: false, encryptionCompanyIsBoss: false })
+      })
+    }
+  },
+
+  /** 老板创建公司后，生成本地密钥对并初始化企业加密 */
+  _setupBossCompanyKeys() {
+    var crypto = this._getCrypto()
+    if (!crypto) return
+
+    var ecc = null
+    try { ecc = require('../../vendor/noble-ecc.js') } catch (e) {}
+    if (!ecc) {
+      console.warn('[crypto] ECC 模块未加载，跳过公司加密初始化')
+      return
+    }
+
+    try {
+      // 客户端生成 secp256k1 密钥对（私钥永不离客户端）
+      var privBytes = ecc.randomPrivateKey()
+      var pubBytes = ecc.getPublicKey(privBytes, true)
+      var privHex = ''
+      for (var i = 0; i < privBytes.length; i++) {
+        privHex += (privBytes[i] < 16 ? '0' : '') + privBytes[i].toString(16)
+      }
+      var pubHex = ''
+      for (var j = 0; j < pubBytes.length; j++) {
+        pubHex += (pubBytes[j] < 16 ? '0' : '') + pubBytes[j].toString(16)
+      }
+
+      // 存储私钥到本地
+      crypto.setCompanyPrivateKey(privHex)
+      crypto.setCompanyPublicKey(pubHex, '')
+
+      this.setData({ encryptionCompanyKeyReady: true, encryptionCompanyIsBoss: true })
+      console.log('[crypto] 公司加密密钥对已生成')
+
+      // 上传公钥到服务端（员工加入时自动获取）
+      api.uploadCompanyPublicKey(pubHex, '').catch(function () {
+        console.warn('[crypto] 公司公钥上传失败，后续重试')
+      })
+
+      // 加密私钥后上传服务端备份（用主密钥加密）
+      var masterKey = crypto.exportMasterKey()
+      if (masterKey) {
+        var encPrivHex = _encryptWithMasterKey(crypto, privHex)
+        api.uploadCompanyEncryptedPrivateKey(encPrivHex, '').catch(function () {
+          console.warn('[crypto] 公司私钥备份上传失败，后续重试')
+        })
+      }
+    } catch (e) {
+      console.error('[crypto] 公司密钥对生成失败:', e.message)
+    }
+  },
+
+  /** 刷新公司加密状态到 UI */
+  _refreshCompanyEncryptionState() {
+    var crypto = this._getCrypto()
+    if (!crypto) return
+    var ci = api.getCompanyInfo()
+    if (!ci || !ci.companyUid) {
+      this.setData({ encryptionCompanyKeyReady: false, encryptionCompanyIsBoss: false })
+      return
+    }
+    this.setData({
+      encryptionCompanyIsBoss: ci.companyRole === 'boss',
+      encryptionCompanyKeyReady: ci.companyRole === 'boss'
+        ? !!crypto.getCompanyPrivateKey()
+        : !!crypto.getCompanyPublicKey()
+    })
   },
 
   /** 换设备恢复时，手机号未缓存 → 弹窗让用户输入 */
@@ -5357,6 +5720,7 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
       encryptionEnabled: hasKey,
       encryptionAdvancedEnabled: hasKey && crypto.isAdvancedSecurityEnabled()
     })
+    this._refreshCompanyEncryptionState()
   },
 
   /** VIP 过期/续费时自动对齐加密 tier */
@@ -5420,10 +5784,14 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
     var that = this
     var isVip = api.isVip()
     var isAdvanced = crypto.isAdvancedSecurityEnabled()
+    var isBoss = crypto.isCompanyBoss()
     var itemList = ['导出主密钥（备份）']
 
     if (isVip) {
       itemList.unshift(isAdvanced ? '关闭高级安全' : '开启高级安全（28位密钥）')
+    }
+    if (isBoss) {
+      itemList.push('导出公司私钥（备份）')
     }
 
     wx.showActionSheet({
@@ -5438,6 +5806,9 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
             break
           case '导出主密钥（备份）':
             that._exportMasterKey()
+            break
+          case '导出公司私钥（备份）':
+            that._exportCompanyPrivateKey()
             break
         }
       }
@@ -5551,6 +5922,24 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
     wx.showModal({
       title: '主密钥已复制',
       content: '密钥已复制到剪贴板，请妥善保存。\n\n任何人拿到此密钥都可解密您的账单数据，请勿泄露。',
+      showCancel: false,
+      confirmText: '知道了'
+    })
+  },
+
+  /** 导出公司私钥（仅老板） */
+  _exportCompanyPrivateKey() {
+    var crypto = this._getCrypto()
+    if (!crypto) return
+    var privKey = crypto.getCompanyPrivateKey()
+    if (!privKey) {
+      wx.showToast({ title: '无公司私钥', icon: 'none' })
+      return
+    }
+    wx.setClipboardData({ data: privKey })
+    wx.showModal({
+      title: '公司私钥已复制',
+      content: '公司私钥已复制到剪贴板，请妥善保存。\n\n丢失后无法解密公司账本数据，公司必须重建。\n\n请勿泄露给任何人（包括员工）。',
       showCancel: false,
       confirmText: '知道了'
     })
@@ -5839,9 +6228,12 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
         }
         api.loginByWechat({ code: loginRes.code }).then(function(result) {
           var userInfo = { nickName: result.nickName, avatarUrl: result.avatarUrl, updatedAt: result.updatedAt }
+          if (result.phone) wx.setStorageSync('user_phone', result.phone)
           that.setData({ isLoggedIn: true, userInfo: userInfo, showLoginPage: false, showGuide: false })
           if (result.isNew) {
-            that.setData({ showProfileModal: true, profileEditMode: false, profileName: '', profileAvatarLocal: '', profileAvatarUrl: '' })
+            wx.removeStorageSync('guideCompleted')
+            that.setData({ _isNewUser: true, showGuide: false })
+            that._startSpotlight('tutorial')
           } else {
             that._refreshAvatarDisplay(userInfo)
           }
@@ -5896,7 +6288,9 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
           if (result.phone) wx.setStorageSync('user_phone', result.phone)
           that.setData({ isLoggedIn: true, userInfo: userInfo, showLoginPage: false, showGuide: false })
           if (result.isNew) {
-            that.setData({ showProfileModal: true, profileEditMode: false, profileName: '', profileAvatarLocal: '', profileAvatarUrl: '' })
+            wx.removeStorageSync('guideCompleted')
+            that.setData({ _isNewUser: true, showGuide: false })
+            that._startSpotlight('tutorial')
           } else {
             that._refreshAvatarDisplay(userInfo)
           }
@@ -5946,6 +6340,7 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
     }
     const info = { companyUid, companyName: companyName.trim(), companyBossTitle: companyBossTitle.trim() || 'BOSS', companyRole: 'boss' }
     api.saveCompanyInfo(info)
+    this._setupBossCompanyKeys()
     wx.showToast({ title: '创建成功', icon: 'success' })
     this.onGuideComplete()
   },
@@ -5958,9 +6353,11 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
       return
     }
     const info = { companyUid: employeeUid.trim(), companyRole: 'employee' }
+    var that = this
     api.joinCompany(info).then(() => {
       wx.showToast({ title: '已提交申请', icon: 'success' })
-      this.onGuideComplete()
+      that._syncCompanyKeys()
+      that.onGuideComplete()
     }).catch(() => {
       wx.showToast({ title: '加入失败', icon: 'none' })
     })
@@ -5972,8 +6369,8 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
     this.setData({ showGuide: false })
     this.initDetailItems()
     this._syncOverviewCards()
-    // 新用户完成引导+教程 → 弹资料完善弹窗
-    if (this.data._isNewUser && this._tutorialDone) {
+    // 新用户完成引导 → 弹资料完善弹窗
+    if (this.data._isNewUser) {
       setTimeout(() => {
         this.setData({
           showProfileModal: true,
@@ -6421,6 +6818,11 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
     var who = this._chatRecognizeFor
     this._chatRecognizeFor = ''
     this.setData({ chatRecording: false })
+    // 未通过审核的员工不能记公司账
+    if (this.data.bookScope === 'company' && !api.isCompanyApproved()) {
+      wx.showToast({ title: '您暂时还未加入公司，请申请或通过审核后重试', icon: 'none', duration: 2500 })
+      return
+    }
     var t = (text || '').trim()
     if (!t) {
       wx.showToast({ title: '没听清，请再说一次', icon: 'none' })
@@ -6623,6 +7025,11 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
 
   onChatSend() {
     playTap()
+    // 未通过审核的员工不能记公司账
+    if (this.data.bookScope === 'company' && !api.isCompanyApproved()) {
+      wx.showToast({ title: '您暂时还未加入公司，请申请或通过审核后重试', icon: 'none', duration: 2500 })
+      return
+    }
     const text = this.data.chatInputText.trim()
     if (!text || this.data.chatThinking) return
 
@@ -7092,7 +7499,8 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
     }
     api.addItem(scope, newItem)
     // 学习模块挂钩（正式版可移除）
-    try { require('../../utils/learn.js').learnFromItem(newItem) } catch (_) {}
+    // [已注释] learn.js 不存在，暂时禁用
+// try { require('../../utils/learn.js').learnFromItem(newItem) } catch (_) {}
     reply.card.itemId = newItem.id
     var _savedItems = this._buildDetailList(scope, api.getItems(scope))
     this.setData({ detailItems: _savedItems, detailGroups: this._buildDetailGroups(_savedItems) })

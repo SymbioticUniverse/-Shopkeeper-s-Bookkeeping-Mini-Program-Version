@@ -2192,3 +2192,140 @@ voucher: this._uploadedVoucherUrl || ''  // 用云端 URL
    { "error": "账单 id 已存在", "conflictId": 1234567890, "serverVersion": { /* ... */ } }
    ```
 3. **`PUT /items/:id`** 条目不存在时返回 `404`
+
+---
+
+## 十、端到端加密 — 后端需求
+
+本节描述 E2E 加密所需的后端数据库 migration 和新增 API 端点。前端 `utils/crypto.js` 已完整实现客户端加解密，后端只需透传密文 + 存储密钥 blob。
+
+### 10.1 数据库 Migration
+
+```sql
+-- items 表：增加密文字段
+ALTER TABLE items ADD COLUMN encrypted_data TEXT DEFAULT NULL;
+
+-- 个人密钥 blob 表（加密后的主密钥，用于换设备恢复）
+CREATE TABLE IF NOT EXISTS user_keys (
+  user_id INTEGER PRIMARY KEY,
+  encrypted_blob TEXT NOT NULL,
+  salt TEXT NOT NULL,
+  tier TEXT NOT NULL DEFAULT 'personal',
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+-- 公司密钥表（独立存储，不污染 companies 表）
+CREATE TABLE IF NOT EXISTS company_keys (
+  company_id INTEGER PRIMARY KEY,
+  public_key TEXT NOT NULL DEFAULT '',
+  key_id TEXT DEFAULT '',
+  encrypted_private_key TEXT,
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  FOREIGN KEY (company_id) REFERENCES companies(id) ON DELETE CASCADE
+);
+```
+
+### 10.2 新增 API
+
+#### PUT /api/auth/user/key-blob
+
+存储加密后的个人主密钥 blob（用于换设备恢复）。
+
+**Request:**
+```json
+{
+  "encrypted_blob": "<base64>",
+  "salt": "<hex>",
+  "tier": "personal|advanced"
+}
+```
+
+**Response:** `{ "ok": true }`
+
+#### GET /api/auth/user/key-blob
+
+获取加密后的个人主密钥 blob。
+
+**Response:**
+```json
+{
+  "encrypted_blob": "<base64>",
+  "salt": "<hex>",
+  "tier": "personal|advanced"
+}
+```
+或 `404`（用户从未开启加密）。
+
+#### GET /api/company/public-key?uid=xxx
+
+员工通过 UID 获取公司公钥（透明无感，加入公司后自动调用）。
+
+**Response:**
+```json
+{
+  "public_key": "<hex>",
+  "key_id": "<uuid>"
+}
+```
+
+#### PUT /api/company/public-key
+
+老板上传公司公钥（创建公司后调用）。
+
+**Request:**
+```json
+{
+  "public_key": "<hex>",
+  "key_id": "<uuid>"
+}
+```
+
+**Response:** `{ "ok": true }`
+
+#### PUT /api/company/private-key
+
+老板上传加密后的公司私钥备份（用个人主密钥 AES-256-GCM 加密）。
+
+**Request:**
+```json
+{
+  "encrypted_private_key": "<base64>",
+  "key_id": "<uuid>"
+}
+```
+
+**Response:** `{ "ok": true }`
+
+#### GET /api/company/private-key
+
+老板取回加密后的公司私钥备份（换设备恢复时调用）。权限：仅 `companyRole === 'boss'` 可调用。
+
+**Response:**
+```json
+{
+  "encrypted_private_key": "<base64>",
+  "key_id": "<uuid>"
+}
+```
+
+### 10.3 items 接口增强
+
+`rowToItem()` 需追加 `encrypted_data` 字段。
+`POST /items` 和 `PUT /items/:id` 接受并透传 `encrypted_data`。
+`GET /items` 返回 `encrypted_data` 字段。
+
+**服务端不解密、不处理 `encrypted_data` 内容。** 密文对服务端完全透明。
+
+### 10.4 加密架构概览
+
+| 层级 | Scope | 加密方式 | 谁可读 |
+|------|-------|----------|--------|
+| 个人默认 | personal | AES-256-GCM（PBKDF2 phone） | 用户本人 |
+| 个人高级 | personal | AES-256-GCM（PBKDF2 phone + 28位密钥） | 用户本人 |
+| 企业 | company | ECIES secp256k1（公钥加密写入 / 私钥解密读取） | 仅老板 |
+
+企业加密流程：
+1. 老板创建公司 → 客户端生成 secp256k1 密钥对 → 私钥存本地 → 公钥上传服务端
+2. 员工加入公司 → 客户端自动获取公钥 → 记公司账时用公钥 ECIES 加密
+3. 服务端只存公钥，永不知私钥。私钥丢失 → 公司必须重建。

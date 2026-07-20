@@ -8,6 +8,15 @@
 
 var noble = require('../vendor/noble-ciphers.js')
 
+// ECC 加密库（懒加载，仅企业加密时使用）
+var _ecc = null
+function _getEcc() {
+  if (_ecc === null) {
+    try { _ecc = require('../vendor/noble-ecc.js') } catch (e) { _ecc = false }
+  }
+  return _ecc || null
+}
+
 // 加密字段列表
 var SENSITIVE_FIELDS = ['amount', 'category', 'note', 'typeLabel', 'target', 'targetType']
 
@@ -15,6 +24,13 @@ var SENSITIVE_FIELDS = ['amount', 'category', 'note', 'typeLabel', 'target', 'ta
 var KEY_MASTER = 'e2e_master_key'
 var KEY_ENABLED = 'e2e_enabled'
 var KEY_ADVANCED = 'e2e_advanced'
+var KEY_COMPANY_PRIV = 'e2e_company_private_key'
+var KEY_COMPANY_PUB = 'e2e_company_public_key'
+var KEY_COMPANY_KEY_ID = 'e2e_company_key_id'
+
+// encrypted_data 类型标记（写在加密前的明文中，加密后不可见）
+var ENC_TYPE_AES_GCM = 0x01   // 个人 AES-256-GCM
+var ENC_TYPE_ECIES = 0x02     // 企业 ECIES
 
 // PBKDF2 参数
 var PBKDF2_ITERATIONS = 100000
@@ -153,6 +169,42 @@ function _bytesToHex(bytes) {
   return hex
 }
 
+// ==================== 公司密钥管理 ====================
+
+function hasCompanyKeys() {
+  return !!wx.getStorageSync(KEY_COMPANY_PRIV) || !!wx.getStorageSync(KEY_COMPANY_PUB)
+}
+
+function isCompanyBoss() {
+  return !!wx.getStorageSync(KEY_COMPANY_PRIV)
+}
+
+function setCompanyPrivateKey(hex) {
+  wx.setStorageSync(KEY_COMPANY_PRIV, hex)
+}
+
+function getCompanyPrivateKey() {
+  return wx.getStorageSync(KEY_COMPANY_PRIV) || null
+}
+
+function setCompanyPublicKey(hex, keyId) {
+  wx.setStorageSync(KEY_COMPANY_PUB, hex)
+  if (keyId) wx.setStorageSync(KEY_COMPANY_KEY_ID, keyId)
+}
+
+function getCompanyPublicKey() {
+  var hex = wx.getStorageSync(KEY_COMPANY_PUB) || null
+  var keyId = wx.getStorageSync(KEY_COMPANY_KEY_ID) || null
+  if (!hex) return null
+  return { key: hex, keyId: keyId }
+}
+
+function clearCompanyKeys() {
+  try { wx.removeStorageSync(KEY_COMPANY_PRIV) } catch (e) {}
+  try { wx.removeStorageSync(KEY_COMPANY_PUB) } catch (e) {}
+  try { wx.removeStorageSync(KEY_COMPANY_KEY_ID) } catch (e) {}
+}
+
 // ==================== 主密钥管理 ====================
 
 /**
@@ -215,6 +267,16 @@ function _aesGcmDecrypt(base64Cipher, key) {
  * 敏感字段替换为 '[encrypted]'
  */
 function encryptItem(item) {
+  // 企业 scope：员工用 ECIES 公钥加密（没有私钥 = 非老板）
+  if (item.scope === 'company') {
+    var cPub = getCompanyPublicKey()
+    var cPriv = getCompanyPrivateKey()
+    if (cPub && !cPriv) {
+      return companyEncryptItem(item, cPub.key)
+    }
+    // 老板有私钥 → 走 AES-GCM（和 personal 一样）
+  }
+
   var key = _getMasterKey()
   if (!key) throw new Error('加密未启用，无主密钥')
 
@@ -226,6 +288,9 @@ function encryptItem(item) {
       sensitive[f] = item[f]
     }
   }
+
+  // 添加类型标记（0x01 = AES-GCM）
+  sensitive['_enc_type'] = ENC_TYPE_AES_GCM
 
   var plainBytes = _textEncoder().encode(JSON.stringify(sensitive))
   var encrypted = _aesGcmEncrypt(plainBytes, keyBytes)
@@ -248,40 +313,117 @@ function encryptItem(item) {
 }
 
 /**
+ * ECIES 公钥加密单个 item（员工记公司账时调用）
+ * @param {object} item
+ * @param {string} publicKeyHex — 公司公钥 hex
+ */
+function companyEncryptItem(item, publicKeyHex) {
+  var pubBytes = _hexToBytes(publicKeyHex)
+  var sensitive = {}
+  for (var i = 0; i < SENSITIVE_FIELDS.length; i++) {
+    var f = SENSITIVE_FIELDS[i]
+    if (item[f] !== undefined && item[f] !== null) {
+      sensitive[f] = item[f]
+    }
+  }
+  // 添加类型标记（0x02 = ECIES）
+  sensitive['_enc_type'] = ENC_TYPE_ECIES
+
+  var ecc = _getEcc()
+  if (!ecc) throw new Error('ECC 加密模块未加载')
+  var plainBytes = _textEncoder().encode(JSON.stringify(sensitive))
+  var encrypted = _toBase64(ecc.eciesEncrypt(plainBytes, pubBytes))
+
+  var result = {}
+  var keys = Object.keys(item)
+  for (var k = 0; k < keys.length; k++) {
+    result[keys[k]] = item[keys[k]]
+  }
+  for (var j = 0; j < SENSITIVE_FIELDS.length; j++) {
+    var f2 = SENSITIVE_FIELDS[j]
+    if (result[f2] !== undefined && result[f2] !== null) {
+      result[f2] = '[encrypted]'
+    }
+  }
+  result.encrypted_data = encrypted
+  return result
+}
+
+/**
  * 解密单个 item
- * 从 encrypted_data 恢复敏感字段
+ * 自动检测加密格式：AES-GCM(个人/老板) 或 ECIES(员工)
  * 如果 encrypted_data 为空 → 旧数据，原样返回
  */
 function decryptItem(item) {
   var encrypted = item.encrypted_data || item.encryptedData
   if (!encrypted) return item
 
-  var key = _getMasterKey()
-  if (!key) {
-    console.warn('[crypto] 收到加密数据但本地无主密钥，保持密文')
-    return item
+  // 方案：先尝试 AES-GCM（覆盖个人+老板自己），失败再试 ECIES
+  var masterKey = _getMasterKey()
+  if (masterKey) {
+    try {
+      var keyBytes = _hexToBytes(masterKey)
+      var decrypted = _aesGcmDecrypt(encrypted, keyBytes)
+      var sensitive = JSON.parse(_textDecoder().decode(decrypted))
+      // 移除内部 _enc_type 标记
+      delete sensitive._enc_type
+      return _applyDecryptedFields(item, sensitive)
+    } catch (e) {
+      // AES-GCM 解密失败 → 可能是 ECIES 格式，继续往下
+    }
   }
 
-  try {
-    var keyBytes = _hexToBytes(key)
-    var decrypted = _aesGcmDecrypt(encrypted, keyBytes)
-    var sensitive = JSON.parse(_textDecoder().decode(decrypted))
-
-    var result = {}
-    var keys = Object.keys(item)
-    for (var k = 0; k < keys.length; k++) {
-      result[keys[k]] = item[keys[k]]
+  // 尝试 ECIES 解密（公司私钥）
+  if (item.scope === 'company') {
+    var cPriv = getCompanyPrivateKey()
+    if (cPriv) {
+      try {
+        return companyDecryptItem(item, cPriv)
+      } catch (e2) {
+        console.warn('[crypto] ECIES 解密失败:', e2.message)
+      }
     }
-    // 恢复敏感字段
-    var sKeys = Object.keys(sensitive)
-    for (var j = 0; j < sKeys.length; j++) {
-      result[sKeys[j]] = sensitive[sKeys[j]]
-    }
-    return result
-  } catch (e) {
-    console.error('[crypto] 解密失败:', e.message)
-    return item
   }
+
+  console.warn('[crypto] 收到加密数据但无法解密（无对应密钥），保持密文')
+  return item
+}
+
+/**
+ * 应用解密后的敏感字段到 item
+ */
+function _applyDecryptedFields(item, sensitive) {
+  var result = {}
+  var keys = Object.keys(item)
+  for (var k = 0; k < keys.length; k++) {
+    result[keys[k]] = item[keys[k]]
+  }
+  var sKeys = Object.keys(sensitive)
+  for (var j = 0; j < sKeys.length; j++) {
+    result[sKeys[j]] = sensitive[sKeys[j]]
+  }
+  return result
+}
+
+/**
+ * ECIES 私钥解密单个 item（老板读员工账时调用）
+ * @param {object} item
+ * @param {string} privateKeyHex — 公司私钥 hex
+ */
+function companyDecryptItem(item, privateKeyHex) {
+  var encrypted = item.encrypted_data || item.encryptedData
+  if (!encrypted) return item
+
+  var ecc = _getEcc()
+  if (!ecc) throw new Error('ECC 加密模块未加载')
+
+  var privBytes = _hexToBytes(privateKeyHex)
+  var blobBytes = _fromBase64(encrypted)
+  var decrypted = ecc.eciesDecrypt(blobBytes, privBytes)
+  var sensitive = JSON.parse(_textDecoder().decode(decrypted))
+  // 移除内部 _enc_type 标记
+  delete sensitive._enc_type
+  return _applyDecryptedFields(item, sensitive)
 }
 
 // ==================== 状态查询 ====================
@@ -495,15 +637,16 @@ function importMasterKey(hex) {
 
 // ==================== 开关控制 ====================
 
-function enableEncryption() {
-  wx.setStorageSync(KEY_ENABLED, true)
-}
-
-function disableEncryption() {
-  try { wx.removeStorageSync(KEY_MASTER) } catch (e) {}
-  try { wx.removeStorageSync(KEY_ENABLED) } catch (e) {}
-  try { wx.removeStorageSync(KEY_ADVANCED) } catch (e) {}
-}
+// [已注释] 未使用，加密走 setupEncryption 全流程
+// function enableEncryption() {
+//   wx.setStorageSync(KEY_ENABLED, true)
+// }
+//
+// function disableEncryption() {
+//   try { wx.removeStorageSync(KEY_MASTER) } catch (e) {}
+//   try { wx.removeStorageSync(KEY_ENABLED) } catch (e) {}
+//   try { wx.removeStorageSync(KEY_ADVANCED) } catch (e) {}
+// }
 
 // ==================== 上传 / 获取 blob（调用网络接口） ====================
 
@@ -563,13 +706,24 @@ module.exports = {
   // 主密钥
   generateMasterKey: generateMasterKey,
 
-  // 加解密
+  // 加解密（支持 AES-GCM + ECIES 自动路由）
   encryptItem: encryptItem,
   decryptItem: decryptItem,
+  companyEncryptItem: companyEncryptItem,
+  companyDecryptItem: companyDecryptItem,
 
   // 状态
   isEncryptionEnabled: isEncryptionEnabled,
   isAdvancedSecurityEnabled: isAdvancedSecurityEnabled,
+
+  // 公司密钥
+  hasCompanyKeys: hasCompanyKeys,
+  isCompanyBoss: isCompanyBoss,
+  setCompanyPrivateKey: setCompanyPrivateKey,
+  getCompanyPrivateKey: getCompanyPrivateKey,
+  setCompanyPublicKey: setCompanyPublicKey,
+  getCompanyPublicKey: getCompanyPublicKey,
+  clearCompanyKeys: clearCompanyKeys,
 
   // 密钥派生 & 恢复
   setupEncryption: setupEncryption,
@@ -589,9 +743,9 @@ module.exports = {
   exportMasterKey: exportMasterKey,
   importMasterKey: importMasterKey,
 
-  // 开关
-  enableEncryption: enableEncryption,
-  disableEncryption: disableEncryption,
+  // 开关（已注释，走 setupEncryption 全流程）
+  // enableEncryption: enableEncryption,
+  // disableEncryption: disableEncryption,
 
   // 网络
   uploadKeyBlob: uploadKeyBlob,

@@ -3,11 +3,11 @@
     "horsewhip": {
       "command": "/Users/rendog/.nvm/versions/node/v20.20.2/bin/node",
       "args": [
-        "/Users/rendog/.vscode/extensions/horsewhip.horsewhip-3.2.5/media/mcp/dist/index.js"
+        "/Users/rendog/.vscode/extensions/horsewhip.horsewhip-3.2.7/media/mcp/dist/index.js"
       ],
       "env": {
         "HORSEWHIP_WORKSPACE": "${CHITU_PROJECT_DIR}",
-        "HORSEWHIP_MCP_VERSION": "3.2.5",
+        "HORSEWHIP_MCP_VERSION": "3.2.7",
         "HORSEWHIP_MCP_HASH": "f9905cc2546545c019dcad2db5681bc3f994f52eda1295f52a9129ddbac8f681"
       },
       "alwaysLoad": true

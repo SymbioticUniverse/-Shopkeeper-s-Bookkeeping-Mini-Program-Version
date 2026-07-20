@@ -1303,6 +1303,23 @@
               <text class="settings-item-value">{{encryptionAdvancedEnabled ? '高级安全' : '已加密'}}<text wx:if="{{!encryptionEnabled}}" style="color:#fa5151;font-size:22rpx">（未就绪）</text></text>
               <text class="settings-item-arrow">〉</text>
             </view>
+            <view class="settings-item" wx:if="{{encryptionCompanyIsBoss}}">
+              <text class="settings-item-label">公司加密状态</text>
+              <text class="settings-item-value" style="{{encryptionCompanyKeyReady ? 'color:#07c160' : 'color:#fa5151'}}">{{encryptionCompanyKeyReady ? '私钥已就绪 ✓' : '私钥缺失！'}}</text>
+            </view>
+            <view class="settings-item" wx:if="{{!encryptionCompanyIsBoss && encryptionCompanyKeyReady}}">
+              <text class="settings-item-label">公司加密状态</text>
+              <text class="settings-item-value" style="color:#07c160">公钥已获取</text>
+            </view>
+            <view class="settings-item">
+              <text class="settings-item-label">绑定手机号</text>
+              <text class="settings-item-value">{{settingsPhone || '未绑定'}}</text>
+            </view>
+            <view class="settings-item settings-item--warn settings-item--last" bindtap="onSettingsTap" data-action="deactivateLedger">
+              <text class="settings-item-label">注销账本</text>
+              <text class="settings-item-value settings-item-value--warn">{{settingsLedgerRole === 'boss' ? '清除公司密钥与数据' : '清除个人密钥与数据'}}</text>
+              <text class="settings-item-arrow">〉</text>
+            </view>
           </view>
           <view class="settings-group">
             <view class="settings-group-title">修改公司关系</view>
@@ -1375,7 +1392,7 @@
               <view class="notify-item {{notifySwipeId === item.id ? 'notify-item--open' : ''}}" bindtouchstart="onNotifyTouchStart" bindtouchmove="onNotifyTouchMove" bindtouchend="onNotifyTouchEnd" bindtap="onNotifyRead" data-id="{{item.id}}">
                 <view class="notify-dot" wx:if="{{!item.read}}"></view>
                 <text class="notify-text">{{item.text}}</text>
-                <text class="notify-time">{{item.time}}</text>
+                <text class="notify-time">{{item._timeText}}</text>
               </view>
             </view>
           </block>
@@ -1580,14 +1597,14 @@
             <view class="my-icon-item" bindtap="onGotoPersonalLedger"><image class="my-icon-circle" src="/assets/icons/gerenzhangben.png" mode="aspectFit"/><text class="my-icon-label">{{t.detail_personal_ledger}}</text></view>
             <view class="my-icon-item" wx:if="{{canSeeCompanyLedger}}" bindtap="onGotoCompanyLedger"><image class="my-icon-circle" src="/assets/icons/gongsizhangben.png" mode="aspectFit"/><text class="my-icon-label">{{t.detail_company_ledger}}</text></view>
             <view class="my-icon-item" bindtap="onAuditEntry">
-              <view class="my-icon-circle" style="position:relative">
+              <view class="my-icon-circle my-icon-circle--badge-host">
                 <image class="my-icon-circle-img" src="/assets/icons/shenhe.png" mode="aspectFit"/>
                 <view class="notify-badge" wx:if="{{hasPendingAudit}}"></view>
               </view>
               <text class="my-icon-label">{{t.my_audit}}</text>
             </view>
             <view class="my-icon-item" bindtap="onNotifyEntry">
-              <view class="my-icon-circle" style="position:relative">
+              <view class="my-icon-circle my-icon-circle--badge-host">
                 <image class="my-icon-circle-img" src="/assets/icons/tongzhi.png" mode="aspectFit"/>
                 <view class="notify-badge" wx:if="{{hasUnreadNotify}}"></view>
               </view>
@@ -1615,8 +1632,26 @@
           <view class="my-item my-share-entry" bindtap="onCompanyShareEntry">
             <image class="my-item-icon" src="/assets/icons/lianjiegongsigongxiangtongyizhangben.png" mode="aspectFit"/>
             <view class="my-item-body">
-              <text class="my-item-title">{{t.my_share_ledger}}</text>
-              <text class="my-item-sub">{{t.my_share_sub}}</text>
+              <!-- 员工待审核 -->
+              <block wx:if="{{settingsLedgerRole === 'employee' && settingsCompanyStatus === 'pending'}}">
+                <text class="my-item-title" style="color:#fa9d3b">等待审核中...</text>
+                <text class="my-item-sub">请联系老板通过审核</text>
+              </block>
+              <!-- 员工已通过 -->
+              <block wx:elif="{{settingsLedgerRole === 'employee' && settingsCompanyStatus === 'approved'}}">
+                <text class="my-item-title" style="color:#07c160">{{companyName || '公司账本'}}</text>
+                <text class="my-item-sub">{{companyBossTitle || 'BOSS'}}</text>
+              </block>
+              <!-- 老板 -->
+              <block wx:elif="{{settingsLedgerRole === 'boss'}}">
+                <text class="my-item-title" style="color:#07c160">{{companyName || t.my_share_ledger}}</text>
+                <text class="my-item-sub">{{companyBossTitle || 'BOSS'}}</text>
+              </block>
+              <!-- 未加入 -->
+              <block wx:else>
+                <text class="my-item-title">{{t.my_share_ledger}}</text>
+                <text class="my-item-sub">{{t.my_share_sub}}</text>
+              </block>
             </view>
             <text class="my-item-arrow">〉</text>
           </view>
