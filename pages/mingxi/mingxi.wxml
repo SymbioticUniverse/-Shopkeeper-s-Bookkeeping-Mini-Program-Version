@@ -751,7 +751,10 @@
             <text class="vip-trial-banner-note">试用期间导出账单和凭证扫描仍有广告</text>
           </view>
         </view>
-        <scroll-view class="vip-plan-list" scroll-y enhanced show-scrollbar="{{false}}">
+        <!-- 体验版：占位 spacer 保持标题置顶 -->
+        <view style="flex: 1;"></view>
+        <!-- 体验版暂不显示个人/企业版套餐卡 -->
+        <scroll-view wx:if="{{false}}" class="vip-plan-list" scroll-y enhanced show-scrollbar="{{false}}">
           <!-- 三张卡垂直排列 -->
           <view class="vip-plan-card vip-plan--{{item.theme}} {{vipSelected === index ? 'vip-plan--selected' : ''}}" wx:for="{{vipCards}}" wx:key="id" wx:for-index="index" bindtap="onVipSelect" data-id="{{index}}">
             <!-- 卡片头部 -->
@@ -810,8 +813,8 @@
             </view>
           </view>
         </scroll-view>
-        <!-- 底部确认按钮 -->
-        <view class="vip-confirm-wrap" wx:if="{{vipSelected >= 0 && !vipCards[vipSelected].isContact}}">
+        <!-- 体验版暂不显示订阅确认按钮 -->
+        <view class="vip-confirm-wrap" wx:if="{{false}}">
           <view class="vip-confirm-btn" bindtap="onVipConfirm"><text class="vip-confirm-text">确认订阅</text></view>
         </view>
       </view>
@@ -1901,7 +1904,7 @@
           </view>
         </view>
         <view class="book-btn-row">
-          <view class="book-btn-save" bindtap="onBookSave"><text>记一笔</text></view>
+          <view class="book-btn-save" catchtap="onBookSave"><text>记一笔</text></view>
         </view>
       </view>
 
@@ -1974,7 +1977,7 @@
           </view>
         </view>
         <view class="book-btn-row">
-          <view class="book-btn-save" bindtap="onMultiSave"><text>记 {{multiCount || 0}} 笔</text></view>
+          <view class="book-btn-save" catchtap="onMultiSave"><text>记 {{multiCount || 0}} 笔</text></view>
         </view>
       </view>
     </view>

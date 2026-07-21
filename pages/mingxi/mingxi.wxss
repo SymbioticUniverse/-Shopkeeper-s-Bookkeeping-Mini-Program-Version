@@ -554,7 +554,7 @@ page {
 .expand-menu-icon--scan { background: #e8f5e9; }
 .expand-menu-icon--category { background: #fff3e0; }
 .expand-menu-icon--chat { background: #e3f2fd; }
-.expand-icon-text { font-size: 28rpx; font-weight: 700; color: #4caf50; }
+.expand-icon-text { font-size: 28rpx; font-weight: 700; color: #ef4444; }
 .expand-icon-text--cat { font-size: 22rpx; color: #ff9800; letter-spacing: -2rpx; }
 .expand-icon-text--chat { font-size: 32rpx; color: #3a7bfd; }
 .expand-menu-label {
@@ -719,6 +719,8 @@ page {
 .value-tag {
   display: flex;
   align-items: baseline;
+  white-space: nowrap;
+  overflow: hidden;
 }
 .three-col .value-tag {
   flex: 1;
@@ -734,11 +736,11 @@ page {
 }
 .green .value-yen,
 .green .value-num {
-  color: #00d042;
+  color: #ef4444;
 }
 .red .value-yen,
 .red .value-num {
-  color: red;
+  color: #333333;
 }
 
 /* ---- 占位卡片 ---- */
@@ -849,7 +851,7 @@ page {
   width: 20rpx;
   height: 20rpx;
   border-radius: 50%;
-  background: #ff3b30;
+  background: #333333;
   border: 2rpx solid #fff;
   box-shadow: 0 0 4rpx rgba(255,59,48,0.5);
 }
@@ -1101,10 +1103,10 @@ page {
   border-radius: 50%;
 }
 .report-dot--green {
-  background: #00d042;
+  background: #ef4444;
 }
 .report-dot--red {
-  background: red;
+  background: #333333;
 }
 .report-inout-label {
   font-size: 26rpx;
@@ -1209,10 +1211,10 @@ page {
   margin-right: 16rpx;
 }
 .settle-dot--in {
-  background: #00d042;
+  background: #ef4444;
 }
 .settle-dot--out {
-  background: #ed2e2e;
+  background: #333333;
 }
 .settle-item-label {
   font-size: 22rpx;
@@ -1229,6 +1231,10 @@ page {
 .settle-amount {
   display: flex;
   align-items: baseline;
+  min-width: 180rpx;
+  flex-shrink: 0;
+  white-space: nowrap;
+  justify-content: flex-end;
 }
 .settle-yen {
   font-size: 24rpx;
@@ -1240,11 +1246,11 @@ page {
 }
 .settle-amount--in .settle-yen,
 .settle-amount--in .settle-num {
-  color: #00d042;
+  color: #ef4444;
 }
 .settle-amount--out .settle-yen,
 .settle-amount--out .settle-num {
-  color: #ed2e2e;
+  color: #333333;
 }
 .settle-date {
   font-size: 24rpx;
@@ -1368,16 +1374,16 @@ page {
   flex-shrink: 0;
 }
 .bill-item--in {
-  background: #3a762e;
+  background: #7f1d1d;
 }
 .bill-item--out {
-  background: #7e0000;
+  background: #1a1a1a;
 }
 .bill-item--advance {
-  background: #3a762e;
+  background: #7f1d1d;
 }
 .bill-item--payable {
-  background: #7e0000;
+  background: #1a1a1a;
 }
 .bill-dot {
   width: 24rpx;
@@ -1465,16 +1471,16 @@ page {
 .bill-amount {
   font-size: 30rpx;
   font-weight: 500;
-  width: 130rpx;
+  min-width: 220rpx;
   flex-shrink: 0;
   text-align: right;
   margin-right: 12rpx;
 }
 .bill-amount--in {
-  color: #00d042;
+  color: #ef4444;
 }
 .bill-amount--out {
-  color: #ed2e2e;
+  color: #333333;
 }
 .bill-item--in .bill-amount,
 .bill-item--out .bill-amount,
@@ -1642,9 +1648,9 @@ page {
   color: #fff;
   flex-shrink: 0;
 }
-.bill-act-settle { background: #00d042; }
+.bill-act-settle { background: #ef4444; }
 .bill-act-confirm { background: #ff9500; }
-.bill-act-delete { background: #ed2e2e; }
+.bill-act-delete { background: #ef4444; }
 .bill-act-void { background: #333; }
 .bill-act-unvoid { background: #007aff; }
 .bill-item {
@@ -1679,8 +1685,8 @@ page {
 }
 .bill-settle-tag--auto {
   background: #e8f5e9;
-  color: #4caf50;
-  border: 1rpx solid #4caf50;
+  color: #ef4444;
+  border: 1rpx solid #ef4444;
 }
 .bill-item--pending-confirm {
   border-left: 4rpx solid #ff9500 !important;
@@ -1777,8 +1783,8 @@ page {
   flex: 1;
   text-align: right;
 }
-.bill-modal-value--in { color: #00d042; }
-.bill-modal-value--out { color: #ed2e2e; }
+.bill-modal-value--in { color: #ef4444; }
+.bill-modal-value--out { color: #333333; }
 .bill-modal-input {
   font-size: 28rpx;
   color: #000;
@@ -1805,14 +1811,14 @@ page {
   font-weight: 500;
   color: #fff;
 }
-.bill-modal-save { background: #000; }
-.bill-modal-settle { background: #00d042; }
-.bill-modal-delete { background: #ed2e2e; }
+.bill-modal-save { background: #ef4444; }
+.bill-modal-settle { background: #ef4444; }
+.bill-modal-delete { background: #333333; }
 .bill-modal-void { background: #333; }
 .bill-modal-unvoid { background: #007aff; }
 .bill-modal-auto-tag {
   font-size: 22rpx;
-  color: #4caf50;
+  color: #ef4444;
   font-weight: 600;
   margin-top: 6rpx;
 }
@@ -2301,7 +2307,7 @@ page {
   width: 88rpx;
   height: 88rpx;
   border-radius: 50%;
-  background: #07C160;
+  background: #e53935;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -2844,7 +2850,7 @@ page {
   display: none;
   align-items: center;
   justify-content: center;
-  background: #ff3b30;
+  background: #333333;
   border-radius: 0 20rpx 20rpx 0;
   font-size: 28rpx;
   font-weight: 500;
@@ -2877,7 +2883,7 @@ page {
   width: 16rpx;
   height: 16rpx;
   border-radius: 50%;
-  background: #ff3b30;
+  background: #333333;
   position: absolute;
   right: 20rpx;
   top: 24rpx;
@@ -2895,7 +2901,7 @@ page {
   width: 28rpx;
   height: 28rpx;
   border-radius: 50%;
-  background: #ff3b30;
+  background: #333333;
   border: 3rpx solid #fff;
   box-shadow: 0 0 10rpx rgba(255,59,48,0.6), 0 2rpx 6rpx rgba(255,59,48,0.3);
   animation: badgePulse 2s ease-in-out infinite;
@@ -3106,6 +3112,8 @@ page {
 .custom-tpl-card .value-tag {
   display: flex;
   align-items: baseline;
+  white-space: nowrap;
+  overflow: hidden;
 }
 
 .custom-tpl-card .three-col .value-tag {
@@ -3125,12 +3133,12 @@ page {
 
 .custom-tpl-card .green .value-yen,
 .custom-tpl-card .green .value-num {
-  color: #66d99a;
+  color: #fca5a5;
 }
 
 .custom-tpl-card .red .value-yen,
 .custom-tpl-card .red .value-num {
-  color: #f08080;
+  color: #d1d5db;
 }
 
 /* 明细页元素缩小 */
@@ -3359,10 +3367,10 @@ page {
   border-radius: 50%;
 }
 .custom-tpl-inout-dot--in {
-  background: #66d99a;
+  background: #fca5a5;
 }
 .custom-tpl-inout-dot--out {
-  background: #f08080;
+  background: #d1d5db;
 }
 .custom-tpl-inout-label {
   font-size: 14rpx;
@@ -3428,10 +3436,10 @@ page {
   flex-shrink: 0;
 }
 .custom-tpl-bill-val--in {
-  color: #66d99a;
+  color: #fca5a5;
 }
 .custom-tpl-bill-val--out {
-  color: #f08080;
+  color: #d1d5db;
 }
 .custom-tpl-bill-date {
   font-size: 14rpx;
@@ -3472,7 +3480,7 @@ page {
 
 /* 选中态玻璃框 */
 .custom-glass-frame--selected .custom-glass-inner {
-  border-color: #00d042;
+  border-color: #ef4444;
   box-shadow:
     inset 0 1rpx 2rpx rgba(0,208,66,0.3),
     0 0 0 3rpx rgba(0,208,66,0.15),
@@ -3487,7 +3495,7 @@ page {
   z-index: 10;
   width: 44rpx;
   height: 44rpx;
-  background: #00d042;
+  background: #ef4444;
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -3526,11 +3534,11 @@ page {
 
 .custom-glass-add-btn--active {
   background: transparent;
-  border: 2rpx solid #00d042;
+  border: 2rpx solid #ef4444;
 }
 
 .custom-glass-add-btn--active text {
-  color: #00d042;
+  color: #ef4444;
 }
 
 /* 全尺寸卡片移除按钮 */
@@ -3864,7 +3872,7 @@ page {
 .popup-slot--span3 { min-height: 420rpx; flex: none; }
 
 .popup-slot--hover {
-  border-color: #00d042;
+  border-color: #ef4444;
   border-style: solid;
   background: rgba(0,208,66,0.06);
 }
@@ -3914,7 +3922,7 @@ page {
   width: 180rpx;
   height: 100rpx;
   background: rgba(255,255,255,0.95);
-  border: 2rpx solid #00d042;
+  border: 2rpx solid #ef4444;
   border-radius: 16rpx;
   display: flex;
   align-items: center;
@@ -4271,10 +4279,10 @@ page {
   border-radius: 50%;
 }
 .report-dot--green {
-  background: #00d042;
+  background: #ef4444;
 }
 .report-dot--red {
-  background: red;
+  background: #333333;
 }
 .report-inout-label {
   font-size: 26rpx;
@@ -4379,10 +4387,10 @@ page {
   margin-right: 16rpx;
 }
 .settle-dot--in {
-  background: #00d042;
+  background: #ef4444;
 }
 .settle-dot--out {
-  background: #ed2e2e;
+  background: #333333;
 }
 .settle-item-label {
   font-size: 22rpx;
@@ -4399,6 +4407,10 @@ page {
 .settle-amount {
   display: flex;
   align-items: baseline;
+  min-width: 180rpx;
+  flex-shrink: 0;
+  white-space: nowrap;
+  justify-content: flex-end;
 }
 .settle-yen {
   font-size: 24rpx;
@@ -4410,11 +4422,11 @@ page {
 }
 .settle-amount--in .settle-yen,
 .settle-amount--in .settle-num {
-  color: #00d042;
+  color: #ef4444;
 }
 .settle-amount--out .settle-yen,
 .settle-amount--out .settle-num {
-  color: #ed2e2e;
+  color: #333333;
 }
 .settle-date {
   font-size: 24rpx;
@@ -4538,16 +4550,16 @@ page {
   flex-shrink: 0;
 }
 .bill-item--in {
-  background: #3a762e;
+  background: #7f1d1d;
 }
 .bill-item--out {
-  background: #7e0000;
+  background: #1a1a1a;
 }
 .bill-item--advance {
-  background: #3a762e;
+  background: #7f1d1d;
 }
 .bill-item--payable {
-  background: #7e0000;
+  background: #1a1a1a;
 }
 .bill-dot {
   width: 24rpx;
@@ -4635,16 +4647,16 @@ page {
 .bill-amount {
   font-size: 30rpx;
   font-weight: 500;
-  width: 130rpx;
+  min-width: 220rpx;
   flex-shrink: 0;
   text-align: right;
   margin-right: 12rpx;
 }
 .bill-amount--in {
-  color: #00d042;
+  color: #ef4444;
 }
 .bill-amount--out {
-  color: #ed2e2e;
+  color: #333333;
 }
 .bill-item--in .bill-amount,
 .bill-item--out .bill-amount,
@@ -4812,9 +4824,9 @@ page {
   color: #fff;
   flex-shrink: 0;
 }
-.bill-act-settle { background: #00d042; }
+.bill-act-settle { background: #ef4444; }
 .bill-act-confirm { background: #ff9500; }
-.bill-act-delete { background: #ed2e2e; }
+.bill-act-delete { background: #ef4444; }
 .bill-act-void { background: #333; }
 .bill-act-unvoid { background: #007aff; }
 .bill-item {
@@ -4849,8 +4861,8 @@ page {
 }
 .bill-settle-tag--auto {
   background: #e8f5e9;
-  color: #4caf50;
-  border: 1rpx solid #4caf50;
+  color: #ef4444;
+  border: 1rpx solid #ef4444;
 }
 .bill-item--pending-confirm {
   border-left: 4rpx solid #ff9500 !important;
@@ -4947,8 +4959,8 @@ page {
   flex: 1;
   text-align: right;
 }
-.bill-modal-value--in { color: #00d042; }
-.bill-modal-value--out { color: #ed2e2e; }
+.bill-modal-value--in { color: #ef4444; }
+.bill-modal-value--out { color: #333333; }
 .bill-modal-input {
   font-size: 28rpx;
   color: #000;
@@ -4975,14 +4987,14 @@ page {
   font-weight: 500;
   color: #fff;
 }
-.bill-modal-save { background: #000; }
-.bill-modal-settle { background: #00d042; }
-.bill-modal-delete { background: #ed2e2e; }
+.bill-modal-save { background: #ef4444; }
+.bill-modal-settle { background: #ef4444; }
+.bill-modal-delete { background: #333333; }
 .bill-modal-void { background: #333; }
 .bill-modal-unvoid { background: #007aff; }
 .bill-modal-auto-tag {
   font-size: 22rpx;
-  color: #4caf50;
+  color: #ef4444;
   font-weight: 600;
   margin-top: 6rpx;
 }
@@ -5471,7 +5483,7 @@ page {
   width: 88rpx;
   height: 88rpx;
   border-radius: 50%;
-  background: #07C160;
+  background: #e53935;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -6014,7 +6026,7 @@ page {
   display: none;
   align-items: center;
   justify-content: center;
-  background: #ff3b30;
+  background: #333333;
   border-radius: 0 20rpx 20rpx 0;
   font-size: 28rpx;
   font-weight: 500;
@@ -6047,7 +6059,7 @@ page {
   width: 16rpx;
   height: 16rpx;
   border-radius: 50%;
-  background: #ff3b30;
+  background: #333333;
   position: absolute;
   right: 20rpx;
   top: 24rpx;
@@ -6065,7 +6077,7 @@ page {
   width: 28rpx;
   height: 28rpx;
   border-radius: 50%;
-  background: #ff3b30;
+  background: #333333;
   border: 3rpx solid #fff;
   box-shadow: 0 0 10rpx rgba(255,59,48,0.6), 0 2rpx 6rpx rgba(255,59,48,0.3);
   animation: badgePulse 2s ease-in-out infinite;
@@ -6276,6 +6288,8 @@ page {
 .custom-tpl-card .value-tag {
   display: flex;
   align-items: baseline;
+  white-space: nowrap;
+  overflow: hidden;
 }
 
 .custom-tpl-card .three-col .value-tag {
@@ -6295,12 +6309,12 @@ page {
 
 .custom-tpl-card .green .value-yen,
 .custom-tpl-card .green .value-num {
-  color: #66d99a;
+  color: #fca5a5;
 }
 
 .custom-tpl-card .red .value-yen,
 .custom-tpl-card .red .value-num {
-  color: #f08080;
+  color: #d1d5db;
 }
 
 /* 明细页元素缩小 */
@@ -6529,10 +6543,10 @@ page {
   border-radius: 50%;
 }
 .custom-tpl-inout-dot--in {
-  background: #66d99a;
+  background: #fca5a5;
 }
 .custom-tpl-inout-dot--out {
-  background: #f08080;
+  background: #d1d5db;
 }
 .custom-tpl-inout-label {
   font-size: 14rpx;
@@ -6598,10 +6612,10 @@ page {
   flex-shrink: 0;
 }
 .custom-tpl-bill-val--in {
-  color: #66d99a;
+  color: #fca5a5;
 }
 .custom-tpl-bill-val--out {
-  color: #f08080;
+  color: #d1d5db;
 }
 .custom-tpl-bill-date {
   font-size: 14rpx;
@@ -6642,7 +6656,7 @@ page {
 
 /* 选中态玻璃框 */
 .custom-glass-frame--selected .custom-glass-inner {
-  border-color: #00d042;
+  border-color: #ef4444;
   box-shadow:
     inset 0 1rpx 2rpx rgba(0,208,66,0.3),
     0 0 0 3rpx rgba(0,208,66,0.15),
@@ -6657,7 +6671,7 @@ page {
   z-index: 10;
   width: 44rpx;
   height: 44rpx;
-  background: #00d042;
+  background: #ef4444;
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -6696,11 +6710,11 @@ page {
 
 .custom-glass-add-btn--active {
   background: transparent;
-  border: 2rpx solid #00d042;
+  border: 2rpx solid #ef4444;
 }
 
 .custom-glass-add-btn--active text {
-  color: #00d042;
+  color: #ef4444;
 }
 
 /* 全尺寸卡片移除按钮 */
@@ -7170,8 +7184,8 @@ page {
   width: 8rpx;
   border-radius: 2rpx 2rpx 0 0;
 }
-.mini-bar--green { background: #00d042; }
-.mini-bar--red { background: #ed2e2e; }
+.mini-bar--green { background: #ef4444; }
+.mini-bar--red { background: #333333; }
 .mini-bar-sep {
   width: 1rpx;
   align-self: stretch;
@@ -7197,8 +7211,8 @@ page {
   height: 52rpx;
   border-radius: 50%;
   background: conic-gradient(
-    #00d042 0deg 140deg,
-    #ed2e2e 140deg 250deg,
+    #ef4444 0deg 140deg,
+    #333333 140deg 250deg,
     #ff9500 250deg 360deg
   );
 }
@@ -7230,8 +7244,8 @@ page {
   height: 8rpx;
   border-radius: 50%;
 }
-.mini-legend-dot--green { background: #00d042; }
-.mini-legend-dot--red { background: #ed2e2e; }
+.mini-legend-dot--green { background: #ef4444; }
+.mini-legend-dot--red { background: #333333; }
 
 /* === 自定义分类页（在 my-card 内） === */
 .card.custom-cat-card {
@@ -7681,8 +7695,8 @@ page {
   background: rgba(0, 0, 0, 0.18);
   flex-shrink: 0;
 }
-.ov-detail-dot--in { background: #00d042; }
-.ov-detail-dot--out { background: #ed2e2e; }
+.ov-detail-dot--in { background: #ef4444; }
+.ov-detail-dot--out { background: #333333; }
 .ov-detail-cat {
   font-size: 22rpx;
   font-weight: 500;
@@ -7711,12 +7725,13 @@ page {
   font-size: 22rpx;
   font-weight: 600;
   color: #000;
-  width: 88rpx;
+  min-width: 140rpx;
   text-align: right;
   flex-shrink: 0;
+  white-space: nowrap;
 }
-.ov-detail-val--in { color: #00d042; }
-.ov-detail-val--out { color: #ed2e2e; }
+.ov-detail-val--in { color: #ef4444; }
+.ov-detail-val--out { color: #333333; }
 .ov-detail-date {
   font-size: 22rpx;
   color: #b0b0b0;
@@ -7809,8 +7824,8 @@ page {
   color: #1a1a1a;
   text-align: center;
 }
-.ledger-stat-val--in { color: #00d042; }
-.ledger-stat-val--out { color: #ed2e2e; }
+.ledger-stat-val--in { color: #ef4444; }
+.ledger-stat-val--out { color: #333333; }
 .ledger-stat-label {
   font-size: 22rpx;
   color: #999;
@@ -7820,9 +7835,9 @@ page {
 .ledger-budget-remain {
   font-size: 24rpx;
   font-weight: 500;
-  color: #00d042;
+  color: #ef4444;
 }
-.ledger-budget-remain--over { color: #ed2e2e; }
+.ledger-budget-remain--over { color: #333333; }
 .ledger-budget-bar {
   width: 100%;
   height: 16rpx;
@@ -7833,10 +7848,10 @@ page {
 .ledger-budget-fill {
   height: 100%;
   border-radius: 8rpx;
-  background: #00d042;
+  background: #ef4444;
   transition: width 0.3s ease;
 }
-.ledger-budget-fill--over { background: #ed2e2e; }
+.ledger-budget-fill--over { background: #333333; }
 .ledger-budget-meta {
   display: flex;
   align-items: center;
@@ -7881,7 +7896,7 @@ page {
   align-items: center;
   justify-content: center;
   border-radius: 18rpx;
-  background: #00d042;
+  background: #ef4444;
   color: #fff;
   font-size: 28rpx;
   font-weight: 500;
@@ -7937,8 +7952,8 @@ page {
   font-weight: 600;
   color: #1a1a1a;
 }
-.ledger-due-val--in { color: #00d042; }
-.ledger-due-val--out { color: #ed2e2e; }
+.ledger-due-val--in { color: #ef4444; }
+.ledger-due-val--out { color: #333333; }
 .ledger-due-arrow {
   width: 14rpx;
   height: 14rpx;
@@ -8026,7 +8041,7 @@ page {
 }
 
 .settings-item-value--warn {
-  color: #ff3b30;
+  color: #333333;
 }
 
 .settings-item-arrow {
@@ -8453,7 +8468,7 @@ page {
 }
 .page--dark .bill-settle-tag--auto {
   background: rgba(76, 175, 80, 0.15);
-  border-color: #4caf50;
+  border-color: #ef4444;
 }
 .page--dark .bill-item--pending-confirm {
   border-left-color: #ff9500 !important;
@@ -8563,8 +8578,8 @@ page {
   border-radius: 50%;
   margin-bottom: 12rpx;
 }
-.book-entry-dot--in { background: #4caf50; }
-.book-entry-dot--out { background: #f44336; }
+.book-entry-dot--in { background: #ef4444; }
+.book-entry-dot--out { background: #333333; }
 .book-entry-dot--transfer { background: #2196f3; }
 
 .book-entry-text {
@@ -8663,7 +8678,7 @@ page {
   position: absolute;
   left: 0; right: 0;
   height: 6rpx;
-  background: linear-gradient(90deg, transparent, #07C160, transparent);
+  background: linear-gradient(90deg, transparent, #e53935, transparent);
   box-shadow: 0 0 20rpx 4rpx rgba(7,193,96,0.6);
   animation: scanLine 1.6s linear infinite;
 }
@@ -8855,8 +8870,8 @@ page {
   color: #fff;
   font-weight: 600;
 }
-.book-type-tab--income.book-type-tab--active { background: #07C160; }
-.book-type-tab--expense.book-type-tab--active { background: #e74c3c; }
+.book-type-tab--income.book-type-tab--active { background: #e53935; }
+.book-type-tab--expense.book-type-tab--active { background: #333333; }
 .book-type-tab--payForward.book-type-tab--active { background: #f0ad4e; }
 .book-type-tab--payable.book-type-tab--active { background: #4a90d9; }
 
@@ -8877,13 +8892,13 @@ page {
   font-weight: 600;
 }
 .book-scope-tab--active {
-  background: #07C160;
+  background: #e53935;
   color: #fff;
   font-weight: 700;
   box-shadow: 0 4rpx 16rpx rgba(7, 193, 96, 0.35);
 }
 .page--dark .book-scope-bar { background: #2a2a3a; }
-.page--dark .book-scope-tab--active { background: #07C160; color: #fff; }
+.page--dark .book-scope-tab--active { background: #e53935; color: #fff; }
 
 .book-amount-row {
   display: flex;
@@ -8981,7 +8996,7 @@ page {
   font-weight: 500;
 }
 .book-cat-select-label:first-child {
-  background: #07C160;
+  background: #e53935;
 }
 .book-cat-select-sep {
   font-size: 24rpx;
@@ -9241,12 +9256,12 @@ page {
 
 .multi-type-tab--income.multi-type-tab--active {
   background: #fff;
-  color: #4caf50;
+  color: #ef4444;
 }
 
 .multi-type-tab--expense.multi-type-tab--active {
   background: #fff;
-  color: #f44336;
+  color: #333333;
 }
 
 .multi-note-input {
@@ -9402,7 +9417,7 @@ page {
 
 .book-key--clear {
   background: #ffeaea;
-  color: #e74c3c;
+  color: #333333;
   font-size: 28rpx;
   font-weight: 600;
 }
@@ -9414,8 +9429,8 @@ page {
 .page--dark .book-type-bar { background: #2a2a3a; }
 .page--dark .book-type-tab { background: #2a2a3a; color: #888; }
 .page--dark .book-type-bar { background: transparent; }
-.page--dark .book-type-tab--income.book-type-tab--active { background: #07C160; color: #fff; }
-.page--dark .book-type-tab--expense.book-type-tab--active { background: #e74c3c; color: #fff; }
+.page--dark .book-type-tab--income.book-type-tab--active { background: #e53935; color: #fff; }
+.page--dark .book-type-tab--expense.book-type-tab--active { background: #333333; color: #fff; }
 .page--dark .book-type-tab--payForward.book-type-tab--active { background: #f0ad4e; color: #fff; }
 .page--dark .book-type-tab--payable.book-type-tab--active { background: #4a90d9; color: #fff; }
 .page--dark .book-yen { color: #e0e0e0 !important; }
@@ -9431,8 +9446,8 @@ page {
 .page--dark .multi-scope-toggle,
 .page--dark .multi-type-toggle { background: #2a2a3a; }
 .page--dark .multi-scope-tab--active { background: #3a3a4e; color: #7eb8ff; }
-.page--dark .multi-type-tab--income.multi-type-tab--active { background: #1a3a2a; color: #5fdb7a; }
-.page--dark .multi-type-tab--expense.multi-type-tab--active { background: #3a1a1a; color: #f87171; }
+.page--dark .multi-type-tab--income.multi-type-tab--active { background: #3a1a1a; color: #f87171; }
+.page--dark .multi-type-tab--expense.multi-type-tab--active { background: #1f1f1f; color: #9ca3af; }
 .page--dark .multi-note-input { background: #2a2a3a; color: #ccc; }
 .page--dark .multi-date-picker { background: #2a2a3a; }
 .page--dark .multi-date-value { color: #ddd; }
@@ -10719,7 +10734,7 @@ page {
   width: 16rpx;
   height: 16rpx;
   border-radius: 50%;
-  background: #ff3b30;
+  background: #333333;
   animation: chatRecPulse 1s infinite ease-in-out;
 }
 @keyframes chatRecPulse {
@@ -10728,7 +10743,7 @@ page {
 }
 .chat-recording-text {
   font-size: 26rpx;
-  color: #ff3b30;
+  color: #333333;
   font-weight: 600;
   letter-spacing: 2rpx;
 }
@@ -10786,8 +10801,8 @@ page {
   flex-direction: column;
   gap: 16rpx;
 }
-.chat-bill-card--out { background: #7e0000; }
-.chat-bill-card--in { background: #3a762e; }
+.chat-bill-card--out { background: #1a1a1a; }
+.chat-bill-card--in { background: #7f1d1d; }
 .chat-bill-card--payForward { background: #6b3a00; }
 .chat-bill-card--payable { background: #1a3a5c; }
 
@@ -10945,7 +10960,7 @@ page {
   color: #333;
 }
 .chat-bill-btn--confirm {
-  background: #34c759;
+  background: #ef4444;
   color: #fff;
 }
 .chat-bill-btn--confirm:active {
@@ -11158,7 +11173,7 @@ page {
 .page--dark .chat-voice-btn { background: #2a2a3a; border-color: rgba(255,255,255,0.08); }
 .page--dark .chat-voice-text { color: #aaa; }
 .page--dark .chat-bill-btn--reject { background: #555; color: #ddd; }
-.page--dark .chat-bill-btn--confirm { background: #34c759; }
+.page--dark .chat-bill-btn--confirm { background: #ef4444; }
 .page--dark .chat-cancel-hint { color: rgba(255,255,255,0.3); }
 
 /* 暗色模式 - 拓展菜单 */
@@ -11303,7 +11318,7 @@ page {
   width: 52rpx;
   height: 52rpx;
   border-radius: 50%;
-  background: #00d042;
+  background: #ef4444;
   border: 4rpx solid #fff;
   display: flex;
   align-items: center;
@@ -11381,7 +11396,7 @@ page {
   transform: translateY(1rpx);
 }
 .profile-btn--save {
-  background: #00d042;
+  background: #ef4444;
   color: #fff;
   box-shadow: 0 8rpx 20rpx rgba(0, 208, 66, 0.3);
 }
@@ -11554,8 +11569,8 @@ page {
   font-size: 36rpx;
   font-weight: 700;
 }
-.rsum-tot-val--in { color: #00d042; }
-.rsum-tot-val--out { color: #ed2e2e; }
+.rsum-tot-val--in { color: #ef4444; }
+.rsum-tot-val--out { color: #333333; }
 .rsum-empty,
 .rsum-locked {
   margin-top: 8rpx;
@@ -11582,8 +11597,8 @@ page {
   font-size: 26rpx;
   font-weight: 600;
 }
-.rsum-group-sum--in { color: #00d042; }
-.rsum-group-sum--out { color: #ed2e2e; }
+.rsum-group-sum--in { color: #ef4444; }
+.rsum-group-sum--out { color: #333333; }
 .rsum-cat {
   display: flex;
   align-items: center;
@@ -11619,8 +11634,8 @@ page {
   border-radius: 6rpx;
   min-width: 4rpx;
 }
-.rsum-cat-bar-fill--in { background: #00d042; }
-.rsum-cat-bar-fill--out { background: #ed2e2e; }
+.rsum-cat-bar-fill--in { background: #ef4444; }
+.rsum-cat-bar-fill--out { background: #333333; }
 .rsum-cat-pct {
   width: 60rpx;
   font-size: 22rpx;
@@ -11633,8 +11648,8 @@ page {
   font-weight: 600;
   text-align: right;
 }
-.rsum-cat-amt--in { color: #00d042; }
-.rsum-cat-amt--out { color: #ed2e2e; }
+.rsum-cat-amt--in { color: #ef4444; }
+.rsum-cat-amt--out { color: #333333; }
 
 .page--dark .report-summary {
   background: rgba(255, 255, 255, 0.05);
@@ -11670,7 +11685,7 @@ page {
 }
 .rct-tab--active {
   color: #fff;
-  background: #00d042;
+  background: #ef4444;
   font-weight: 600;
 }
 .report-chart-stage {
@@ -11681,7 +11696,7 @@ page {
 }
 .page--dark .report-chart-tabs { background: rgba(255, 255, 255, 0.06); }
 .page--dark .rct-tab { color: #888; }
-.page--dark .rct-tab--active { color: #fff; background: #00d042; }
+.page--dark .rct-tab--active { color: #fff; background: #ef4444; }
 
 /* ---- 报表汇总底部：导出引导 ---- */
 .rsum-footer {
@@ -11704,7 +11719,7 @@ page {
   font-size: 28rpx;
   font-weight: 600;
   color: #fff;
-  background: #00d042;
+  background: #ef4444;
   border-radius: 16rpx;
   box-shadow: 0 6rpx 16rpx rgba(0, 208, 66, 0.25);
 }
@@ -11765,7 +11780,7 @@ page {
 }
 .conflict-progress-fill {
   height: 100%;
-  background: #34c759;
+  background: #ef4444;
   border-radius: 3rpx;
   transition: width 0.3s;
 }
@@ -11851,8 +11866,8 @@ page {
 .conflict-item-cat { font-size: 26rpx; font-weight: 500; color: #333; }
 .conflict-item-type { font-size: 22rpx; color: #a0a0a0; margin-left: auto; }
 .conflict-item-amount { font-size: 34rpx; font-weight: 700; }
-.conflict-amount--in { color: #34c759; }
-.conflict-amount--out { color: #ff3b30; }
+.conflict-amount--in { color: #ef4444; }
+.conflict-amount--out { color: #333333; }
 .conflict-item-date { font-size: 22rpx; color: #a0a0a0; }
 .conflict-item-note { font-size: 24rpx; color: #666; }
 .conflict-deleted-hint { font-size: 24rpx; color: #dc2626; }
@@ -11882,7 +11897,7 @@ page {
 .conflict-btn--server { border-color: #2e7d32; color: #2e7d32; }
 .conflict-btn--active.conflict-btn--local { background: #1565c0; color: #fff; }
 .conflict-btn--active.conflict-btn--server { background: #2e7d32; color: #fff; }
-.conflict-resolved-tag { font-size: 22rpx; color: #34c759; text-align: center; }
+.conflict-resolved-tag { font-size: 22rpx; color: #ef4444; text-align: center; }
 .conflict-nav { display: flex; align-items: center; gap: 16rpx; }
 .conflict-nav-btn {
   width: 120rpx;
@@ -11909,10 +11924,10 @@ page {
   background: #e0e0e0;
 }
 .conflict-nav-dot--active { background: #333; }
-.conflict-nav-dot--resolved { background: #34c759; }
+.conflict-nav-dot--resolved { background: #ef4444; }
 .conflict-apply {
   height: 80rpx;
-  background: #34c759;
+  background: #ef4444;
   border-radius: 16rpx;
   display: flex;
   align-items: center;

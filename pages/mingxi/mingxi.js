@@ -1294,10 +1294,11 @@ Page({
     const personalItems = api.getItems('personal').filter(inMonth)
     const companyItems = this.data.canSeeCompanyLedger ? api.getItems('company').filter(inMonth) : []
     const sum = (items, fn) => items.filter(fn).reduce((s, it) => s + parseFloat(it.amount || 0), 0)
-    // 金额缩写：千用 k、万用 W，最多 3 位小数
     const fmt = (n) => {
-      if (n >= 10000) return +(n / 10000).toFixed(3) + 'W'
-      if (n >= 1000) return +(n / 1000).toFixed(3) + 'k'
+      const abs = Math.abs(n)
+      const sign = n < 0 ? -1 : 1
+      if (abs >= 10000) return (sign * Math.floor(abs / 1000) / 10).toFixed(1) + 'W'
+      if (abs >= 1000) return (sign * Math.floor(abs / 100) / 10).toFixed(1) + 'k'
       return n.toFixed(2)
     }
 
@@ -1664,10 +1665,10 @@ Page({
       const gH = Math.max(2, totalH * ratio)
       const rH = Math.max(2, totalH - gH)
 
-      ctx.fillStyle = '#00d042'
+      ctx.fillStyle = '#ef4444'
       ctx.fillRect(cx - blockW / 2, fy - gH, blockW, gH)
 
-      ctx.fillStyle = '#ed2e2e'
+      ctx.fillStyle = '#333333'
       ctx.fillRect(cx - blockW / 2, fy, blockW, rH)
 
       ctx.fillStyle = C.dot
@@ -1678,14 +1679,14 @@ Page({
 
     // Legend
     const lx = ml, ly = 10
-    ctx.fillStyle = '#00d042'
+    ctx.fillStyle = '#ef4444'
     ctx.fillRect(lx, ly, 8, 8)
     ctx.fillStyle = C.text
     ctx.font = '10px sans-serif'
     ctx.textAlign = 'left'
     ctx.fillText('收入', lx + 12, ly + 8)
 
-    ctx.fillStyle = '#ed2e2e'
+    ctx.fillStyle = '#333333'
     ctx.fillRect(lx + 52, ly, 8, 8)
     ctx.fillText('支出', lx + 64, ly + 8)
 
@@ -1734,7 +1735,7 @@ Page({
       ctx.textAlign = 'left'
 
       // Net value (prominent)
-      const netColor = pt.net >= 0 ? '#00d042' : '#ed2e2e'
+      const netColor = pt.net >= 0 ? '#ef4444' : '#333333'
       ctx.fillStyle = C.text
       ctx.fillText('净值', tipX + 8, tipY + 14)
       ctx.fillStyle = netColor
@@ -1748,10 +1749,10 @@ Page({
       ctx.beginPath(); ctx.moveTo(tipX + 8, tipY + 20); ctx.lineTo(tipX + tipW - 8, tipY + 20); ctx.stroke()
 
       const rows = [
-        { label: '收入', val: pt.income, color: '#00d042' },
-        { label: '支出', val: pt.expense, color: '#ed2e2e' },
-        { label: '应收', val: pt.receivable, color: '#00d042' },
-        { label: '应付', val: pt.payable, color: '#ed2e2e' },
+        { label: '收入', val: pt.income, color: '#ef4444' },
+        { label: '支出', val: pt.expense, color: '#333333' },
+        { label: '应收', val: pt.receivable, color: '#ef4444' },
+        { label: '应付', val: pt.payable, color: '#333333' },
       ]
       rows.forEach((row, i) => {
         const ry = tipY + 34 + i * 15
@@ -1867,23 +1868,23 @@ Page({
       const expenseH = Math.max(1, (expense / yMax) * ph)
 
       // Income bar (left side)
-      ctx.fillStyle = '#00d042'
+      ctx.fillStyle = '#ef4444'
       ctx.fillRect(cx - barW - gap / 2, bottomY - incomeH, barW, incomeH)
 
       // Expense bar (right side)
-      ctx.fillStyle = '#ed2e2e'
+      ctx.fillStyle = '#333333'
       ctx.fillRect(cx + gap / 2, bottomY - expenseH, barW, expenseH)
     }
 
     // Legend
     const lx = ml, ly = 10
-    ctx.fillStyle = '#00d042'
+    ctx.fillStyle = '#ef4444'
     ctx.fillRect(lx, ly, 8, 8)
     ctx.fillStyle = C.text
     ctx.font = '10px sans-serif'
     ctx.textAlign = 'left'
     ctx.fillText('收入', lx + 12, ly + 8)
-    ctx.fillStyle = '#ed2e2e'
+    ctx.fillStyle = '#333333'
     ctx.fillRect(lx + 52, ly, 8, 8)
     ctx.fillText('支出', lx + 64, ly + 8)
   },
@@ -2012,11 +2013,19 @@ Page({
       expenseCats = build(isExpense, expense)
     }
 
+    var fmt = function (n) {
+      var abs = Math.abs(n)
+      var sign = n < 0 ? -1 : 1
+      if (abs >= 10000) return (sign * Math.floor(abs / 1000) / 10).toFixed(1) + 'W'
+      if (abs >= 1000) return (sign * Math.floor(abs / 100) / 10).toFixed(1) + 'k'
+      return n.toFixed(2)
+    }
+
     this.setData({
       reportSummary: {
-        income: income.toFixed(2),
-        expense: expense.toFixed(2),
-        balance: balance.toFixed(2),
+        income: fmt(income),
+        expense: fmt(expense),
+        balance: fmt(balance),
         balanceNeg: balance < 0,
         incomeCats,
         expenseCats,
@@ -2698,7 +2707,7 @@ Page({
           if (item.id === modalItem.id) return { ...item, category: modalEdit.category, amount: modalEdit.amount, note: modalEdit.note }
           return { ...item }
         })
-        this.setData({ [itemsKey]: updated, modalItem: null })
+        this.setData({ [itemsKey]: updated, detailGroups: this._buildDetailGroups(updated), modalItem: null })
         this._calcOverviewData()
         wx.showToast({ title: '已保存', icon: 'success' })
       },
@@ -3060,65 +3069,105 @@ Page({
   },
 
   onMultiSave() {
-    playTap()
-    const { multiExpression, multiResult, multiCount, multiNote, multiScope, multiType, multiStartDate, multiEndDate, multiUseDateRange } = this.data
+    try { playTap() } catch (_) {}
+
+    var self = this
+    var multiExpression = this.data.multiExpression
+    var multiResult = this.data.multiResult
+    var multiCount = this.data.multiCount
+    var multiNote = this.data.multiNote
+    var multiScope = this.data.multiScope
+    var multiType = this.data.multiType
+    var multiStartDate = this.data.multiStartDate
+    var multiEndDate = this.data.multiEndDate
+    var multiUseDateRange = this.data.multiUseDateRange
+
     if (!multiCount || parseFloat(multiResult) <= 0) {
       wx.showToast({ title: '请输入金额', icon: 'none' })
       return
     }
-    // 按 + 拆分，解析每笔金额
-    const clean = multiExpression.replace(/[+\-]+$/, '')
-    const parts = clean.split('+').filter(s => s)
-    const amounts = parts.map(s => {
-      const subParts = s.split('-')
-      let sub = parseFloat(subParts[0]) || 0
-      for (let i = 1; i < subParts.length; i++) {
+    if (parseFloat(multiResult) >= 10000000) {
+      wx.showToast({ title: '合计金额不能超过千万', icon: 'none' })
+      return
+    }
+    var clean = multiExpression.replace(/[+\-]+$/, '')
+    var parts = clean.split('+').filter(function (s) { return s })
+    var amounts = parts.map(function (s) {
+      var subParts = s.split('-')
+      var sub = parseFloat(subParts[0]) || 0
+      for (var i = 1; i < subParts.length; i++) {
         sub -= parseFloat(subParts[i]) || 0
       }
       return sub
     })
-    const validAmounts = amounts.filter(a => a > 0)
+    var validAmounts = amounts.filter(function (a) { return a > 0 })
     if (!validAmounts.length) {
       wx.showToast({ title: '请输入有效金额', icon: 'none' })
       return
     }
-    const total = validAmounts.reduce((s, a) => s + parseFloat(a.toFixed(2)), 0)
-    const today = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}-${String(new Date().getDate()).padStart(2, '0')}`
-    const itemType = multiType === 'income' ? 'in' : 'out'
-    const itemTypeLabel = multiType === 'income' ? '收入' : '支出'
-    const td = this._getBookTargetDefaults(multiScope, multiType)
-    const item = {
-      id: api.generateId(),
-      type: itemType,
-      typeLabel: itemTypeLabel,
-      amount: parseFloat(total.toFixed(2)),
-      category: '多笔记账',
-      date: today,
-      note: multiNote,
-      target: td.target,
-      targetType: td.targetType,
-      scope: multiScope,
-      isMulti: true,
-      multiItems: validAmounts.map(a => ({ amount: parseFloat(a.toFixed(2)) })),
-      multiCount: validAmounts.length,
-      multiDateStart: multiStartDate,
-      multiDateEnd: multiUseDateRange ? multiEndDate : '',
+
+    try {
+      var total = validAmounts.reduce(function (s, a) { return s + parseFloat(a.toFixed(2)) }, 0)
+      var today = (new Date().getFullYear()) + '-' + String(new Date().getMonth() + 1).padStart(2, '0') + '-' + String(new Date().getDate()).padStart(2, '0')
+      var itemType = multiType === 'income' ? 'in' : 'out'
+      var itemTypeLabel = multiType === 'income' ? '收入' : '支出'
+      var td = this._getBookTargetDefaults(multiScope, multiType)
+      var item = {
+        id: api.generateId(),
+        type: itemType,
+        typeLabel: itemTypeLabel,
+        amount: parseFloat(total.toFixed(2)),
+        category: '多笔记账',
+        date: today,
+        note: multiNote,
+        target: td.target,
+        targetType: td.targetType,
+        scope: multiScope,
+        isMulti: true,
+        multiItems: validAmounts.map(function (a) { return { amount: parseFloat(a.toFixed(2)) } }),
+        multiCount: validAmounts.length,
+        multiDateStart: multiStartDate,
+        multiDateEnd: multiUseDateRange ? multiEndDate : '',
+      }
+      api.addItem(multiScope, item)
+
+      this.initDetailItems()
+      this._syncOverviewCards()
+      this._calcOverviewData()
+
+      wx.showModal({
+        title: '记账成功',
+        content: '已记 ' + validAmounts.length + ' 笔，共 ¥' + parseFloat(total.toFixed(2)),
+        confirmText: '结束记账',
+        cancelText: '继续记账',
+        success: function (res) {
+          if (res.confirm) {
+            self.setData({
+              showBookPopup: false,
+              bookPhoto: '',
+              multiExpression: '',
+              multiResult: '0.00',
+              multiCount: 0,
+              multiNote: '',
+            })
+            self._redrawReportCharts()
+          } else {
+            self.setData({
+              multiExpression: '',
+              multiResult: '0.00',
+              multiCount: 0,
+              multiNote: '',
+            })
+          }
+        }
+      })
+    } catch (err) {
+      wx.showModal({
+        title: '保存失败',
+        content: err.message || '未知错误',
+        showCancel: false
+      })
     }
-    api.addItem(multiScope, item)
-    // 学习模块挂钩（正式版可移除）
-    // [已注释] learn.js 不存在，暂时禁用
-// try { require('../../utils/learn.js').learnFromItem(item) } catch (_) {}
-    const _items = this._buildDetailList(multiScope, api.getItems(multiScope))
-    this.setData({
-      detailItems: _items,
-      detailGroups: this._buildDetailGroups(_items),
-      multiExpression: '',
-      multiResult: '0.00',
-      multiCount: 0,
-      multiNote: '',
-    })
-    this._calcOverviewData()
-    wx.showToast({ title: `已记 ${validAmounts.length} 笔`, icon: 'success' })
   },
 
   onBookClose() {
@@ -3274,10 +3323,24 @@ Page({
   },
 
   onBookSave() {
-    playTap()
-    const { type, amount, category, date, note, target, targetType } = this.data.bookForm
+    try { playTap() } catch (_) {}
+
+    var self = this
+    var form = this.data.bookForm || {}
+    var type = form.type
+    var amount = form.amount
+    var category = form.category
+    var date = form.date
+    var note = form.note
+    var target = form.target
+    var targetType = form.targetType
+
     if (!amount || parseFloat(amount) <= 0) {
       wx.showToast({ title: '请输入金额', icon: 'none' })
+      return
+    }
+    if (parseFloat(amount) >= 10000000) {
+      wx.showToast({ title: '单笔金额不能超过千万', icon: 'none' })
       return
     }
     if (!category) {
@@ -3288,61 +3351,86 @@ Page({
       wx.showToast({ title: '请选择对象', icon: 'none' })
       return
     }
-    let voucher = ''
-    if (this.data.bookPhoto) {
-      try { voucher = wx.getFileSystemManager().saveFileSync(this.data.bookPhoto) }
-      catch (e) { voucher = this.data.bookPhoto }
-    }
-    const typeLabelMap = { income: '收入', expense: '支出', payForward: '垫付', payable: '应付' }
-    const itemType = type === 'income' ? 'in' : 'out'
-    const newItem = {
-      id: api.generateId(),
-      category: category,
-      type: itemType,
-      typeLabel: typeLabelMap[type] || '支出',
-      scope: this.data.bookScope,
-      amount: parseFloat(amount).toFixed(2),
-      date: date,
-      note: note || '',
-      target: target || '',
-      targetType: targetType || 'external',
-      voucher: voucher,
-    }
-    const scope = this.data.bookScope
 
-    // 内部对象 + 垫付/应付 → 联动对面 scope
-    if (targetType === 'internal' && (type === 'payForward' || type === 'payable')) {
-      const mirrorScope = scope === 'personal' ? 'company' : 'personal'
-      const mirrorTypeLabel = type === 'payForward' ? '应付' : '垫付'
-      const mirrorType = mirrorTypeLabel === '应付' ? 'out' : 'in'
-      const mirrorItem = {
+    try {
+      var voucher = ''
+      if (this.data.bookPhoto) {
+        try { voucher = wx.getFileSystemManager().saveFileSync(this.data.bookPhoto) }
+        catch (e) { voucher = this.data.bookPhoto }
+      }
+      var typeLabelMap = { income: '收入', expense: '支出', payForward: '垫付', payable: '应付' }
+      var itemType = type === 'income' ? 'in' : 'out'
+      var newItem = {
         id: api.generateId(),
         category: category,
-        type: mirrorType,
-        typeLabel: mirrorTypeLabel,
-        scope: mirrorScope,
+        type: itemType,
+        typeLabel: typeLabelMap[type] || '支出',
+        scope: this.data.bookScope,
         amount: parseFloat(amount).toFixed(2),
         date: date,
         note: note || '',
-        target: scope === 'personal' ? (this.data.userInfo && this.data.userInfo.nickName || '个人') : ((api.getCompanyInfo() || {}).companyName || '公司'),
-        targetType: 'internal',
-        linkedId: newItem.id,
+        target: target || '',
+        targetType: targetType || 'external',
+        voucher: voucher,
       }
-      newItem.linkedId = mirrorItem.id
-      api.addLinkedItems(scope, newItem, mirrorScope, mirrorItem)
-    } else {
-      api.addItem(scope, newItem)
-    }
-    // 学习模块挂钩（正式版可移除）
-    // [已注释] learn.js 不存在，暂时禁用
-// try { require('../../utils/learn.js').learnFromItem(newItem) } catch (_) {}
+      var scope = this.data.bookScope
 
-    var _items2497 = this._buildDetailList(scope, api.getItems(scope))
-this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_items2497), showBookPopup: false, bookPhoto: '' })
-    this._calcOverviewData()
-    wx.showToast({ title: '记账成功', icon: 'success' })
-    this._onSpotlightAction()
-    this._redrawReportCharts()
+      if (targetType === 'internal' && (type === 'payForward' || type === 'payable')) {
+        var mirrorScope = scope === 'personal' ? 'company' : 'personal'
+        var mirrorTypeLabel = type === 'payForward' ? '应付' : '垫付'
+        var mirrorType = mirrorTypeLabel === '应付' ? 'out' : 'in'
+        var mirrorItem = {
+          id: api.generateId(),
+          category: category,
+          type: mirrorType,
+          typeLabel: mirrorTypeLabel,
+          scope: mirrorScope,
+          amount: parseFloat(amount).toFixed(2),
+          date: date,
+          note: note || '',
+          target: scope === 'personal' ? (this.data.userInfo && this.data.userInfo.nickName || '个人') : ((api.getCompanyInfo() || {}).companyName || '公司'),
+          targetType: 'internal',
+          linkedId: newItem.id,
+        }
+        newItem.linkedId = mirrorItem.id
+        api.addLinkedItems(scope, newItem, mirrorScope, mirrorItem)
+      } else {
+        api.addItem(scope, newItem)
+      }
+
+      this.initDetailItems()
+      this._syncOverviewCards()
+      this._calcOverviewData()
+      this._onSpotlightAction()
+
+      var _typeLabel = typeLabelMap[type] || '支出'
+      var _amountText = parseFloat(amount).toFixed(2)
+      wx.showModal({
+        title: '记账成功',
+        content: _typeLabel + ' ¥' + _amountText,
+        confirmText: '结束记账',
+        cancelText: '继续记账',
+        success: function (res) {
+          if (res.confirm) {
+            self.setData({ showBookPopup: false, bookPhoto: '' })
+            self._redrawReportCharts()
+          } else {
+            self.setData({
+              'bookForm.amount': '',
+              'bookForm.note': '',
+              'bookForm.category': '',
+              bookPhoto: '',
+            })
+          }
+        }
+      })
+    } catch (err) {
+      wx.showModal({
+        title: '保存失败',
+        content: err.message || '未知错误',
+        showCancel: false
+      })
+    }
   },
 
   onModalClose() {
@@ -5467,6 +5555,13 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
     var crypto = this._getCrypto()
     if (!crypto) return Promise.resolve()
 
+    // 清理损坏状态：e2e_enabled 标记存在但主密钥丢失
+    if (wx.getStorageSync('e2e_enabled') && !wx.getStorageSync('e2e_master_key')) {
+      try { wx.removeStorageSync('e2e_enabled') } catch (_) {}
+      try { wx.removeStorageSync('e2e_advanced') } catch (_) {}
+      console.warn('[crypto] 检测到损坏的加密状态，已自动清理')
+    }
+
     var masterKey = crypto.exportMasterKey()
     var hasKey = !!masterKey
 
@@ -5501,7 +5596,9 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
                 resolveSetup()
               })
             } catch (e) {
-              console.error('[crypto] 自动初始化加密失败:', e.message)
+              console.error('[crypto] 自动初始化加密失败，但主密钥已生成可用:', e.message)
+              // 主密钥已成功生成并保存，加密可正常工作，仅恢复 blob 上传失败
+              that.setData({ encryptionEnabled: true, encryptionAdvancedEnabled: false })
               resolveSetup()
             }
           }).then(function () { return that._syncCompanyKeys() })
@@ -5510,17 +5607,24 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
         return
       }
 
-      // 服务端有 blob → 必定开启过加密，需要恢复
+      // 服务端有 blob → 尝试恢复，失败则静默重新初始化（个人端加密不阻断）
       return new Promise(function (resolveRecover) {
         function _doRecover(phone) {
           if (result.tier === 'advanced') {
             that._showAdvancedKeyInput(function (advancedKey) {
+              if (!advancedKey) {
+                // Boss 取消输入 → 不覆盖旧 blob，保留恢复机会
+                console.warn('[crypto] 高级密钥恢复已取消，跳过初始化')
+                resolveRecover()
+                return
+              }
               var ok = crypto.recoverMasterKeyAdvanced(phone, advancedKey, result.blob, result.salt)
               if (ok) {
                 that.setData({ encryptionEnabled: true, encryptionAdvancedEnabled: true })
-                wx.showToast({ title: '密钥已恢复', icon: 'success' })
+                console.log('[crypto] 密钥已恢复')
               } else {
-                wx.showToast({ title: '密钥不正确或手机号不匹配', icon: 'none' })
+                // 密钥错误 → 不覆盖旧 blob，等 Boss 下次重试
+                wx.showToast({ title: '密钥不正确', icon: 'none' })
               }
               resolveRecover()
             })
@@ -5528,26 +5632,31 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
             var ok = crypto.recoverMasterKey(phone, result.blob, result.salt)
             if (ok) {
               that.setData({ encryptionEnabled: true, encryptionAdvancedEnabled: false })
-              wx.showToast({ title: '密钥已恢复', icon: 'success' })
             } else {
-              wx.showToast({ title: '密钥恢复失败，手机号可能不匹配', icon: 'none' })
+              // 恢复失败 → 静默重新初始化（个人端不卡用户）
+              _reinitCrypto(phone)
             }
             resolveRecover()
           }
+        }
+
+        // 恢复失败时：清旧 blob，重新初始化，不弹 toast
+        function _reinitCrypto(phone) {
+          console.warn('[crypto] 恢复失败，自动重新初始化加密')
+          try {
+            var setupResult = crypto.setupEncryption(phone)
+            crypto.uploadKeyBlob(setupResult.encryptedBlob, setupResult.salt, setupResult.tier || 'personal').catch(function () {})
+          } catch (_) {}
+          that.setData({ encryptionEnabled: true, encryptionAdvancedEnabled: false })
         }
 
         var cachedPhone = wx.getStorageSync('user_phone') || ''
         if (cachedPhone) {
           _doRecover(cachedPhone)
         } else {
-          that._promptPhoneForRecovery(function (phone) {
-            if (phone) {
-              wx.setStorageSync('user_phone', phone)
-              _doRecover(phone)
-            } else {
-              resolveRecover()
-            }
-          })
+          // 无缓存手机号 → 不弹窗，跳过恢复，等下次登录自动初始化
+          console.warn('[crypto] 无缓存手机号，跳过恢复')
+          resolveRecover()
         }
       }).then(function () { return that._syncCompanyKeys() })
     }).catch(function (err) {
@@ -5821,44 +5930,55 @@ this.setData({ detailItems: _items2497, detailGroups: this._buildDetailGroups(_i
     if (!crypto) return
     var that = this
 
-    // 生成 28 位密钥
-    var advancedKey = crypto.generateAdvancedKey()
-    this.setData({ encryptionAdvancedKey: advancedKey })
-
+    // 第一次确认：警告说明，还未生成密钥
     wx.showModal({
-      title: '高级安全密钥',
-      content: '请务必保存以下 28 位密钥，丢失后将永久无法恢复数据：\n\n' + advancedKey + '\n\n已复制到剪贴板，请妥善保存后再确认。',
-      confirmText: '我已保存',
+      title: '⚠️ 开启高级安全（1/2）',
+      content: '将生成 28 位高级安全密钥。\n\n此密钥丢失后永久无法恢复！\n公司加密数据将永远无法解密！！',
+      confirmText: '我已知晓，下一步',
       cancelText: '取消',
-      success: function (res) {
-        if (!res.confirm) {
-          that.setData({ encryptionAdvancedKey: '' })
-          return
-        }
+      success: function (res1) {
+        if (!res1.confirm) return
+
+        // 用户确认后才生成密钥
+        var advancedKey = crypto.generateAdvancedKey()
         wx.setClipboardData({ data: advancedKey })
 
-        var phone = wx.getStorageSync('user_phone') || ''
-        if (!phone) {
-          wx.showToast({ title: '请先绑定手机号', icon: 'none' })
-          return
-        }
-        wx.showLoading({ title: '切换高级安全...' })
-        try {
-          var result = crypto.enableAdvancedSecurity(phone, advancedKey)
-          crypto.uploadKeyBlob(result.encryptedBlob, result.salt, result.tier).then(function () {
-            wx.hideLoading()
-            wx.setStorageSync('e2e_advanced', true)
-            wx.removeStorageSync('e2e_advanced_downgraded')
-            that.setData({ encryptionAdvancedEnabled: true, encryptionAdvancedKey: '' })
-            wx.showToast({ title: '高级安全已开启', icon: 'success' })
-          }).catch(function () {
-            wx.hideLoading()
-            wx.showToast({ title: '上传失败，请重试', icon: 'none' })
-          })
-        } catch (e) {
-          wx.hideLoading()
-          wx.showToast({ title: '操作失败: ' + e.message, icon: 'none' })
-        }
+        // 第二次确认：展示密钥
+        wx.showModal({
+          title: '⚠️ 保存密钥（2/2）',
+          content: '以下 28 位密钥已复制到剪贴板，请立即保存到安全的地方：\n\n' + advancedKey,
+          confirmText: '已保存，确认开启',
+          cancelText: '取消',
+          success: function (res2) {
+            if (!res2.confirm) {
+              wx.showToast({ title: '高级安全开启失败，密钥已丢弃', icon: 'none', duration: 2500 })
+              return
+            }
+
+            var phone = wx.getStorageSync('user_phone') || ''
+            if (!phone) {
+              wx.showToast({ title: '请先绑定手机号', icon: 'none' })
+              return
+            }
+            wx.showLoading({ title: '开启高级安全...' })
+            try {
+              var result = crypto.enableAdvancedSecurity(phone, advancedKey)
+              crypto.uploadKeyBlob(result.encryptedBlob, result.salt, result.tier).then(function () {
+                wx.hideLoading()
+                wx.setStorageSync('e2e_advanced', true)
+                wx.removeStorageSync('e2e_advanced_downgraded')
+                that.setData({ encryptionAdvancedEnabled: true })
+                wx.showToast({ title: '高级安全已开启', icon: 'success' })
+              }).catch(function () {
+                wx.hideLoading()
+                wx.showToast({ title: '上传失败，请重试', icon: 'none' })
+              })
+            } catch (e) {
+              wx.hideLoading()
+              wx.showToast({ title: '操作失败: ' + e.message, icon: 'none' })
+            }
+          }
+        })
       }
     })
   },

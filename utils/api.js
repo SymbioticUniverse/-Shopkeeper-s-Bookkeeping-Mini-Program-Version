@@ -384,14 +384,29 @@ function _addItemLocal(scope, item) {
 }
 
 function addItem(scope, item) {
-  const stamped = { ...item, _updatedAt: Date.now(), _dirty: true, _syncedAt: 0, _lastKnownHash: null }
+  var stamped = { ...item, _updatedAt: Date.now(), _dirty: true, _syncedAt: 0, _lastKnownHash: null }
   _addItemLocal(scope, stamped)
 
   // E2E：推送到服务端前加密
   var pushItem = stamped
   var crypto = _getCrypto()
   if (crypto && crypto.isEncryptionEnabled()) {
-    pushItem = crypto.encryptItem(stamped)
+    try {
+      pushItem = crypto.encryptItem(stamped)
+    } catch (e) {
+      console.error('[api] encryptItem 失败，尝试修复加密状态:', e.message)
+      // 尝试自动修复：重新初始化加密后重试一次
+      try {
+        var phone = wx.getStorageSync('user_phone') || ''
+        if (phone && crypto.setupEncryption) {
+          var setupResult = crypto.setupEncryption(phone)
+          crypto.uploadKeyBlob(setupResult.encryptedBlob, setupResult.salt, setupResult.tier || 'personal').catch(function () {})
+          pushItem = crypto.encryptItem(stamped)
+        }
+      } catch (e2) {
+        console.error('[api] 加密修复失败，仍尝试推送:', e2.message)
+      }
+    }
   }
 
   // 立即推送到云端，成功/409 则清脏标记，网络失败入离线队列待重试
@@ -424,9 +439,23 @@ function updateItem(id, data) {
   var pushData = patched
   var crypto = _getCrypto()
   if (crypto && crypto.isEncryptionEnabled()) {
-    // 需要带原始 item 的敏感字段用于加密（patched 可能只含部分字段）
-    var fullItem = updated.find(function (it) { return it.id === id })
-    pushData = crypto.encryptItem(fullItem || patched)
+    try {
+      var fullItem = updated.find(function (it) { return it.id === id })
+      pushData = crypto.encryptItem(fullItem || patched)
+    } catch (e) {
+      console.error('[api] encryptItem 失败，尝试修复加密状态:', e.message)
+      try {
+        var phone = wx.getStorageSync('user_phone') || ''
+        if (phone && crypto.setupEncryption) {
+          var setupResult = crypto.setupEncryption(phone)
+          crypto.uploadKeyBlob(setupResult.encryptedBlob, setupResult.salt, setupResult.tier || 'personal').catch(function () {})
+          var fullItem2 = updated.find(function (it) { return it.id === id })
+          pushData = crypto.encryptItem(fullItem2 || patched)
+        }
+      } catch (e2) {
+        console.error('[api] 加密修复失败，仍尝试推送:', e2.message)
+      }
+    }
   }
 
   _pushBackend('PUT', '/items/' + id, pushData)
@@ -440,10 +469,9 @@ async function removeItem(id) {
 
   if (!item) return
 
-  // 从未同步过的条目 → 直接移除，并提醒用户
+  // 从未同步过的条目 → 直接移除
   if (!item._syncedAt) {
     _save(key, items.filter(it => it.id !== id))
-    wx.showToast({ title: '该记录尚未同步到云端，删除后无法恢复', icon: 'none', duration: 2500 })
     return
   }
 

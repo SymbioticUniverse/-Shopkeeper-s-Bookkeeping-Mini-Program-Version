@@ -15,7 +15,7 @@
  *
  * 单元格：number → 数值单元格；其余 → 文本（内联字符串）。空串/null 跳过。
  * 想加样式（加粗/底色）时，单元格写成对象 { v, s }，s 是样式索引：
- *   xlsx.STYLE.HEAD(表头灰底加粗) / STYLE.INCOME(绿底白字) / STYLE.EXPENSE(红底白字)
+ *   xlsx.STYLE.HEAD(表头灰底加粗) / STYLE.INCOME(红底白字) / STYLE.EXPENSE(黑底白字)
  */
 
 // 样式索引（对应 styles.xml 的 cellXfs 顺序）
@@ -168,8 +168,8 @@ function buildStyles() {
     '<fill><patternFill patternType="none"/></fill>' +
     '<fill><patternFill patternType="gray125"/></fill>' +
     '<fill><patternFill patternType="solid"><fgColor rgb="FFEDEDED"/></patternFill></fill>' +
-    '<fill><patternFill patternType="solid"><fgColor rgb="FF00B050"/></patternFill></fill>' +
-    '<fill><patternFill patternType="solid"><fgColor rgb="FFED2E2E"/></patternFill></fill>' +
+    '<fill><patternFill patternType="solid"><fgColor rgb="FFef4444"/></patternFill></fill>' +
+    '<fill><patternFill patternType="solid"><fgColor rgb="FF333333"/></patternFill></fill>' +
     '<fill><patternFill patternType="solid"><fgColor rgb="FF2F6BD6"/></patternFill></fill>' +
     '</fills>' +
     '<borders count="1"><border/></borders>' +

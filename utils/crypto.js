@@ -6,6 +6,19 @@
  * 高级安全：28 位自保管密钥参与派生（企业用户可选）
  */
 
+// 强制覆盖 setBigUint64：真机原生实现可能只接受 BigInt 不接受 Number
+if (typeof DataView !== 'undefined') {
+  DataView.prototype.setBigUint64 = function (byteOffset, value, littleEndian) {
+    if (littleEndian) {
+      this.setUint32(byteOffset, Number(value), true)
+      this.setUint32(byteOffset + 4, 0, true)
+    } else {
+      this.setUint32(byteOffset, 0, false)
+      this.setUint32(byteOffset + 4, Number(value), false)
+    }
+  }
+}
+
 var noble = require('../vendor/noble-ciphers.js')
 
 // ECC 加密库（懒加载，仅企业加密时使用）
@@ -445,6 +458,12 @@ function _deriveRecoveryKey(phoneNumber, extraKey, salt) {
   var enc = _textEncoder()
   var phoneBytes = enc.encode(phoneNumber)
   var saltBytes = salt ? _hexToBytes(salt) : _randomBytes(16)
+  // 确保 saltBytes 是 Uint8Array（真机 wx.getRandomValues 可能返回 wrapper object）
+  if (!(saltBytes instanceof Uint8Array)) {
+    var tmp = new Uint8Array(16)
+    for (var i = 0; i < 16; i++) tmp[i] = saltBytes[i] || 0
+    saltBytes = tmp
+  }
 
   var passBytes
   if (extraKey) {
