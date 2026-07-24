@@ -75,25 +75,58 @@ function createMethods(dependencies) {
     try { return require('../../utils/crypto.js') } catch (_) { return null }
   },
 
+  _showMasterKeyBackupNotice() {
+    var crypto = this._getCrypto()
+    var masterKey = crypto && crypto.exportMasterKey()
+    if (!masterKey) return
+    wx.setClipboardData({ data: masterKey })
+    wx.showModal({
+      title: '请保存数据恢复密钥',
+      content: '64 位恢复密钥已复制到剪贴板。\n\n服务端无法解密或找回它；换设备时必须导入此密钥才能查看历史账单。',
+      showCancel: false,
+      confirmText: '我已保存'
+    })
+  },
+
   /** 确保主密钥已生成且有效，登录后立即调用。已有有效密钥或服务器有 blob 时跳过（避免覆盖高级安全 blob） */
   _ensureCryptoReady(phone) {
     var crypto = this._getCrypto()
-    if (!crypto || !phone) return Promise.resolve()
+    if (!crypto) return Promise.resolve()
+    try {
+      crypto.assertAccountKeyOwnership()
+    } catch (e) {
+      console.error('[crypto] 账号密钥归属校验失败:', e.message)
+      wx.showToast({ title: '加密账号校验失败，请重新登录', icon: 'none', duration: 3000 })
+      return Promise.resolve({ blocked: true })
+    }
     var masterKey = crypto.exportMasterKey()
-    // 已有有效密钥 → 跳过
-    if (masterKey && !/^0+$/.test(masterKey)) return Promise.resolve()
-    // 无有效密钥 → 先检查服务器是否有 blob，有则不覆盖（交给 _initCrypto 走恢复流程）
     var that = this
+    // 已有有效密钥：把旧版“手机号可恢复”备份迁移成服务端无法解开的 manual 标记。
+    if (masterKey && !/^0+$/.test(masterKey)) {
+      return crypto.fetchKeyBlob().then(function (existing) {
+        if (existing && existing.tier !== 'personal') return
+        var migrated = crypto.createManualBackup()
+        return crypto.uploadKeyBlob(migrated.encryptedBlob, migrated.salt, migrated.tier).then(function () {
+          that._showMasterKeyBackupNotice()
+          console.log('[crypto] 端到端账户标记已安全写入')
+        })
+      }).catch(function (err) {
+        console.warn('[crypto] 旧密钥备份迁移推迟:', err && err.message || err)
+      })
+    }
+    // 无有效密钥 → 先检查服务器是否有 blob，有则不覆盖（交给 _initCrypto 走恢复流程）
     return crypto.fetchKeyBlob().then(function (result) {
       if (result && result.blob) {
+        wx.setStorageSync('e2e_required', true)
         console.log('[crypto] 服务器已有 blob（tier=' + (result.tier || 'unknown') + '），跳过自动生成')
         return
       }
       // 服务器无 blob → 首次使用，生成并上传
       console.log('[crypto] 首次使用，初始化主密钥...')
-      var setupResult = crypto.setupEncryption(phone)
+      var setupResult = crypto.setupEncryption()
       return crypto.uploadKeyBlob(setupResult.encryptedBlob, setupResult.salt, setupResult.tier).then(function () {
-        console.log('[crypto] 主密钥已生成并上传')
+        that._showMasterKeyBackupNotice()
+        console.log('[crypto] 主密钥已生成，服务端仅保存不可恢复标记')
       }).catch(function (err) {
         console.error('[crypto] 主密钥上传失败:', err && err.message || err)
       })
@@ -106,6 +139,37 @@ function createMethods(dependencies) {
   _initCrypto() {
     var crypto = this._getCrypto()
     if (!crypto) return Promise.resolve()
+
+    // 老版本升级：历史主密钥可能没有 owner。必须在线向服务端确认 token 对应
+    // userId 后才能补绑定；离线时保留原密钥但保持不可用，绝不猜测账号归属。
+    var hasToken = !!wx.getStorageSync('authToken')
+    var needsVerifiedBootstrap = hasToken && (
+      !crypto.getAuthenticatedUserId() ||
+      (!!wx.getStorageSync('e2e_master_key') && !crypto.getKeyOwner())
+    )
+    if (needsVerifiedBootstrap) {
+      var that = this
+      return api.bootstrapAuthenticatedAccount().then(function () {
+        return that._initCrypto()
+      }).catch(function (e) {
+        that.setData({ encryptionEnabled: false, encryptionAdvancedEnabled: false })
+        console.warn('[crypto] 暂时无法确认历史密钥归属，保持禁用:', e && e.message || e)
+        return { blocked: true }
+      })
+    }
+
+    // 加密初始化必须先确认本地密钥 owner 与当前登录 userId 一致。
+    // 不匹配时禁止继续，避免旧账号密钥被拿来解密或上传到新账号。
+    if (wx.getStorageSync('authToken')) {
+      try {
+        crypto.assertAccountKeyOwnership()
+      } catch (e) {
+        this.setData({ encryptionEnabled: false, encryptionAdvancedEnabled: false })
+        console.error('[crypto] 账号密钥归属校验失败:', e.message)
+        wx.showToast({ title: '加密账号校验失败，请重新登录', icon: 'none', duration: 3000 })
+        return Promise.resolve({ blocked: true })
+      }
+    }
 
     // 清理损坏状态：e2e_enabled 标记存在但主密钥丢失
     if (wx.getStorageSync('e2e_enabled') && !wx.getStorageSync('e2e_master_key')) {
@@ -122,28 +186,18 @@ function createMethods(dependencies) {
       encryptionAdvancedEnabled: hasKey && crypto.isAdvancedSecurityEnabled()
     })
 
-    // 已有主密钥 → 检测是否为零值损坏密钥（旧版 randomBytes bug），是则自动重新生成
+    // 已有主密钥 → 零值或格式损坏时清除本地副本，必须从原备份恢复，禁止自动换钥。
     if (hasKey) {
-      if (/^0+$/.test(masterKey)) {
-        console.warn('[crypto] 检测到损坏的主密钥（全零），自动重新生成')
-        var phone = wx.getStorageSync('user_phone') || ''
-        if (phone) {
-          try {
-            var that0 = this
-            var setupResult = crypto.setupEncryption(phone)
-            crypto.uploadKeyBlob(setupResult.encryptedBlob, setupResult.salt, setupResult.tier).then(function () {
-              that0.setData({ encryptionEnabled: true, encryptionAdvancedEnabled: false })
-              console.log('[crypto] 主密钥已重新生成，新 blob 已上传')
-            }).catch(function (err) {
-              console.error('[crypto] 新密钥 blob 上传失败，服务器仍保留旧（可能损坏的）blob:', err && err.message || err)
-              that0.setData({ encryptionEnabled: true, encryptionAdvancedEnabled: false })
-            })
-          } catch (e) {
-            console.error('[crypto] 主密钥重新生成失败:', e.message)
-          }
-        }
+      if (/^0+$/.test(masterKey) || !/^[0-9a-fA-F]{64}$/.test(masterKey)) {
+        console.error('[crypto] 检测到损坏的主密钥，转入恢复流程')
+        wx.removeStorageSync('e2e_master_key')
+        wx.removeStorageSync('e2e_enabled')
+        wx.removeStorageSync('e2e_advanced')
+        hasKey = false
+        this.setData({ encryptionEnabled: false, encryptionAdvancedEnabled: false })
+      } else {
+        return this._syncCompanyKeys()
       }
-      return this._syncCompanyKeys()
     }
 
     // 未登录 → 无 token，等登录后重试
@@ -154,35 +208,59 @@ function createMethods(dependencies) {
     return crypto.fetchKeyBlob().then(function (result) {
       if (!result || !result.blob) {
         // 服务端无 blob → 首次使用，自动初始化默认加密
-        var phone = wx.getStorageSync('user_phone') || ''
-        if (phone) {
-          return new Promise(function (resolveSetup) {
-            try {
-              var setupResult = crypto.setupEncryption(phone)
-              crypto.uploadKeyBlob(setupResult.encryptedBlob, setupResult.salt, setupResult.tier).then(function () {
-                that.setData({ encryptionEnabled: true, encryptionAdvancedEnabled: false })
-                console.log('[crypto] 默认加密已自动初始化，blob 已上传')
-                resolveSetup()
-              }).catch(function (err) {
-                console.error('[crypto] 默认加密 blob 上传失败:', err && err.message || err)
-                console.warn('[crypto] 默认加密已初始化但 blob 上传失败')
-                that.setData({ encryptionEnabled: true, encryptionAdvancedEnabled: false })
-                resolveSetup()
-              })
-            } catch (e) {
-              console.error('[crypto] 自动初始化加密失败，但主密钥已生成可用:', e.message)
-              // 主密钥已成功生成并保存，加密可正常工作，仅恢复 blob 上传失败
+        return new Promise(function (resolveSetup) {
+          try {
+            var setupResult = crypto.setupEncryption()
+            crypto.uploadKeyBlob(setupResult.encryptedBlob, setupResult.salt, setupResult.tier).then(function () {
+              that.setData({ encryptionEnabled: true, encryptionAdvancedEnabled: false })
+              that._showMasterKeyBackupNotice()
+              console.log('[crypto] 默认加密已初始化，服务端仅保存不可恢复标记')
+              resolveSetup()
+            }).catch(function (err) {
+              console.error('[crypto] 默认加密 blob 上传失败:', err && err.message || err)
+              console.warn('[crypto] 默认加密已初始化但 blob 上传失败')
               that.setData({ encryptionEnabled: true, encryptionAdvancedEnabled: false })
               resolveSetup()
-            }
-          }).then(function () { return that._syncCompanyKeys() })
-        }
-        // dev 模式无手机号 → 跳过
-        return
+            })
+          } catch (e) {
+            console.error('[crypto] 自动初始化加密失败，但主密钥已生成可用:', e.message)
+            // 主密钥已成功生成并保存，加密可正常工作，仅恢复 blob 上传失败
+            that.setData({ encryptionEnabled: true, encryptionAdvancedEnabled: false })
+            resolveSetup()
+          }
+        }).then(function () { return that._syncCompanyKeys() })
       }
 
-      // 服务端有 blob → 尝试恢复，失败则静默重新初始化（个人端加密不阻断）
+      wx.setStorageSync('e2e_required', true)
+      // 服务端有 blob → 只允许恢复原密钥，失败时保留服务端备份并显式报错。
       return new Promise(function (resolveRecover) {
+        if (result.tier === 'manual') {
+          wx.showModal({
+            title: '导入数据恢复密钥',
+            content: '此账号已有端到端加密数据，请输入之前保存的 64 位恢复密钥。',
+            editable: true,
+            placeholderText: '64位恢复密钥',
+            confirmText: '恢复',
+            cancelText: '暂不',
+            success: function (res) {
+              if (!res.confirm) {
+                resolveRecover()
+                return
+              }
+              try {
+                crypto.verifyAndImportMasterKey((res.content || '').trim(), result.blob)
+                that.setData({ encryptionEnabled: true, encryptionAdvancedEnabled: false })
+                wx.showToast({ title: '数据密钥已恢复', icon: 'success' })
+              } catch (e) {
+                wx.showToast({ title: e.message || '恢复密钥不正确', icon: 'none' })
+              }
+              resolveRecover()
+            },
+            fail: function () { resolveRecover() }
+          })
+          return
+        }
+
         function _doRecover(phone) {
           if (result.tier === 'advanced') {
             // 服务器有高级 blob，标记以供设置页显示"恢复高级安全"入口
@@ -205,29 +283,28 @@ function createMethods(dependencies) {
           } else {
             var ok = crypto.recoverMasterKey(phone, result.blob, result.salt)
             if (ok) {
-              // 检查恢复出的密钥是否损坏（全零），是则自动重新初始化
+              // 恢复出的密钥必须是合法非零 256-bit 密钥。
               if (/^0+$/.test(crypto.exportMasterKey())) {
-                console.warn('[crypto] 从服务器恢复的密钥为全零，重新初始化')
-                _reinitCrypto(phone)
+                wx.removeStorageSync('e2e_master_key')
+                wx.removeStorageSync('e2e_enabled')
+                that.setData({ encryptionEnabled: false, encryptionAdvancedEnabled: false })
+                wx.showToast({ title: '密钥备份损坏，未覆盖原备份', icon: 'none' })
               } else {
                 that.setData({ encryptionEnabled: true, encryptionAdvancedEnabled: false })
+                // 旧 personal blob 可被服务端凭手机号推导，仅用于一次迁移。
+                var migrated = crypto.createManualBackup()
+                crypto.uploadKeyBlob(migrated.encryptedBlob, migrated.salt, migrated.tier)
+                  .then(function () { that._showMasterKeyBackupNotice() })
+                  .catch(function (err) {
+                    console.warn('[crypto] 旧版密钥备份迁移失败:', err && err.message || err)
+                  })
               }
             } else {
-              // 恢复失败 → 静默重新初始化（个人端不卡用户）
-              _reinitCrypto(phone)
+              that.setData({ encryptionEnabled: false, encryptionAdvancedEnabled: false })
+              wx.showToast({ title: '密钥恢复失败，数据未被覆盖', icon: 'none' })
             }
             resolveRecover()
           }
-        }
-
-        // 恢复失败时：清旧 blob，重新初始化，不弹 toast
-        function _reinitCrypto(phone) {
-          console.warn('[crypto] 恢复失败，自动重新初始化加密')
-          try {
-            var setupResult = crypto.setupEncryption(phone)
-            crypto.uploadKeyBlob(setupResult.encryptedBlob, setupResult.salt, setupResult.tier || 'personal').catch(function () {})
-          } catch (_) {}
-          that.setData({ encryptionEnabled: true, encryptionAdvancedEnabled: false })
         }
 
         var cachedPhone = wx.getStorageSync('user_phone') || ''
@@ -262,7 +339,7 @@ function createMethods(dependencies) {
     var hasPub = crypto.getCompanyPublicKey()
 
     // 已有密钥 → 检查是否就绪
-    if (isBoss && hasPriv) {
+    if (isBoss && hasPriv && hasPub) {
       this.setData({ encryptionCompanyKeyReady: true, encryptionCompanyIsBoss: true })
       return Promise.resolve()
     }
@@ -285,10 +362,9 @@ function createMethods(dependencies) {
           }
           try {
             var privHex = _decryptWithMasterKey(crypto, result.encrypted_private_key)
+            if (!result.public_key) throw new Error('公司公钥备份缺失')
+            crypto.setCompanyPublicKey(result.public_key, result.key_id || '')
             crypto.setCompanyPrivateKey(privHex)
-            if (result.key_id) {
-              crypto.setCompanyPublicKey(result.public_key || '', result.key_id)
-            }
             that.setData({ encryptionCompanyKeyReady: true, encryptionCompanyIsBoss: true })
             console.log('[crypto] 公司私钥已从服务端恢复')
           } catch (e) {
@@ -299,8 +375,24 @@ function createMethods(dependencies) {
           // 新创建的公司在等后端部署 → 暂时标记未就绪
           that.setData({ encryptionCompanyKeyReady: false, encryptionCompanyIsBoss: true })
         }
-      }).catch(function () {
-        that.setData({ encryptionCompanyKeyReady: false, encryptionCompanyIsBoss: true })
+      }).catch(function (privateError) {
+        if (!privateError || privateError.statusCode !== 404) {
+          that.setData({ encryptionCompanyKeyReady: false, encryptionCompanyIsBoss: true })
+          return
+        }
+        // 新公司若尚无任何密钥，安全地重试原子初始化；若已有公钥但私钥
+        // 备份缺失，则禁止覆盖，以免已有密文永久失效。
+        return api.fetchCompanyPublicKey(ci.companyUid).then(function (publicResult) {
+          if (publicResult && publicResult.public_key) {
+            crypto.setCompanyPublicKey(publicResult.public_key, publicResult.key_id || '')
+          }
+          that.setData({ encryptionCompanyKeyReady: false, encryptionCompanyIsBoss: true })
+        }).catch(function (publicError) {
+          if (publicError && publicError.statusCode === 404) {
+            return that._setupBossCompanyKeys(true)
+          }
+          that.setData({ encryptionCompanyKeyReady: false, encryptionCompanyIsBoss: true })
+        })
       })
     } else {
       // 员工缺失公钥 → 从服务端获取
@@ -319,33 +411,32 @@ function createMethods(dependencies) {
 
   /** 设置页手动触发公司密钥重新生成 */
   onRegenerateCompanyKeys() {
-    var that = this
-    this._showCustomModal({
-      title: '重新生成公司密钥',
-      content: '将重新生成公司加密密钥对。\n\n旧数据若用旧密钥加密将无法解密。',
-      confirm: '确定',
-      cancel: '取消',
-      cb: function (confirmed) {
-        if (confirmed) {
-          wx.showLoading({ title: '生成中...' })
-          that._setupBossCompanyKeys()
-          wx.hideLoading()
-          wx.showToast({ title: '密钥已重新生成', icon: 'success' })
-        }
-      }
+    wx.showModal({
+      title: '暂不支持密钥轮换',
+      content: '为避免历史公司账单永久无法解密，当前版本禁止直接覆盖公司密钥。后续将通过带版本号的密钥轮换完成。',
+      showCancel: false,
+      confirmText: '知道了'
     })
   },
 
   /** 老板创建公司后，生成本地密钥对并初始化企业加密 */
-  _setupBossCompanyKeys() {
+  async _setupBossCompanyKeys(serverConfirmedEmpty) {
     var crypto = this._getCrypto()
-    if (!crypto) return
+    if (!crypto) throw new Error('加密模块未加载')
+    if (crypto.getCompanyPrivateKey() || crypto.getCompanyPublicKey()) {
+      if (crypto.getCompanyPrivateKey() && crypto.getCompanyPublicKey()) {
+        this._refreshCompanyEncryptionState()
+        return
+      }
+      if (!serverConfirmedEmpty) throw new Error('公司密钥状态不完整，禁止自动覆盖')
+      crypto.clearCompanyKeys()
+    }
 
     var ecc = null
     try { ecc = require('../../vendor/noble-ecc.js') } catch (e) {}
     if (!ecc) {
       console.warn('[crypto] ECC 模块未加载，跳过公司加密初始化')
-      return
+      throw new Error('ECC 加密模块未加载')
     }
 
     try {
@@ -361,29 +452,21 @@ function createMethods(dependencies) {
         pubHex += (pubBytes[j] < 16 ? '0' : '') + pubBytes[j].toString(16)
       }
 
-      // 存储私钥到本地
-      crypto.setCompanyPrivateKey(privHex)
-      crypto.setCompanyPublicKey(pubHex, '')
-
-      this.setData({ encryptionCompanyKeyReady: true, encryptionCompanyIsBoss: true })
-      console.log('[crypto] 公司加密密钥对已生成')
-
-      // 上传公钥到服务端（员工加入时自动获取）
-      api.uploadCompanyPublicKey(pubHex, '').catch(function () {
-        console.warn('[crypto] 公司公钥上传失败，后续重试')
-      })
-
-      // 加密私钥后上传服务端备份（用主密钥加密）
+      var keyId = 'ck_' + api.generateId().slice(0, 20)
       var masterKey = crypto.exportMasterKey()
-      if (masterKey) {
-        var encPrivHex = _encryptWithMasterKey(crypto, privHex)
-        api.uploadCompanyEncryptedPrivateKey(encPrivHex, '').catch(function () {
-          console.warn('[crypto] 公司私钥备份上传失败，后续重试')
-        })
-      }
+      if (!masterKey) throw new Error('主密钥未就绪，无法备份公司私钥')
+      var encPrivHex = _encryptWithMasterKey(crypto, privHex)
+
+      // 同一代公钥与私钥备份由服务端原子写入，避免只成功一半。
+      await api.uploadCompanyKeys(pubHex, encPrivHex, keyId)
+      crypto.setCompanyPrivateKey(privHex)
+      crypto.setCompanyPublicKey(pubHex, keyId)
+      this.setData({ encryptionCompanyKeyReady: true, encryptionCompanyIsBoss: true })
+      console.log('[crypto] 公司加密密钥对已生成并完成备份')
     } catch (e) {
       console.error('[crypto] 公司密钥对生成失败:', e.message)
-      wx.showToast({ title: '密钥生成失败：' + (e.message || '未知错误'), icon: 'none', duration: 3000 })
+      this.setData({ encryptionCompanyKeyReady: false, encryptionCompanyIsBoss: true })
+      throw e
     }
   },
 
@@ -399,7 +482,7 @@ function createMethods(dependencies) {
     this.setData({
       encryptionCompanyIsBoss: ci.companyRole === 'boss',
       encryptionCompanyKeyReady: ci.companyRole === 'boss'
-        ? !!crypto.getCompanyPrivateKey()
+        ? !!(crypto.getCompanyPrivateKey() && crypto.getCompanyPublicKey())
         : !!crypto.getCompanyPublicKey()
     })
   },
@@ -447,21 +530,8 @@ function createMethods(dependencies) {
     var that = this
 
     if (isAdvanced && !isVip) {
-      // VIP 过期 → 自动降级 blob 到 personal
-      try {
-        var result = crypto.downgradeToPersonal(phone)
-        crypto.uploadKeyBlob(result.encryptedBlob, result.salt, result.tier).then(function () {
-          wx.setStorageSync('e2e_advanced', false)
-          wx.setStorageSync('e2e_advanced_downgraded', true)
-          that.setData({ encryptionAdvancedEnabled: false })
-          console.log('[crypto] VIP 过期，已自动降级为默认加密')
-        }).catch(function () {
-          // 上传失败 → 保持本地高级标记不变，下次对齐检查会重试
-          console.warn('[crypto] VIP 过期降级 blob 上传失败，下次重试')
-        })
-      } catch (e) {
-        console.error('[crypto] VIP 过期自动降级失败:', e.message)
-      }
+      // 订阅状态不得降低既有数据的安全等级。
+      console.warn('[crypto] VIP 已过期，但高级安全保持不变')
       return
     }
 
@@ -700,22 +770,21 @@ function createMethods(dependencies) {
           return
         }
         wx.showLoading({ title: '切换默认模式...' })
-        try {
-          var result = crypto.disableAdvancedSecurity(phone, key)
-          crypto.uploadKeyBlob(result.encryptedBlob, result.salt, result.tier).then(function () {
+        crypto.fetchKeyBlob().then(function (current) {
+          if (!current || current.tier !== 'advanced') throw new Error('未找到高级安全备份')
+          var result = crypto.disableAdvancedSecurity(phone, key, current.blob, current.salt)
+          return crypto.uploadKeyBlob(result.encryptedBlob, result.salt, result.tier)
+        }).then(function () {
             wx.hideLoading()
             wx.setStorageSync('e2e_advanced', false)
             wx.removeStorageSync('e2e_advanced_downgraded')
             that.setData({ encryptionAdvancedEnabled: false })
+            that._showMasterKeyBackupNotice()
             wx.showToast({ title: '已切回默认模式', icon: 'success' })
-          }).catch(function () {
-            wx.hideLoading()
-            wx.showToast({ title: '上传失败，请重试', icon: 'none' })
-          })
-        } catch (e) {
+        }).catch(function () {
           wx.hideLoading()
           wx.showToast({ title: '密钥不正确', icon: 'none' })
-        }
+        })
       }
     })
   },
@@ -779,13 +848,21 @@ function createMethods(dependencies) {
       success: function (res) {
         if (!res.confirm || !res.content) return
         var hex = (res.content || '').trim()
-        try {
-          crypto.importMasterKey(hex)
+        crypto.fetchKeyBlob().then(function (backup) {
+          if (backup && backup.tier === 'manual') {
+            crypto.verifyAndImportMasterKey(hex, backup.blob)
+          } else {
+            crypto.importMasterKey(hex)
+          }
           that.setData({ encryptionEnabled: true })
+          return api.syncFromCloud()
+        }).then(function () {
+          that.initDetailItems()
+          that._syncOverviewCards()
           wx.showToast({ title: '密钥已导入', icon: 'success' })
-        } catch (e) {
-          wx.showToast({ title: '密钥格式不正确', icon: 'none' })
-        }
+        }).catch(function (e) {
+          wx.showToast({ title: (e && e.message) || '密钥不正确', icon: 'none' })
+        })
       }
     })
   },
@@ -823,10 +900,13 @@ function createMethods(dependencies) {
         var ok = crypto.recoverMasterKeyAdvanced(phone, advancedKey, result.blob, result.salt)
         if (ok) {
           that.setData({ encryptionEnabled: true, encryptionAdvancedEnabled: true, settingsHasAdvancedBlob: false })
-          // 重新解密已加载的数据
-          that.initDetailItems()
-          that._syncOverviewCards()
-          wx.showToast({ title: '密钥已恢复', icon: 'success' })
+          api.syncFromCloud().then(function () {
+            that.initDetailItems()
+            that._syncOverviewCards()
+            wx.showToast({ title: '密钥已恢复', icon: 'success' })
+          }).catch(function () {
+            wx.showToast({ title: '密钥已恢复，请稍后同步数据', icon: 'none' })
+          })
         } else {
           wx.showToast({ title: '密钥不正确', icon: 'none' })
         }

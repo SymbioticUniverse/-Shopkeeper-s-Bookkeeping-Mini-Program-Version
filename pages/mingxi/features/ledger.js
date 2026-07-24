@@ -180,25 +180,27 @@ function createMethods(dependencies) {
     this.setData({ showAuditPage: false })
   },
 
-  onAuditApprove(e) {
+  async onAuditApprove(e) {
     playTap()
     const { id } = e.currentTarget.dataset
     const list = this.data.auditList.map(item => item.id === id ? { ...item, status: 'approved' } : item)
-    api.saveAuditList(list)
+    const result = await api.saveAuditList(list)
+    if (result && result.failed) return
     this.setData({ auditList: list })
     this.updateAuditBadge()
     const notifyList = api.getNotifyList()
     notifyList.unshift({ id: api.generateId(), text: '审核通过加入公司', time: new Date().toLocaleDateString(), read: false })
-    api.saveNotifyList(notifyList)
+    await api.saveNotifyList(notifyList)
     this.updateNotifyBadge()
     wx.showToast({ title: '已通过', icon: 'success' })
   },
 
-  onAuditReject(e) {
+  async onAuditReject(e) {
     playTap()
     const { id } = e.currentTarget.dataset
     const list = this.data.auditList.map(item => item.id === id ? { ...item, status: 'rejected' } : item)
-    api.saveAuditList(list)
+    const result = await api.saveAuditList(list)
+    if (result && result.failed) return
     this.setData({ auditList: list })
     this.updateAuditBadge()
     wx.showToast({ title: '已拒绝', icon: 'none' })
@@ -243,11 +245,16 @@ function createMethods(dependencies) {
     this.updateNotifyBadge()
   },
 
-  onNotifyRead(e) {
+  async onNotifyRead(e) {
     playTap()
     const { id } = e.currentTarget.dataset
+    try {
+      await api.markNotificationRead(id)
+    } catch (error) {
+      wx.showToast({ title: '标记已读失败，请重试', icon: 'none' })
+      return
+    }
     const list = this.data.notifyList.map(item => item.id === id ? { ...item, read: true } : item)
-    api.saveNotifyList(list)
     this.setData({ notifyList: list })
     this.updateNotifyBadge()
   },
@@ -277,12 +284,18 @@ function createMethods(dependencies) {
     // keep swiped open
   },
 
-  onNotifyDelete(e) {
+  async onNotifyDelete(e) {
     playTap()
     const { id } = e.currentTarget.dataset
+    try {
+      await api.deleteNotification(id)
+    } catch (error) {
+      wx.showToast({ title: '删除失败，请重试', icon: 'none' })
+      return
+    }
     const list = this.data.notifyList.filter(item => item.id !== id)
-    api.saveNotifyList(list)
     this.setData({ notifyList: list, notifySwipeId: '' })
+    this.updateNotifyBadge()
   },
 
   onExportBillEntry() {
@@ -295,7 +308,7 @@ function createMethods(dependencies) {
     this.setData({ showExportBill: false })
   },
 
-  onExportPersonal() {
+  async onExportPersonal() {
     playTap()
     if (this.data.exportFormatOptions[this.data.exportFormatIndex] !== '.EXCEL') {
       wx.showToast({ title: 'PDF 即将支持，请先选 .EXCEL', icon: 'none' })
@@ -304,14 +317,23 @@ function createMethods(dependencies) {
     var usage = api.checkUsage('export')
     if (!usage.allowed) {
       this._showVipLimitDialog('export')
+      return
+    }
+    try {
+      await api.incrementUsage('export')
+    } catch (err) {
+      if (err && (err.statusCode === 402 || err.error === 'export_limit_exhausted')) {
+        this._showVipLimitDialog('export')
+      } else {
+        wx.showToast({ title: '暂时无法校验导出额度，请稍后重试', icon: 'none' })
+      }
       return
     }
     const nick = (this.data.userInfo && this.data.userInfo.nickName) || '个人'
     this._exportBillXlsx('personal', nick, false, '账本')
-    api.incrementUsage('export')
   },
 
-  onExportCompany() {
+  async onExportCompany() {
     playTap()
     if (this.data.exportFormatOptions[this.data.exportFormatIndex] !== '.EXCEL') {
       wx.showToast({ title: 'PDF 即将支持，请先选 .EXCEL', icon: 'none' })
@@ -322,9 +344,18 @@ function createMethods(dependencies) {
       this._showVipLimitDialog('export')
       return
     }
+    try {
+      await api.incrementUsage('export')
+    } catch (err) {
+      if (err && (err.statusCode === 402 || err.error === 'export_limit_exhausted')) {
+        this._showVipLimitDialog('export')
+      } else {
+        wx.showToast({ title: '暂时无法校验导出额度，请稍后重试', icon: 'none' })
+      }
+      return
+    }
     const name = (api.getCompanyInfo && (api.getCompanyInfo() || {}).companyName) || '公司'
     this._exportBillXlsx('company', name, true, '账单表')
-    api.incrementUsage('export')
   },
 
   // 导出范围判定：口径同 _inReportRange，用导出页自己的时间状态
@@ -535,7 +566,7 @@ function createMethods(dependencies) {
     this.setData({ contactFeedback: e.detail.value })
   },
 
-  onContactSubmit() {
+  async onContactSubmit() {
     playTap()
     const text = (this.data.contactFeedback || '').trim()
     if (!text) {
@@ -545,8 +576,9 @@ function createMethods(dependencies) {
     // 存储反馈
     const feedbackList = api.getFeedbackList()
     feedbackList.unshift({ id: api.generateId(), text, time: new Date().toLocaleString() })
-    api.saveFeedbackList(feedbackList)
-    wx.showToast({ title: '感谢您的反馈！VIP 会员已赠送', icon: 'success' })
+    const result = await api.saveFeedbackList(feedbackList)
+    if (result && result.failed) return
+    wx.showToast({ title: '感谢您的反馈！', icon: 'success' })
     this.setData({ contactFeedback: '' })
   },
 

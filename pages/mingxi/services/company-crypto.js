@@ -6,6 +6,11 @@ function _encryptWithMasterKey(crypto, plainHex) {
   var noble = require('../../../vendor/noble-ciphers.js')
   var keyBytes = _hexToBytesLocal(masterKey)
   var iv = noble.randomBytes(12)
+  var allZero = true
+  for (var z = 0; z < iv.length; z++) {
+    if (iv[z] !== 0) { allZero = false; break }
+  }
+  if (allZero) throw new Error('安全随机数生成失败')
   var cipher = noble.gcm(keyBytes, iv)
   var plainBytes = _hexToBytesLocal(plainHex)
   var encrypted = cipher.encrypt(plainBytes)
@@ -18,7 +23,7 @@ function _encryptWithMasterKey(crypto, plainHex) {
 function _decryptWithMasterKey(crypto, base64Cipher) {
   var masterKey = crypto.exportMasterKey()
   if (!masterKey) throw new Error('无主密钥')
-  var noble = require('../../vendor/noble-ciphers.js')
+  var noble = require('../../../vendor/noble-ciphers.js')
   var combined = _fromBase64Local(base64Cipher)
   var iv = combined.slice(0, 12)
   var encrypted = combined.slice(12)

@@ -125,7 +125,8 @@ function createMethods(dependencies) {
   // ---- 扫描凭证识别 ----
   _startScanRecognize(photo) {
     this.setData({ scanRecognizing: true, bookPhoto: photo })
-    api.uploadVoucher(photo).then((url) => {
+    // OCR 临时图在识别完成后由服务端立即删除，不作为云端凭证长期保存。
+    api.uploadVoucher(photo, 'ocr').then((url) => {
       return api.ocrParse(url)
     }).then((result) => {
       if (!result) throw { error: '识别结果为空' }

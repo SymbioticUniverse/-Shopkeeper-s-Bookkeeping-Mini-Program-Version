@@ -607,6 +607,11 @@
           </view>
           <view class="settings-group">
             <view class="settings-group-title">修改公司关系</view>
+            <view class="settings-item" wx:if="{{settingsLedgerRole !== 'personal' && settingsCompanyStatus === 'approved'}}" bindtap="onSettingsTap" data-action="recoverCompanyItems">
+              <text class="settings-item-label">恢复历史公司账目</text>
+              <text class="settings-item-value">检查待认领旧账</text>
+              <text class="settings-item-arrow">〉</text>
+            </view>
             <view class="settings-item" wx:if="{{settingsLedgerRole === 'personal'}}" bindtap="onSettingsTap" data-action="registerOrJoin">
               <text class="settings-item-label">{{t.settings_ledger_personal}}</text>
               <text class="settings-item-value settings-item-value--warn">{{t.settings_ledger_personal_val}}</text>

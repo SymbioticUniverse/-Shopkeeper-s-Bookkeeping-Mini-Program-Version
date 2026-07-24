@@ -21,6 +21,7 @@ var _1n = 1n
 var _8n = 8n
 var _2n = 2n
 var _3n = 3n
+var _4n = 4n
 var _7n = 7n
 
 // Generator point (affine)
@@ -169,15 +170,15 @@ function randomBytes(len) {
   } else if (typeof wx !== 'undefined' && wx.getRandomValues) {
     wx.getRandomValues(bytes)
   } else {
-    for (var i = 0; i < len; i++) bytes[i] = Math.floor(Math.random() * 256)
+    throw new Error('安全随机数生成器不可用')
   }
-  // 安全检查：模拟器环境可能返回全零，兜底 Math.random
+  // 密钥与 IV 绝不能退化为 Math.random；异常时失败封闭。
   var allZero = true
   for (var i = 0; i < len; i++) {
     if (bytes[i] !== 0) { allZero = false; break }
   }
   if (allZero) {
-    for (var j = 0; j < len; j++) bytes[j] = Math.floor(Math.random() * 256)
+    throw new Error('安全随机数生成失败')
   }
   return bytes
 }
@@ -237,14 +238,17 @@ function _decodePublicKey(pub) {
     // y^2 = x^3 + 7 mod P
     var y2 = _mod(_mod(x * x, P) * x + _7n, P)
     var y = _modPow(y2, (P + _1n) / _4n, P)
-    if ((y & _1n) !== (prefix & _1n)) y = _mod(-y, P)
+    if (_mod(y * y, P) !== y2) throw new Error('公钥点不在 secp256k1 曲线上')
+    if (Number(y & _1n) !== (prefix & 1)) y = _mod(-y, P)
     return _pointAffine(x, y)
   } else if (len === 65) {
     if (pub[0] !== 4) throw new Error('无效非压缩公钥前缀')
-    return _pointAffine(
-      _bytesToNumberBE(pub.subarray(1, 33)),
-      _bytesToNumberBE(pub.subarray(33, 65))
-    )
+    var ux = _bytesToNumberBE(pub.subarray(1, 33))
+    var uy = _bytesToNumberBE(pub.subarray(33, 65))
+    if (ux >= P || uy >= P || _mod(uy * uy, P) !== _mod(_mod(ux * ux, P) * ux + _7n, P)) {
+      throw new Error('公钥点不在 secp256k1 曲线上')
+    }
+    return _pointAffine(ux, uy)
   }
   throw new Error('公钥长度必须为 33 或 65')
 }

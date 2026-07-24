@@ -110,6 +110,87 @@ function createMethods(dependencies) {
     this.setData({ showAboutPage: false })
   },
 
+  async _recoverOrphanCompanyItems() {
+    wx.showLoading({ title: '检查旧账中...' })
+    let result
+    try {
+      result = await api.getOrphanCompanyItems()
+    } catch (e) {
+      wx.hideLoading()
+      wx.showToast({ title: (e && e.message) || '旧账检查失败', icon: 'none' })
+      return
+    }
+    wx.hideLoading()
+
+    const items = (result && result.items) || []
+    const claimable = items.filter(item => item.claimable)
+    const blockedCount = Number(result && result.blockedCount) || 0
+    if (items.length === 0) {
+      wx.showToast({ title: '没有待恢复的旧账', icon: 'success' })
+      return
+    }
+    if (claimable.length === 0) {
+      wx.showModal({
+        title: '旧账无法自动恢复',
+        content: '发现的旧账已通过关联账目确认属于其他公司，未做任何修改。',
+        showCancel: false
+      })
+      return
+    }
+
+    const companyInfo = api.getCompanyInfo() || {}
+    const companyName = companyInfo.companyName || result.companyUid || '当前公司'
+    const blockedText = blockedCount > 0
+      ? `\n另有 ${blockedCount} 笔已确认属于其他公司，将保持隔离。`
+      : ''
+    wx.showModal({
+      title: `恢复 ${claimable.length} 笔旧账`,
+      content: `这些账目由您创建，但缺少公司归属。仅当它们确实属于“${companyName}”时才可认领；认领后公司管理员可以读取。${blockedText}`,
+      confirmText: '确认认领',
+      confirmColor: '#07c160',
+      success: async (modalResult) => {
+        if (!modalResult.confirm) return
+        wx.showLoading({ title: '恢复中...' })
+        let recoveredCount = 0
+        try {
+          const ids = claimable.map(item => item.id)
+          for (let start = 0; start < ids.length; start += 500) {
+            const recovered = await api.claimOrphanCompanyItems(
+              ids.slice(start, start + 500),
+              result.companyUid
+            )
+            recoveredCount += Number(recovered && recovered.recovered) || 0
+          }
+          await api.refreshItems()
+          this.initDetailItems()
+          this.initSettleItems()
+          this.updateReportDate()
+          wx.hideLoading()
+          wx.showToast({
+            title: `已恢复 ${recoveredCount || claimable.length} 笔`,
+            icon: 'success'
+          })
+        } catch (e) {
+          if (recoveredCount > 0) {
+            try {
+              await api.refreshItems()
+              this.initDetailItems()
+              this.initSettleItems()
+              this.updateReportDate()
+            } catch (_) {}
+          }
+          wx.hideLoading()
+          wx.showToast({
+            title: recoveredCount > 0
+              ? `已恢复 ${recoveredCount} 笔，其余请重试`
+              : ((e && e.message) || '恢复失败，请重试'),
+            icon: 'none'
+          })
+        }
+      }
+    })
+  },
+
   onSettingsTap(e) {
     playTap()
     const { action } = e.currentTarget.dataset
@@ -149,6 +230,9 @@ function createMethods(dependencies) {
         break
       case 'security':
         this._onEncryptionTap()
+        break
+      case 'recoverCompanyItems':
+        this._recoverOrphanCompanyItems()
         break
       case 'registerOrJoin':
         if (!this.data.isLoggedIn) {
@@ -230,28 +314,34 @@ function createMethods(dependencies) {
               const e2eEnabled = wx.getStorageSync('e2e_enabled')
               const e2eAdvanced = wx.getStorageSync('e2e_advanced')
               const e2eAdvancedDowngraded = wx.getStorageSync('e2e_advanced_downgraded')
+              const e2eRequired = wx.getStorageSync('e2e_required')
+              const e2eBackupPending = wx.getStorageSync('e2e_backup_pending')
               const companyPriv = wx.getStorageSync('e2e_company_private_key')
               const companyPub = wx.getStorageSync('e2e_company_public_key')
               const companyKeyId = wx.getStorageSync('e2e_company_key_id')
               const vipStatus = wx.getStorageSync('vipStatus')
               wx.clearStorageSync()
-              // 恢复关键数据
-              if (lang) api.saveSetting('appLanguage', lang)
-              if (darkMode) api.saveSetting('appDarkMode', darkMode)
-              if (userInfo) api.saveUserInfo(userInfo)
-              if (companyInfo) api.cacheCompanyInfo(companyInfo)
-              if (privacyAnalytics !== undefined) api.saveSetting('privacy_allowAnalytics', privacyAnalytics)
-              if (privacyCrash !== undefined) api.saveSetting('privacy_allowCrashReport', privacyCrash)
+              // 先恢复身份与加密保护状态，再触发任何后台设置同步。
               if (authToken) wx.setStorageSync('authToken', authToken)
               if (refreshToken) wx.setStorageSync('refreshToken', refreshToken)
               if (masterKey) wx.setStorageSync('e2e_master_key', masterKey)
               if (e2eEnabled) wx.setStorageSync('e2e_enabled', e2eEnabled)
               if (e2eAdvanced) wx.setStorageSync('e2e_advanced', e2eAdvanced)
               if (e2eAdvancedDowngraded) wx.setStorageSync('e2e_advanced_downgraded', e2eAdvancedDowngraded)
+              if (e2eRequired) wx.setStorageSync('e2e_required', e2eRequired)
+              if (e2eBackupPending) wx.setStorageSync('e2e_backup_pending', e2eBackupPending)
               if (companyPriv) wx.setStorageSync('e2e_company_private_key', companyPriv)
               if (companyPub) wx.setStorageSync('e2e_company_public_key', companyPub)
               if (companyKeyId) wx.setStorageSync('e2e_company_key_id', companyKeyId)
               if (vipStatus) wx.setStorageSync('vipStatus', vipStatus)
+
+              // 恢复普通设置
+              if (lang) api.saveSetting('appLanguage', lang)
+              if (darkMode) api.saveSetting('appDarkMode', darkMode)
+              if (userInfo) api.saveUserInfo(userInfo)
+              if (companyInfo) api.cacheCompanyInfo(companyInfo)
+              if (privacyAnalytics !== undefined) api.saveSetting('privacy_allowAnalytics', privacyAnalytics)
+              if (privacyCrash !== undefined) api.saveSetting('privacy_allowCrashReport', privacyCrash)
               wx.showToast({ title: '缓存已清除', icon: 'success' })
               // 刷新页面数据
               this.initDetailItems()
@@ -279,18 +369,20 @@ function createMethods(dependencies) {
           success: async (res) => {
             if (res.confirm) {
               wx.showLoading({ title: '注销中...' })
+              let deactivateResult
               try {
-                await api.deletePersonalItems()
-                // 2. boss 解散公司后端（同时 void 所有公司账目）
-                if (isBoss) await api.removeCompanyInfo()
+                // 后端单事务完成个人账单、联动镜像、公司和密钥标记清理。
+                deactivateResult = await api.deactivateLedger()
               } catch (e) {
                 console.error('[deactivateLedger] 服务端清理失败:', e)
                 wx.hideLoading()
                 wx.showToast({ title: '服务端清理失败，未注销账本', icon: 'none' })
                 return
               }
+              const companyWasDissolved = !!(deactivateResult && deactivateResult.companyDissolved)
+              const retainCompany = !!(deactivateResult && deactivateResult.companyRetained)
               // 3. 清空加密密钥（员工只清个人，不动公司）
-              if (isBoss) crypto.clearCompanyKeys()
+              if (companyWasDissolved) crypto.clearCompanyKeys()
               try { wx.removeStorageSync('e2e_master_key') } catch (_) {}
               try { wx.removeStorageSync('e2e_enabled') } catch (_) {}
               try { wx.removeStorageSync('e2e_advanced') } catch (_) {}
@@ -300,7 +392,7 @@ function createMethods(dependencies) {
               const darkMode = api.getSetting('appDarkMode')
               const privacyAnalytics = api.getSetting('privacy_allowAnalytics')
               const privacyCrash = api.getSetting('privacy_allowCrashReport')
-              const companyInfo = isEmployee ? api.getCompanyInfo() : null
+              const companyInfo = retainCompany ? api.getCompanyInfo() : null
               // 5. 全量清除
               wx.clearStorageSync()
               // 6. 恢复
@@ -316,7 +408,7 @@ function createMethods(dependencies) {
                 showSettingsPage: false,
                 showGuide: true,
                 guideStep: 0,
-                settingsLedgerRole: isEmployee ? 'employee' : 'personal',
+                settingsLedgerRole: retainCompany ? 'employee' : 'personal',
                 encryptionEnabled: false,
                 encryptionAdvancedEnabled: false,
                 encryptionTier: '',

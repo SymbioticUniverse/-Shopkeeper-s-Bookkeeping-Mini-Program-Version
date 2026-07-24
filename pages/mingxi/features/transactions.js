@@ -55,11 +55,13 @@ function createMethods(dependencies) {
         let failed = 0
         for (const item of settleable) {
           try {
+            let result
             if (isPending(item.settleStatus)) {
-              await api.settleConfirm(item.id)
+              result = await api.settleConfirm(item.id)
             } else {
-              await api.settleItem(item.id)
+              result = await api.settleItem(item.id)
             }
+            this._applyEncryptedSettlementActions(item, result && result.clientAutoItems)
           } catch (e) {
             failed++
           }
@@ -177,18 +179,28 @@ function createMethods(dependencies) {
     playTap()
     const { modalItem, modalEdit, modalFrom } = this.data
     if (!modalItem || !modalEdit) return
+    if (modalItem._ownedByMe === false) {
+      wx.showToast({ title: '只能修改自己创建的公司账单', icon: 'none' })
+      return
+    }
     wx.showModal({
       title: '确认保存',
       content: '确定要保存修改吗？',
-      success: (res) => {
+      success: async (res) => {
         if (!res.confirm) return
-        api.updateItem(modalItem.id, { category: modalEdit.category, amount: modalEdit.amount, note: modalEdit.note })
-        const itemsKey = modalFrom === 'settle' ? 'settleItems' : 'detailItems'
-        const updated = this.data[itemsKey].map(item => {
-          if (item.id === modalItem.id) return { ...item, category: modalEdit.category, amount: modalEdit.amount, note: modalEdit.note }
-          return { ...item }
-        })
-        this.setData({ [itemsKey]: updated, detailGroups: this._buildDetailGroups(updated), modalItem: null })
+        try {
+          await api.updateItem(modalItem.id, {
+            category: modalEdit.category,
+            amount: modalEdit.amount,
+            note: modalEdit.note
+          })
+        } catch (e) {
+          wx.showToast({ title: '保存失败，请重试', icon: 'none' })
+          return
+        }
+        this.initDetailItems()
+        this.initSettleItems()
+        this.setData({ modalItem: null })
         this._calcOverviewData()
         wx.showToast({ title: '已保存', icon: 'success' })
       },
@@ -934,6 +946,44 @@ function createMethods(dependencies) {
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
   },
 
+  _applyEncryptedSettlementActions(fallbackSource, actions) {
+    if (!Array.isArray(actions) || !actions.length) return
+
+    const allItems = api.getItemsIncludingVoided('personal')
+      .concat(api.getItemsIncludingVoided('company'))
+
+    actions.forEach(action => {
+      const exactSource = allItems.find(item =>
+        String(item.id) === String(action.sourceId) && Number.isFinite(Number(item.amount))
+      )
+      const source = exactSource || fallbackSource
+      if (!source || !Number.isFinite(Number(source.amount))) {
+        throw new Error('结清记录缺少可解密的源账单')
+      }
+
+      // 确定性 ID 让接口重试、批量操作和断网恢复都不会重复记账。
+      const autoId = `settle:${action.sourceId}:${action.scope}:${action.type}`
+      const targetItems = api.getItemsIncludingVoided(action.scope)
+      if (targetItems.some(item => String(item.id) === autoId)) return
+
+      api.addItem(action.scope, {
+        id: autoId,
+        scope: action.scope,
+        category: source.category || '结清',
+        type: action.type,
+        typeLabel: action.typeLabel,
+        amount: Number(source.amount),
+        date: this._todayDate(),
+        note: '',
+        target: source.target || '',
+        targetType: source.targetType || 'internal',
+        settleStatus: 'settled',
+        settleInfo: `${this._formatSettleTime()} 自动结清`,
+        _autoSettle: true,
+      })
+    })
+  },
+
   onBillSettle(e) {
     playTap()
     const id = e.currentTarget.dataset.id
@@ -998,8 +1048,10 @@ function createMethods(dependencies) {
 
   async _doSettle(found, from, skipRefresh) {
     // 服务端权威：只把应付 id 交给后端，boss/员工分支、镜像、自动记录、通知全在服务端处理
+    let result
     try {
-      await api.settleItem(found.id)
+      result = await api.settleItem(found.id)
+      this._applyEncryptedSettlementActions(found, result && result.clientAutoItems)
     } catch (e) {
       wx.showToast({ title: '发起失败，请重试', icon: 'none' })
       return false
@@ -1041,7 +1093,8 @@ function createMethods(dependencies) {
       success: async (res) => {
         if (!res.confirm) return
         try {
-          await api.settleConfirm(found.id)
+          const result = await api.settleConfirm(found.id)
+          this._applyEncryptedSettlementActions(found, result && result.clientAutoItems)
         } catch (e) {
           wx.showToast({ title: '确认失败，请重试', icon: 'none' })
           return
@@ -1082,19 +1135,29 @@ function createMethods(dependencies) {
     playTap()
     const id = e.currentTarget.dataset.id
     const from = e.currentTarget.dataset.from || 'detail'
+    const itemsKey = from === 'settle' ? 'settleItems' : 'detailItems'
+    const found = this.data[itemsKey].find(item => item.id === id)
+    if (found && found._ownedByMe === false) {
+      wx.showToast({ title: '只能作废自己创建的公司账单', icon: 'none' })
+      return
+    }
     wx.showModal({
       title: '确认作废',
       content: '作废后仍可取消作废，确定吗？',
-      success: (res) => {
+      success: async (res) => {
         if (!res.confirm) return
-        const itemsKey = from === 'settle' ? 'settleItems' : 'detailItems'
-        const found = this.data[itemsKey].find(item => item.id === id)
         // 更新原始记录
-        api.updateItem(id, { _voided: true })
+        const updates = [api.updateItem(id, { _voided: true })]
         // 级联更新镜像记录
         const mirrorId = found && found.linkedId
         if (mirrorId) {
-          api.updateItem(mirrorId, { _voided: true })
+          updates.push(api.updateItem(mirrorId, { _voided: true }))
+        }
+        try {
+          await Promise.all(updates)
+        } catch (e) {
+          wx.showToast({ title: '作废同步失败，请重试', icon: 'none' })
+          return
         }
         const updated = this.data[itemsKey].map(item => {
           if (item.id === id || item.id === mirrorId) return { ...item, _voided: true, _open: false }
@@ -1112,19 +1175,29 @@ function createMethods(dependencies) {
     playTap()
     const id = e.currentTarget.dataset.id
     const from = e.currentTarget.dataset.from || 'detail'
+    const itemsKey = from === 'settle' ? 'settleItems' : 'detailItems'
+    const found = this.data[itemsKey].find(item => item.id === id)
+    if (found && found._ownedByMe === false) {
+      wx.showToast({ title: '只能恢复自己创建的公司账单', icon: 'none' })
+      return
+    }
     wx.showModal({
       title: '取消作废',
       content: '确定要恢复此记录吗？',
-      success: (res) => {
+      success: async (res) => {
         if (!res.confirm) return
-        const itemsKey = from === 'settle' ? 'settleItems' : 'detailItems'
-        const found = this.data[itemsKey].find(item => item.id === id)
         // 更新原始记录
-        api.updateItem(id, { _voided: false })
+        const updates = [api.updateItem(id, { _voided: false })]
         // 级联更新镜像记录
         const mirrorId = found && found.linkedId
         if (mirrorId) {
-          api.updateItem(mirrorId, { _voided: false })
+          updates.push(api.updateItem(mirrorId, { _voided: false }))
+        }
+        try {
+          await Promise.all(updates)
+        } catch (e) {
+          wx.showToast({ title: '恢复同步失败，请重试', icon: 'none' })
+          return
         }
         const updated2 = this.data[itemsKey].map(item => {
           if (item.id === id || item.id === mirrorId) return { ...item, _voided: false, _open: false }

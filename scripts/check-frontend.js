@@ -197,7 +197,33 @@ if (detailContext.data.detailItems.length !== 1 ||
   fail('明细周期筛选或作废记录恢复入口失效')
 }
 
+storage.companyInfo = { companyUid: 'OLD-COMPANY', companyRole: 'boss', companyStatus: 'approved' }
+storage.companyItems = [{ id: 'old-company-item', scope: 'company' }]
+storage.companyCategories = [{ id: 'old-company-category' }]
+storage.auditList = [{ id: 'old-company-audit' }]
+storage.offlineQueue = [
+  {
+    id: 'company-queue',
+    action: 'PUT',
+    path: '/items/old-company-item',
+    data: { _voided: true },
+  },
+  {
+    id: 'personal-queue',
+    action: 'POST',
+    path: '/items',
+    data: { scope: 'personal', item: { id: 'personal-item', scope: 'personal' } },
+  },
+]
+api.removeCompanyInfo()
+if (storage.companyInfo || storage.companyItems || storage.companyCategories || storage.auditList) {
+  fail('退出公司后仍残留旧公司缓存')
+}
+if (!storage.offlineQueue || storage.offlineQueue.length !== 1 || storage.offlineQueue[0].id !== 'personal-queue') {
+  fail('切换公司时没有隔离公司离线队列，或误删了个人离线操作')
+}
+
 console.log(
   `前端完整性检查通过：${registeredMethods.length} 个页面方法，` +
-  `${eventHandlers.size} 个事件绑定，${wxmlFiles.length} 个 WXML 文件，5 组行为回归`
+  `${eventHandlers.size} 个事件绑定，${wxmlFiles.length} 个 WXML 文件，6 组行为回归`
 )

@@ -2,19 +2,34 @@
  * E2E 加密核心模块
  *
  * 加密算法：AES-256-GCM（via vendor/noble-ciphers.js）
- * 密钥恢复：PBKDF2-HMAC-SHA256 从手机号派生 recovery key
- * 高级安全：28 位自保管密钥参与派生（企业用户可选）
+ * 默认恢复：用户自保管 64 位主密钥，服务端无恢复能力
+ * 高级恢复：PBKDF2-HMAC-SHA256（手机号 + 28 位自保管密钥）
  */
 
-// 强制覆盖 setBigUint64：真机原生实现可能只接受 BigInt 不接受 Number
+// WeChat 某些版本实现了 setBigUint64，但只接受 BigInt；noble 传入 Number。
+// 兼容层必须正确写入高低 32 位，不能把高位直接清零。
 if (typeof DataView !== 'undefined') {
+  var _nativeSetBigUint64 = typeof DataView.prototype.setBigUint64 === 'function'
+    ? DataView.prototype.setBigUint64
+    : null
   DataView.prototype.setBigUint64 = function (byteOffset, value, littleEndian) {
+    if (_nativeSetBigUint64 && typeof BigInt === 'function') {
+      return _nativeSetBigUint64.call(
+        this,
+        byteOffset,
+        typeof value === 'bigint' ? value : BigInt(value),
+        littleEndian
+      )
+    }
+    var numeric = Number(value)
+    var high = Math.floor(numeric / 0x100000000)
+    var low = numeric >>> 0
     if (littleEndian) {
-      this.setUint32(byteOffset, Number(value), true)
-      this.setUint32(byteOffset + 4, 0, true)
+      this.setUint32(byteOffset, low, true)
+      this.setUint32(byteOffset + 4, high, true)
     } else {
-      this.setUint32(byteOffset, 0, false)
-      this.setUint32(byteOffset + 4, Number(value), false)
+      this.setUint32(byteOffset, high, false)
+      this.setUint32(byteOffset + 4, low, false)
     }
   }
 }
@@ -31,15 +46,22 @@ function _getEcc() {
 }
 
 // 加密字段列表
-var SENSITIVE_FIELDS = ['amount', 'category', 'note', 'typeLabel', 'target', 'targetType']
+var SENSITIVE_FIELDS = [
+  'amount', 'category', 'note', 'type', 'typeLabel',
+  'date', 'target', 'targetType', 'voucher'
+]
 
 // Storage keys
 var KEY_MASTER = 'e2e_master_key'
+var KEY_OWNER = 'e2e_key_owner'
+var KEY_AUTH_USER = 'authUserId'
 var KEY_ENABLED = 'e2e_enabled'
 var KEY_ADVANCED = 'e2e_advanced'
 var KEY_COMPANY_PRIV = 'e2e_company_private_key'
 var KEY_COMPANY_PUB = 'e2e_company_public_key'
 var KEY_COMPANY_KEY_ID = 'e2e_company_key_id'
+var KEY_BACKUP_PENDING = 'e2e_backup_pending'
+var KEY_REQUIRED = 'e2e_required'
 
 // encrypted_data 类型标记（写在加密前的明文中，加密后不可见）
 var ENC_TYPE_AES_GCM = 0x01   // 个人 AES-256-GCM
@@ -52,6 +74,7 @@ var PBKDF2_KEY_LEN = 32
 // 高级安全密钥长度
 var ADVANCED_KEY_LEN = 28
 var ADVANCED_KEY_CHARSET = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz'
+var MANUAL_KEY_CHECK = 'miniprogram-e2e-key-check-v1'
 
 // ==================== 环境兼容 ====================
 
@@ -90,7 +113,12 @@ function _textDecoder() {
         else if (c < 0xe0) { code = ((c & 0x1f) << 6) | (bytes[i + 1] & 0x3f); len = 2 }
         else if (c < 0xf0) { code = ((c & 0x0f) << 12) | ((bytes[i + 1] & 0x3f) << 6) | (bytes[i + 2] & 0x3f); len = 3 }
         else { code = ((c & 0x07) << 18) | ((bytes[i + 1] & 0x3f) << 12) | ((bytes[i + 2] & 0x3f) << 6) | (bytes[i + 3] & 0x3f); len = 4 }
-        str += String.fromCharCode(code)
+        if (code > 0xffff) {
+          code -= 0x10000
+          str += String.fromCharCode(0xd800 + (code >> 10), 0xdc00 + (code & 0x3ff))
+        } else {
+          str += String.fromCharCode(code)
+        }
         i += len
       }
       return str
@@ -100,16 +128,13 @@ function _textDecoder() {
 
 function _randomBytes(length) {
   var bytes = noble.randomBytes(length)
-  // 安全检查：如果 noble 返回全零（wx.getRandomValues 在某些环境失效），用 Math.random 兜底
+  // 安全检查：密码学随机源异常时必须失败封闭，Math.random 不能用于生成密钥或 IV。
   var allZero = true
   for (var i = 0; i < bytes.length; i++) {
     if (bytes[i] !== 0) { allZero = false; break }
   }
   if (allZero) {
-    console.error('[crypto] noble.randomBytes 返回全零！使用 Math.random 兜底')
-    for (var j = 0; j < length; j++) {
-      bytes[j] = Math.floor(Math.random() * 256)
-    }
+    throw new Error('安全随机数生成失败，请重启小程序后重试')
   }
   return bytes
 }
@@ -176,6 +201,9 @@ function _fromBase64(b64) {
  * hex 字符串 → Uint8Array
  */
 function _hexToBytes(hex) {
+  if (typeof hex !== 'string' || hex.length % 2 !== 0 || !/^[0-9a-fA-F]+$/.test(hex)) {
+    throw new Error('无效的十六进制数据')
+  }
   var bytes = new Uint8Array(hex.length / 2)
   for (var i = 0; i < bytes.length; i++) {
     bytes[i] = parseInt(hex.substr(i * 2, 2), 16)
@@ -205,6 +233,7 @@ function isCompanyBoss() {
 }
 
 function setCompanyPrivateKey(hex) {
+  if (!/^[0-9a-fA-F]{64}$/.test(hex || '')) throw new Error('公司私钥格式无效')
   wx.setStorageSync(KEY_COMPANY_PRIV, hex)
 }
 
@@ -213,6 +242,7 @@ function getCompanyPrivateKey() {
 }
 
 function setCompanyPublicKey(hex, keyId) {
+  if (!/^(02|03)[0-9a-fA-F]{64}$/.test(hex || '')) throw new Error('公司公钥格式无效')
   wx.setStorageSync(KEY_COMPANY_PUB, hex)
   if (keyId) wx.setStorageSync(KEY_COMPANY_KEY_ID, keyId)
 }
@@ -232,6 +262,99 @@ function clearCompanyKeys() {
 
 // ==================== 主密钥管理 ====================
 
+function _normalizeUserId(userId) {
+  if (userId === undefined || userId === null || userId === '') return ''
+  return String(userId)
+}
+
+function getKeyOwner() {
+  return _normalizeUserId(wx.getStorageSync(KEY_OWNER))
+}
+
+function getAuthenticatedUserId() {
+  return _normalizeUserId(wx.getStorageSync(KEY_AUTH_USER))
+}
+
+/**
+ * 清除个人密钥及所有账号级加密标记。
+ * 仅用于明确换号、账号注销或无法确认旧密钥归属的场景。
+ */
+function clearPersonalEncryptionState() {
+  var keys = [
+    KEY_MASTER,
+    KEY_OWNER,
+    KEY_ENABLED,
+    KEY_ADVANCED,
+    KEY_BACKUP_PENDING,
+    KEY_REQUIRED,
+    'e2e_advanced_downgraded'
+  ]
+  for (var i = 0; i < keys.length; i++) {
+    try { wx.removeStorageSync(keys[i]) } catch (e) {}
+  }
+}
+
+/**
+ * 登录成功后切换本地加密上下文。
+ *
+ * 已有 owner 与新账号不一致时必须清钥；旧版无 owner 的密钥只有在本地已
+ * 记录同一 authUserId 时才能迁移绑定，否则无法证明归属，按失败封闭处理。
+ */
+function activateAccount(userId, options) {
+  var nextUserId = _normalizeUserId(userId)
+  if (!nextUserId) throw new Error('登录响应缺少用户标识，已阻止加密初始化')
+
+  var verifiedBootstrap = !!(options && options.verifiedBootstrap)
+  var previousUserId = getAuthenticatedUserId()
+  var owner = getKeyOwner()
+  var hasMasterKey = !!wx.getStorageSync(KEY_MASTER)
+  var accountChanged = !!previousUserId && previousUserId !== nextUserId
+  var ownerMismatch = !!owner && owner !== nextUserId
+  var unownedKeyIsAmbiguous = hasMasterKey && !owner &&
+    previousUserId !== nextUserId && !verifiedBootstrap
+
+  if (ownerMismatch || unownedKeyIsAmbiguous) {
+    clearPersonalEncryptionState()
+    hasMasterKey = false
+    owner = ''
+  }
+  if (accountChanged || ownerMismatch || unownedKeyIsAmbiguous) {
+    clearCompanyKeys()
+  }
+
+  wx.setStorageSync(KEY_AUTH_USER, nextUserId)
+
+  // 兼容已经记录 authUserId、但尚未补 owner 标记的过渡版本。
+  if (hasMasterKey && !owner && (previousUserId === nextUserId || verifiedBootstrap)) {
+    wx.setStorageSync(KEY_OWNER, nextUserId)
+  }
+
+  return {
+    userId: nextUserId,
+    accountChanged: accountChanged || ownerMismatch || unownedKeyIsAmbiguous,
+    hasOwnedKey: !!wx.getStorageSync(KEY_MASTER) && getKeyOwner() === nextUserId
+  }
+}
+
+function isKeyOwnedByCurrentUser() {
+  var owner = getKeyOwner()
+  var currentUserId = getAuthenticatedUserId()
+  return !!owner && !!currentUserId && owner === currentUserId
+}
+
+/**
+ * 页面初始化入口使用的失败封闭检查。
+ * 无主密钥时允许进入恢复/首次生成流程；一旦存在主密钥，必须有匹配 owner。
+ */
+function assertAccountKeyOwnership() {
+  var currentUserId = getAuthenticatedUserId()
+  if (!currentUserId) throw new Error('未确认当前账号，已阻止加密初始化')
+  if (wx.getStorageSync(KEY_MASTER) && !isKeyOwnedByCurrentUser()) {
+    throw new Error('本地加密密钥不属于当前账号，已阻止使用')
+  }
+  return true
+}
+
 /**
  * 生成 256-bit 随机主密钥 (hex)
  */
@@ -243,14 +366,20 @@ function generateMasterKey() {
  * 获取本地存储的主密钥
  */
 function _getMasterKey() {
-  return wx.getStorageSync(KEY_MASTER) || null
+  var key = wx.getStorageSync(KEY_MASTER) || null
+  if (!key) return null
+  // 所有加解密和导出路径统一从这里取钥，账号不匹配时一律不可见。
+  return isKeyOwnedByCurrentUser() ? key : null
 }
 
 /**
  * 保存主密钥到本地
  */
 function _setMasterKey(hexKey) {
+  var currentUserId = getAuthenticatedUserId()
+  if (!currentUserId) throw new Error('未确认当前账号，禁止保存加密密钥')
   wx.setStorageSync(KEY_MASTER, hexKey)
+  wx.setStorageSync(KEY_OWNER, currentUserId)
   // 验证写入
   var verify = wx.getStorageSync(KEY_MASTER)
   if (verify !== hexKey) {
@@ -300,14 +429,16 @@ function _aesGcmDecrypt(base64Cipher, key) {
  * 敏感字段替换为 '[encrypted]'
  */
 function encryptItem(item) {
-  // 企业 scope：员工用 ECIES 公钥加密（没有私钥 = 非老板）
+  assertAccountKeyOwnership()
+  if (wx.getStorageSync(KEY_BACKUP_PENDING)) {
+    throw new Error('加密账户标记尚未安全写入云端')
+  }
+
+  // 企业 scope 统一用公司公钥加密；老板和员工必须使用同一种公司密钥体系。
   if (item.scope === 'company') {
     var cPub = getCompanyPublicKey()
-    var cPriv = getCompanyPrivateKey()
-    if (cPub && !cPriv) {
-      return companyEncryptItem(item, cPub.key)
-    }
-    // 老板有私钥 → 走 AES-GCM（和 personal 一样）
+    if (!cPub) throw new Error('公司加密公钥未就绪')
+    return companyEncryptItem(item, cPub.key)
   }
 
   var key = _getMasterKey()
@@ -324,6 +455,9 @@ function encryptItem(item) {
 
   // 添加类型标记（0x01 = AES-GCM）
   sensitive['_enc_type'] = ENC_TYPE_AES_GCM
+  sensitive['_bound_id'] = String(item.id)
+  sensitive['_bound_scope'] = item.scope || 'personal'
+  sensitive['_operation_kind'] = _operationKindFor(item)
 
   var plainBytes = _textEncoder().encode(JSON.stringify(sensitive))
   var encrypted = _aesGcmEncrypt(plainBytes, keyBytes)
@@ -342,7 +476,16 @@ function encryptItem(item) {
     }
   }
   result.encrypted_data = encrypted
+  delete result.encryptedData
+  result._operationKind = _operationKindFor(item)
+  result._encryptionVersion = 1
   return result
+}
+
+function _operationKindFor(item) {
+  if (item && item.typeLabel === '垫付') return 'advance'
+  if (item && item.typeLabel === '应付') return 'payable'
+  return 'normal'
 }
 
 /**
@@ -351,6 +494,7 @@ function encryptItem(item) {
  * @param {string} publicKeyHex — 公司公钥 hex
  */
 function companyEncryptItem(item, publicKeyHex) {
+  assertAccountKeyOwnership()
   var pubBytes = _hexToBytes(publicKeyHex)
   var sensitive = {}
   for (var i = 0; i < SENSITIVE_FIELDS.length; i++) {
@@ -361,6 +505,9 @@ function companyEncryptItem(item, publicKeyHex) {
   }
   // 添加类型标记（0x02 = ECIES）
   sensitive['_enc_type'] = ENC_TYPE_ECIES
+  sensitive['_bound_id'] = String(item.id)
+  sensitive['_bound_scope'] = item.scope || 'company'
+  sensitive['_operation_kind'] = _operationKindFor(item)
 
   var ecc = _getEcc()
   if (!ecc) throw new Error('ECC 加密模块未加载')
@@ -379,6 +526,9 @@ function companyEncryptItem(item, publicKeyHex) {
     }
   }
   result.encrypted_data = encrypted
+  delete result.encryptedData
+  result._operationKind = _operationKindFor(item)
+  result._encryptionVersion = 1
   return result
 }
 
@@ -390,6 +540,12 @@ function companyEncryptItem(item, publicKeyHex) {
 function decryptItem(item) {
   var encrypted = item.encrypted_data || item.encryptedData
   if (!encrypted) return item
+  try {
+    assertAccountKeyOwnership()
+  } catch (e) {
+    console.warn('[crypto] 账号密钥上下文无效，保持密文')
+    return item
+  }
 
   // 方案：先尝试 AES-GCM（覆盖个人+老板自己），失败再试 ECIES
   var masterKey = _getMasterKey()
@@ -398,8 +554,8 @@ function decryptItem(item) {
       var keyBytes = _hexToBytes(masterKey)
       var decrypted = _aesGcmDecrypt(encrypted, keyBytes)
       var sensitive = JSON.parse(_textDecoder().decode(decrypted))
-      // 移除内部 _enc_type 标记
-      delete sensitive._enc_type
+      _validateDecryptedBinding(item, sensitive)
+      _removeInternalFields(sensitive)
       return _applyDecryptedFields(item, sensitive)
     } catch (e) {
       // AES-GCM 解密失败 → 可能是 ECIES 格式，继续往下
@@ -438,6 +594,32 @@ function _applyDecryptedFields(item, sensitive) {
   return result
 }
 
+function _validateDecryptedBinding(item, sensitive) {
+  // 旧版密文没有绑定信息，继续兼容读取；新版必须防止服务端交换账单密文、
+  // 修改 scope 或篡改结算操作类型。
+  if (sensitive._bound_id !== undefined && String(item.id) !== String(sensitive._bound_id)) {
+    throw new Error('密文与账单 ID 不匹配')
+  }
+  if (sensitive._bound_scope !== undefined && String(item.scope) !== String(sensitive._bound_scope)) {
+    throw new Error('密文与账本范围不匹配')
+  }
+  var publicKind = item._operationKind || item.operation_kind
+  if (
+    sensitive._operation_kind !== undefined
+    && publicKind
+    && publicKind !== sensitive._operation_kind
+  ) {
+    throw new Error('密文结算类型校验失败')
+  }
+}
+
+function _removeInternalFields(sensitive) {
+  delete sensitive._enc_type
+  delete sensitive._bound_id
+  delete sensitive._bound_scope
+  delete sensitive._operation_kind
+}
+
 /**
  * ECIES 私钥解密单个 item（老板读员工账时调用）
  * @param {object} item
@@ -446,6 +628,7 @@ function _applyDecryptedFields(item, sensitive) {
 function companyDecryptItem(item, privateKeyHex) {
   var encrypted = item.encrypted_data || item.encryptedData
   if (!encrypted) return item
+  assertAccountKeyOwnership()
 
   var ecc = _getEcc()
   if (!ecc) throw new Error('ECC 加密模块未加载')
@@ -454,19 +637,19 @@ function companyDecryptItem(item, privateKeyHex) {
   var blobBytes = _fromBase64(encrypted)
   var decrypted = ecc.eciesDecrypt(blobBytes, privBytes)
   var sensitive = JSON.parse(_textDecoder().decode(decrypted))
-  // 移除内部 _enc_type 标记
-  delete sensitive._enc_type
+  _validateDecryptedBinding(item, sensitive)
+  _removeInternalFields(sensitive)
   return _applyDecryptedFields(item, sensitive)
 }
 
 // ==================== 状态查询 ====================
 
 function isEncryptionEnabled() {
-  return !!wx.getStorageSync(KEY_ENABLED)
+  return !!wx.getStorageSync(KEY_ENABLED) && isKeyOwnedByCurrentUser()
 }
 
 function isAdvancedSecurityEnabled() {
-  return !!wx.getStorageSync(KEY_ADVANCED)
+  return isEncryptionEnabled() && !!wx.getStorageSync(KEY_ADVANCED)
 }
 
 // ==================== 密钥派生 & 恢复 ====================
@@ -505,24 +688,48 @@ function _deriveRecoveryKey(phoneNumber, extraKey, salt) {
 }
 
 /**
- * 启用加密（默认模式）
- * 1. 生成主密钥
- * 2. 从手机号派生 recovery key
- * 3. 用 recovery key 加密主密钥
- * 4. 存储主密钥到本地
- * 5. 返回 { encryptedBlob, salt } 供上传服务端
+ * 创建不可恢复的云端标记。
+ *
+ * 默认模式不能再用服务端已知的手机号包装主密钥，否则服务端同时持有
+ * 手机号、salt 和 blob，并不是真正的端到端加密。这里用一次性随机密钥
+ * 包装主密钥后立即丢弃该密钥；换设备必须导入用户保存的 64 位主密钥。
  */
-function setupEncryption(phoneNumber) {
+function createManualBackup() {
+  var masterKey = _getMasterKey()
+  if (!masterKey) throw new Error('主密钥丢失')
+  var blob = _aesGcmEncrypt(_textEncoder().encode(MANUAL_KEY_CHECK), _hexToBytes(masterKey))
+  wx.setStorageSync(KEY_BACKUP_PENDING, true)
+  return {
+    encryptedBlob: blob,
+    salt: _bytesToHex(_randomBytes(16)),
+    tier: 'manual'
+  }
+}
+
+/** 用云端校验密文验证用户导入的主密钥，验证通过后才写入本地。 */
+function verifyAndImportMasterKey(hex, encryptedBlob) {
+  if (!/^[0-9a-fA-F]{64}$/.test(hex || '') || !encryptedBlob) {
+    throw new Error('恢复密钥格式不正确')
+  }
+  var plain
+  try {
+    plain = _textDecoder().decode(_aesGcmDecrypt(encryptedBlob, _hexToBytes(hex)))
+  } catch (e) {
+    throw new Error('恢复密钥不正确')
+  }
+  if (plain !== MANUAL_KEY_CHECK) throw new Error('恢复密钥不正确')
+  importMasterKey(hex)
+  return true
+}
+
+/** 启用默认加密：主密钥只保存在客户端，服务端仅存不可恢复标记。 */
+function setupEncryption() {
   var masterKey = generateMasterKey()
   _setMasterKey(masterKey)
   wx.setStorageSync(KEY_ENABLED, true)
-
-  var recovery = _deriveRecoveryKey(phoneNumber, null, null)
-  var recoveryKeyBytes = _hexToBytes(recovery.key)
-  var masterBytes = _hexToBytes(masterKey)
-  var blob = _aesGcmEncrypt(masterBytes, recoveryKeyBytes)
-
-  return { encryptedBlob: blob, salt: recovery.salt, tier: 'personal' }
+  wx.setStorageSync(KEY_REQUIRED, true)
+  wx.setStorageSync(KEY_ADVANCED, false)
+  return createManualBackup()
 }
 
 /**
@@ -554,31 +761,32 @@ function enableAdvancedSecurity(phoneNumber, advancedKey) {
  * 关闭高级安全，切回默认模式
  * 注意：纯计算函数，不修改本地状态。调用方应在上传成功后手动设置 e2e_advanced=false。
  */
-function disableAdvancedSecurity(phoneNumber, advancedKey) {
+function disableAdvancedSecurity(phoneNumber, advancedKey, encryptedBlob, salt) {
   if (!isEncryptionEnabled()) throw new Error('加密未启用')
   if (!advancedKey || advancedKey.length !== ADVANCED_KEY_LEN) {
     throw new Error('密钥格式不正确')
   }
 
-  // 先用高级安全模式验证当前 blob 可解密（验证密钥正确性）
+  if (!encryptedBlob || !salt) throw new Error('缺少高级安全备份，无法验证密钥')
+
+  // 必须解密服务端现有高级 blob，并与本地主密钥常量时间比对。
   var masterKey = _getMasterKey()
-  var recovery = _deriveRecoveryKey(phoneNumber, advancedKey, null)
+  if (!masterKey) throw new Error('主密钥丢失')
+  var recovery = _deriveRecoveryKey(phoneNumber, advancedKey, salt)
   var recoveryKeyBytes = _hexToBytes(recovery.key)
   var masterBytes = _hexToBytes(masterKey)
-  var testBlob = _aesGcmEncrypt(masterBytes, recoveryKeyBytes)
-
+  var recovered
   try {
-    _aesGcmDecrypt(testBlob, recoveryKeyBytes)
+    recovered = _aesGcmDecrypt(encryptedBlob, recoveryKeyBytes)
   } catch (e) {
     throw new Error('密钥验证失败')
   }
+  if (recovered.length !== masterBytes.length) throw new Error('密钥验证失败')
+  var mismatch = 0
+  for (var i = 0; i < masterBytes.length; i++) mismatch |= recovered[i] ^ masterBytes[i]
+  if (mismatch !== 0) throw new Error('密钥验证失败')
 
-  // 重新用纯手机号派生并加密
-  var newRecovery = _deriveRecoveryKey(phoneNumber, null, null)
-  var newRecoveryBytes = _hexToBytes(newRecovery.key)
-  var newBlob = _aesGcmEncrypt(masterBytes, newRecoveryBytes)
-
-  return { encryptedBlob: newBlob, salt: newRecovery.salt, tier: 'personal' }
+  return createManualBackup()
 }
 
 /**
@@ -588,15 +796,7 @@ function disableAdvancedSecurity(phoneNumber, advancedKey) {
  * 手动清除 e2e_advanced 标记并更新 UI。
  */
 function downgradeToPersonal(phoneNumber) {
-  var masterKey = _getMasterKey()
-  if (!masterKey) throw new Error('主密钥丢失')
-
-  var recovery = _deriveRecoveryKey(phoneNumber, null, null)
-  var recoveryKeyBytes = _hexToBytes(recovery.key)
-  var masterBytes = _hexToBytes(masterKey)
-  var blob = _aesGcmEncrypt(masterBytes, recoveryKeyBytes)
-
-  return { encryptedBlob: blob, salt: recovery.salt, tier: 'personal' }
+  return createManualBackup()
 }
 
 /**
@@ -611,6 +811,7 @@ function recoverMasterKey(phoneNumber, encryptedBlob, salt) {
     var masterKey = _bytesToHex(masterBytes)
     _setMasterKey(masterKey)
     wx.setStorageSync(KEY_ENABLED, true)
+    wx.setStorageSync(KEY_REQUIRED, true)
     wx.setStorageSync(KEY_ADVANCED, false)
     return true
   } catch (e) {
@@ -631,6 +832,7 @@ function recoverMasterKeyAdvanced(phoneNumber, advancedKey, encryptedBlob, salt)
     var masterKey = _bytesToHex(masterBytes)
     _setMasterKey(masterKey)
     wx.setStorageSync(KEY_ENABLED, true)
+    wx.setStorageSync(KEY_REQUIRED, true)
     wx.setStorageSync(KEY_ADVANCED, true)
     return true
   } catch (e) {
@@ -666,11 +868,12 @@ function exportMasterKey() {
 }
 
 function importMasterKey(hex) {
-  if (!hex || hex.length !== 64) {
+  if (!/^[0-9a-fA-F]{64}$/.test(hex || '')) {
     throw new Error('密钥格式不正确（需64位 hex）')
   }
   _setMasterKey(hex)
   wx.setStorageSync(KEY_ENABLED, true)
+  wx.setStorageSync(KEY_REQUIRED, true)
   return true
 }
 
@@ -706,7 +909,10 @@ function uploadKeyBlob(encryptedBlob, salt, tier) {
       },
       data: { encrypted_blob: encryptedBlob, salt: salt, tier: tier || 'personal' },
       success: function (res) {
-        if (res.statusCode === 200) resolve(res.data)
+        if (res.statusCode === 200) {
+          wx.removeStorageSync(KEY_BACKUP_PENDING)
+          resolve(res.data)
+        }
         else reject(new Error('上传密钥失败: ' + res.statusCode))
       },
       fail: function (err) { reject(err) }
@@ -754,6 +960,12 @@ module.exports = {
   // 状态
   isEncryptionEnabled: isEncryptionEnabled,
   isAdvancedSecurityEnabled: isAdvancedSecurityEnabled,
+  getKeyOwner: getKeyOwner,
+  getAuthenticatedUserId: getAuthenticatedUserId,
+  isKeyOwnedByCurrentUser: isKeyOwnedByCurrentUser,
+  assertAccountKeyOwnership: assertAccountKeyOwnership,
+  activateAccount: activateAccount,
+  clearPersonalEncryptionState: clearPersonalEncryptionState,
 
   // 公司密钥
   hasCompanyKeys: hasCompanyKeys,
@@ -766,6 +978,8 @@ module.exports = {
 
   // 密钥派生 & 恢复
   setupEncryption: setupEncryption,
+  createManualBackup: createManualBackup,
+  verifyAndImportMasterKey: verifyAndImportMasterKey,
   enableAdvancedSecurity: enableAdvancedSecurity,
   disableAdvancedSecurity: disableAdvancedSecurity,
   recoverMasterKey: recoverMasterKey,

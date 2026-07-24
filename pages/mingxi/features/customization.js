@@ -46,7 +46,7 @@ function createMethods(dependencies) {
     this.setData({ catModalEmoji: e.currentTarget.dataset.emoji })
   },
 
-  onCatModalConfirm() {
+  async onCatModalConfirm() {
     playTap()
     const { catModalScope, catModalName, catModalEmoji } = this.data
     const name = catModalName.trim()
@@ -69,11 +69,9 @@ function createMethods(dependencies) {
       inOut: currentTab,
     }
     const newList = [...list, newItem]
-    this.setData({
-      [key]: newList,
-      showCatModal: false,
-    })
-    api.saveCategories(catModalScope, newList)
+    const result = await api.saveCategories(catModalScope, newList)
+    if (result && result.failed) return
+    this.setData({ [key]: newList, showCatModal: false })
     wx.showToast({ title: '已添加', icon: 'success' })
   },
 
@@ -84,12 +82,13 @@ function createMethods(dependencies) {
     wx.showModal({
       title: '删除分类',
       content: '确定删除此分类吗？',
-      success(res) {
+      async success(res) {
         if (!res.confirm) return
         const key = scope === 'personal' ? 'personalCategories' : 'companyCategories'
         const updated = that.data[key].filter(item => item.id !== id)
+        const result = await api.saveCategories(scope, updated)
+        if (result && result.failed) return
         that.setData({ [key]: updated })
-        api.saveCategories(scope, updated)
         wx.showToast({ title: '已删除', icon: 'success' })
       },
     })

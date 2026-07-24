@@ -150,6 +150,7 @@ function createMethods(dependencies) {
     const su = api.getUserInfo()
     if (su) this.setData({ userInfo: su })
     this._refreshAvatarDisplay(su)
+    this._syncCompanyDisplayData()
     // 静默刷新 VIP 状态
     api.getVipStatus().then(function (s) { this.setData({ vipStatus: s, vipTrialDays: this._computeTrialDays(s), vipExpiresText: this._formatVipExpiry(s) }); this._checkEncryptionTierAlignment() }.bind(this)).catch(function () {})
     // 公司可见性可能因云端同步到的 companyInfo 改变 → 仅变化时重建简览卡（避免每次重绘图表）
@@ -232,19 +233,20 @@ function createMethods(dependencies) {
       })
       await api.resolveConflicts(resolutions)
       wx.showToast({ title: '冲突已解决', icon: 'success' })
+      this.setData({
+        showConflictPanel: false,
+        conflicts: [],
+        conflictIndex: 0,
+        conflictResolving: false
+      })
+      // 刷新数据
+      this.initDetailItems()
+      this.initSettleItems()
+      this._syncOverviewCards()
     } catch (e) {
+      this.setData({ conflictResolving: false })
       wx.showToast({ title: '同步失败，请重试', icon: 'none' })
     }
-    this.setData({
-      showConflictPanel: false,
-      conflicts: [],
-      conflictIndex: 0,
-      conflictResolving: false
-    })
-    // 刷新数据
-    this.initDetailItems()
-    this.initSettleItems()
-    this._syncOverviewCards()
   },
 
   // ---- 资料设置（昵称/头像）+ 头像显示 ----
