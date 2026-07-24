@@ -553,7 +553,14 @@ function decryptItem(item) {
     try {
       var keyBytes = _hexToBytes(masterKey)
       var decrypted = _aesGcmDecrypt(encrypted, keyBytes)
-      var sensitive = JSON.parse(_textDecoder().decode(decrypted))
+      var decoded = _textDecoder().decode(decrypted)
+      var sensitive
+      try {
+        sensitive = JSON.parse(decoded)
+      } catch (parseErr) {
+        console.warn('[crypto] 解密成功但 JSON 解析失败:', parseErr.message)
+        return item
+      }
       _validateDecryptedBinding(item, sensitive)
       _removeInternalFields(sensitive)
       return _applyDecryptedFields(item, sensitive)

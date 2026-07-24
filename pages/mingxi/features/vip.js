@@ -19,11 +19,11 @@ function createMethods(dependencies) {
       var trialDays = that._computeTrialDays(status)
       var offerDays = Math.ceil((new Date('2026-09-25T23:59:59+08:00') - new Date()) / 86400000)
       if (offerDays < 0) offerDays = 0
-      that.setData({ showVipPage: true, vipDetailId: -1, vipSelected: -1, vipEnterpriseSeats: 4, vipStatus: status, showTrialBanner: isFree, vipTrialDays: trialDays, trialOfferDays: offerDays, vipExpiresText: that._formatVipExpiry(status) })
+      that.setData({ showVipPage: true, vipDetailId: -1, vipSelected: -1, vipEnterpriseSeats: 4, vipStatus: status, showTrialBanner: isFree && offerDays > 0, vipTrialDays: trialDays, trialOfferDays: offerDays, vipExpiresText: that._formatVipExpiry(status) })
     }).catch(function () {
       var offerDays = Math.ceil((new Date('2026-09-25T23:59:59+08:00') - new Date()) / 86400000)
       if (offerDays < 0) offerDays = 0
-      that.setData({ showVipPage: true, vipDetailId: -1, vipSelected: -1, vipEnterpriseSeats: 4, showTrialBanner: true, vipTrialDays: 0, trialOfferDays: offerDays })
+      that.setData({ showVipPage: true, vipDetailId: -1, vipSelected: -1, vipEnterpriseSeats: 4, showTrialBanner: offerDays > 0, vipTrialDays: 0, trialOfferDays: offerDays })
     })
   },
 

@@ -239,8 +239,10 @@ function createMethods(dependencies) {
           wx.showToast({ title: '登录成功（开发模式）', icon: 'success' })
           // 登录后立即确保主密钥存在且有效，完成后再同步
           that._ensureCryptoReady().then(function () {
-          that._initCrypto().then(function () {
-          api.syncFromCloud().then(function(syncResult) {
+            return that._initCrypto()
+          }).then(function () {
+            return api.syncFromCloud()
+          }).then(function(syncResult) {
             if (syncResult && syncResult.hasConflicts) { that._handleSyncResult(syncResult); return }
             that.initDetailItems()
             that._syncOverviewCards()
@@ -250,8 +252,8 @@ function createMethods(dependencies) {
             api.getVipStatus().then(function(s) { that.setData({ vipStatus: s, vipTrialDays: that._computeTrialDays(s), vipExpiresText: that._formatVipExpiry(s) }); that._checkEncryptionTierAlignment() }).catch(function() {})
             that.updateNotifyBadge()
             that.updateAuditBadge()
-          })
-          })
+          }).catch(function(err) {
+            console.error('[登录] 加密/同步失败:', err)
           })
         }).catch(function(err) {
           console.error('[微信登录] 开发模式登录失败:', JSON.stringify(err))
@@ -298,8 +300,10 @@ function createMethods(dependencies) {
           wx.showToast({ title: '登录成功', icon: 'success' })
           // 登录后立即确保主密钥存在且有效（非全零），完成后再同步
           that._ensureCryptoReady().then(function () {
-          that._initCrypto().then(function () {
-            api.syncFromCloud().then(function(syncResult) {
+            return that._initCrypto()
+          }).then(function () {
+            return api.syncFromCloud()
+          }).then(function(syncResult) {
             if (syncResult && syncResult.hasConflicts) { that._handleSyncResult(syncResult); return }
             that.initDetailItems()
             that._syncOverviewCards()
@@ -309,8 +313,8 @@ function createMethods(dependencies) {
             api.getVipStatus().then(function(s) { that.setData({ vipStatus: s, vipTrialDays: that._computeTrialDays(s), vipExpiresText: that._formatVipExpiry(s) }); that._checkEncryptionTierAlignment() }).catch(function() {})
             that.updateNotifyBadge()
             that.updateAuditBadge()
-          })
-          })
+          }).catch(function(err) {
+            console.error('[登录] 加密/同步失败:', err)
           })
         }).catch(function(err) {
           console.error('[微信手机号] 登录请求失败:', JSON.stringify(err))

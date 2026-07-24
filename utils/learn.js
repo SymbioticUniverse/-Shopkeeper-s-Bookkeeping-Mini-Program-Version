@@ -203,7 +203,7 @@ function _flushUpload() {
     fail: function (err) {
       // 失败时放回队列
       LEARN_QUEUE = batch.concat(LEARN_QUEUE)
-      if (LEARN_QUEUE.length > 200) { LEARN_QUEUE = LEARN_QUEUE.slice(-100) }
+      if (LEARN_QUEUE.length > 200) { LEARN_QUEUE = LEARN_QUEUE.slice(0, 100) }
     }
   })
 }
