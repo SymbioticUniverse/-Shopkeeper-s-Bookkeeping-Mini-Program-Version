@@ -185,13 +185,22 @@ function createMethods(dependencies) {
     playTap()
     const { id } = e.currentTarget.dataset
     const list = this.data.auditList.map(item => item.id === id ? { ...item, status: 'approved' } : item)
-    const result = await api.saveAuditList(list)
-    if (result && result.failed) return
+    try {
+      const result = await api.saveAuditList(list)
+      if (result && result.failed) return
+    } catch (e) {
+      wx.showToast({ title: '操作失败，请重试', icon: 'none' })
+      return
+    }
     this.setData({ auditList: list })
     this.updateAuditBadge()
     const notifyList = api.getNotifyList()
-    notifyList.unshift({ id: api.generateId(), text: '审核通过加入公司', time: new Date().toLocaleDateString(), read: false })
-    await api.saveNotifyList(notifyList)
+    notifyList.unshift({ id: api.generateId(), text: '审核通过加入公司', time: new Date().toISOString(), read: false })
+    try {
+      await api.saveNotifyList(notifyList)
+    } catch (e) {
+      // 通知写入失败不阻塞主流程
+    }
     this.updateNotifyBadge()
     wx.showToast({ title: '已通过', icon: 'success' })
   },
@@ -200,8 +209,13 @@ function createMethods(dependencies) {
     playTap()
     const { id } = e.currentTarget.dataset
     const list = this.data.auditList.map(item => item.id === id ? { ...item, status: 'rejected' } : item)
-    const result = await api.saveAuditList(list)
-    if (result && result.failed) return
+    try {
+      const result = await api.saveAuditList(list)
+      if (result && result.failed) return
+    } catch (e) {
+      wx.showToast({ title: '操作失败，请重试', icon: 'none' })
+      return
+    }
     this.setData({ auditList: list })
     this.updateAuditBadge()
     wx.showToast({ title: '已拒绝', icon: 'none' })
@@ -577,8 +591,13 @@ function createMethods(dependencies) {
     // 存储反馈
     const feedbackList = api.getFeedbackList()
     feedbackList.unshift({ id: api.generateId(), text, time: new Date().toLocaleString() })
-    const result = await api.saveFeedbackList(feedbackList)
-    if (result && result.failed) return
+    try {
+      const result = await api.saveFeedbackList(feedbackList)
+      if (result && result.failed) return
+    } catch (e) {
+      wx.showToast({ title: '提交失败，请重试', icon: 'none' })
+      return
+    }
     wx.showToast({ title: '感谢您的反馈！', icon: 'success' })
     this.setData({ contactFeedback: '' })
   },

@@ -876,7 +876,7 @@
             </view>
             <view class="my-item-body">
               <text class="my-item-title {{vipStatus && vipStatus.vipLevel > 0 ? 'my-item-title--vip' : ''}}">{{vipStatus && vipStatus.vipLevel > 0 ? vipCards[vipStatus.vipLevel - 1].name : t.vip_title}}</text>
-              <text class="my-item-sub" wx:if="{{!vipStatus || vipStatus.vipLevel === 0}}">{{vipStatus ? '' + vipStatus.usage.asr + '/' + vipStatus.limits.asr + ' · 导出 ' + vipStatus.usage.export + '/' + vipStatus.limits.export : t.vip_sub}}</text>
+              <text class="my-item-sub" wx:if="{{!vipStatus || vipStatus.vipLevel === 0}}">{{vipStatus && vipStatus.usage ? '' + vipStatus.usage.asr + '/' + vipStatus.limits.asr + ' · 导出 ' + vipStatus.usage.export + '/' + vipStatus.limits.export : t.vip_sub}}</text>
               <view class="my-item-vip-expire" wx:else>
                 <text class="my-item-vip-expire-text">{{vipExpiresText}}</text>
                 <text class="my-item-vip-expire-days" wx:if="{{vipTrialDays > 0}}">剩 {{vipTrialDays}} 天</text>
