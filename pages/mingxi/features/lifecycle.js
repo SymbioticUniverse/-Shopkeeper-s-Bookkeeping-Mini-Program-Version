@@ -719,6 +719,15 @@ function createMethods(dependencies) {
     }
   },
 
+  /** 浮层关闭后重绘报表图表（wx:if 销毁 canvas 后需重建） */
+  _afterOverlayClose() {
+    if (this.data.currentTab !== 1) return
+    var self = this
+    setTimeout(function () {
+      if (self.data.currentTab === 1) self._refreshReport()
+    }, 350)
+  },
+
   // ---- Canvas 折线图 ----
   // 从真实记账数据聚合图表数据
   _aggregateChartData(optScope) {

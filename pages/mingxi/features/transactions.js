@@ -929,6 +929,7 @@ function createMethods(dependencies) {
   onModalClose() {
     playTap()
     this.setData({ modalItem: null })
+    this._afterOverlayClose()
   },
 
   _formatSettleTime() {

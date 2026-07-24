@@ -13,7 +13,7 @@ function createMethods(dependencies) {
   return {
   drawStockChart(ctx, w, h, chartData, selectedIdx) {
     const dk = this.data.isDarkMode
-    const C = { bg: dk ? '#1e1e2e' : '#fff', text: '#a0a0a0', grid: dk ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)', border: dk ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.15)', line: dk ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.7)', dot: dk ? '#ccc' : '#333', tipBg: dk ? 'rgba(30,30,46,0.96)' : 'rgba(255,255,255,0.96)', sep: dk ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)' }
+    const C = { bg: dk ? '#1e1e2e' : '#fff', text: '#a0a0a0', grid: dk ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)', border: dk ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.15)', line: dk ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.7)', dot: dk ? '#ccc' : '#333', tipBg: dk ? 'rgba(30,30,46,0.96)' : 'rgba(255,255,255,0.96)', sep: dk ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)', incomeBar: dk ? '#f87171' : '#ef4444', expenseBar: dk ? '#d4d4d8' : '#333333' }
     // Background
     ctx.fillStyle = C.bg
     ctx.fillRect(0, 0, w, h)
@@ -97,10 +97,10 @@ function createMethods(dependencies) {
       const gH = Math.max(2, totalH * ratio)
       const rH = Math.max(2, totalH - gH)
 
-      ctx.fillStyle = '#ef4444'
+      ctx.fillStyle = C.incomeBar
       ctx.fillRect(cx - blockW / 2, fy - gH, blockW, gH)
 
-      ctx.fillStyle = '#333333'
+      ctx.fillStyle = C.expenseBar
       ctx.fillRect(cx - blockW / 2, fy, blockW, rH)
 
       ctx.fillStyle = C.dot
@@ -111,14 +111,14 @@ function createMethods(dependencies) {
 
     // Legend
     const lx = ml, ly = 10
-    ctx.fillStyle = '#ef4444'
+    ctx.fillStyle = C.incomeBar
     ctx.fillRect(lx, ly, 8, 8)
     ctx.fillStyle = C.text
     ctx.font = '10px sans-serif'
     ctx.textAlign = 'left'
     ctx.fillText('收入', lx + 12, ly + 8)
 
-    ctx.fillStyle = '#333333'
+    ctx.fillStyle = C.expenseBar
     ctx.fillRect(lx + 52, ly, 8, 8)
     ctx.fillText('支出', lx + 64, ly + 8)
 
@@ -167,7 +167,7 @@ function createMethods(dependencies) {
       ctx.textAlign = 'left'
 
       // Net value (prominent)
-      const netColor = pt.net >= 0 ? '#ef4444' : '#333333'
+      const netColor = pt.net >= 0 ? C.incomeBar : C.expenseBar
       ctx.fillStyle = C.text
       ctx.fillText('净值', tipX + 8, tipY + 14)
       ctx.fillStyle = netColor
@@ -181,10 +181,10 @@ function createMethods(dependencies) {
       ctx.beginPath(); ctx.moveTo(tipX + 8, tipY + 20); ctx.lineTo(tipX + tipW - 8, tipY + 20); ctx.stroke()
 
       const rows = [
-        { label: '收入', val: pt.income, color: '#ef4444' },
-        { label: '支出', val: pt.expense, color: '#333333' },
-        { label: '应收', val: pt.receivable, color: '#ef4444' },
-        { label: '应付', val: pt.payable, color: '#333333' },
+        { label: '收入', val: pt.income, color: C.incomeBar },
+        { label: '支出', val: pt.expense, color: C.expenseBar },
+        { label: '应收', val: pt.receivable, color: C.incomeBar },
+        { label: '应付', val: pt.payable, color: C.expenseBar },
       ]
       rows.forEach((row, i) => {
         const ry = tipY + 34 + i * 15
@@ -214,7 +214,7 @@ function createMethods(dependencies) {
   // ---- 柱状图 ----
   drawBarChart(ctx, w, h, chartData) {
     const dk = this.data.isDarkMode
-    const C = { bg: dk ? '#1e1e2e' : '#fff', text: '#a0a0a0', grid: dk ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)', sep: dk ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)' }
+    const C = { bg: dk ? '#1e1e2e' : '#fff', text: '#a0a0a0', grid: dk ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)', sep: dk ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)', incomeBar: dk ? '#f87171' : '#ef4444', expenseBar: dk ? '#d4d4d8' : '#333333' }
     // Background
     ctx.fillStyle = C.bg
     ctx.fillRect(0, 0, w, h)
@@ -300,23 +300,23 @@ function createMethods(dependencies) {
       const expenseH = Math.max(1, (expense / yMax) * ph)
 
       // Income bar (left side)
-      ctx.fillStyle = '#ef4444'
+      ctx.fillStyle = C.incomeBar
       ctx.fillRect(cx - barW - gap / 2, bottomY - incomeH, barW, incomeH)
 
       // Expense bar (right side)
-      ctx.fillStyle = '#333333'
+      ctx.fillStyle = C.expenseBar
       ctx.fillRect(cx + gap / 2, bottomY - expenseH, barW, expenseH)
     }
 
     // Legend
     const lx = ml, ly = 10
-    ctx.fillStyle = '#ef4444'
+    ctx.fillStyle = C.incomeBar
     ctx.fillRect(lx, ly, 8, 8)
     ctx.fillStyle = C.text
     ctx.font = '10px sans-serif'
     ctx.textAlign = 'left'
     ctx.fillText('收入', lx + 12, ly + 8)
-    ctx.fillStyle = '#333333'
+    ctx.fillStyle = C.expenseBar
     ctx.fillRect(lx + 52, ly, 8, 8)
     ctx.fillText('支出', lx + 64, ly + 8)
   },
@@ -337,9 +337,10 @@ function createMethods(dependencies) {
       const amount = parseFloat(item.amount) || 0
       const cat = item.category || '未分类'
 
-      if (item.type === 'in') {
+      // 口径对齐 _updateReportSummary：收入=收入，支出=支出+垫付，应付不计入收支
+      if (item.typeLabel === '收入') {
         incomeMap[cat] = (incomeMap[cat] || 0) + amount
-      } else {
+      } else if (item.typeLabel === '支出' || item.typeLabel === '垫付') {
         expenseMap[cat] = (expenseMap[cat] || 0) + amount
       }
     })
@@ -364,7 +365,7 @@ function createMethods(dependencies) {
   // 预留鉴权接口：分类拆解后期可做成 VIP 能力。现返回 true 表示全部解锁；
   // 接入登录态 / 会员后改为真实判断即可，例如 return !!(api.isVip && api.isVip())
   _canUseProSummary() {
-    return api.isVip()
+    try { return api.isVip() } catch (e) { return false }
   },
 
   // 当前报表筛选范围判定：月(YYYY-MM)/年(YYYY)/日(YYYY-MM-DD)看 reportPickerDate；季看 reportSelectedYear + reportQuarterMultiIndex[1]

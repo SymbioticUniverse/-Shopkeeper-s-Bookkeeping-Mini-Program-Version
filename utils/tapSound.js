@@ -8,7 +8,8 @@ function _getVibrationLevel() {
   var raw = wx.getStorageSync('tapVibration')
   if (raw === '' || raw === undefined || raw === null) return 1
   var n = parseInt(raw)
-  return isNaN(n) ? 1 : n
+  if (isNaN(n) || n < 0 || n > 4) return 1
+  return n
 }
 
 function _getPlayer() {
