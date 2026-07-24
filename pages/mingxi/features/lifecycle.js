@@ -31,6 +31,8 @@ function createMethods(dependencies) {
       'reportQuarterRange[0]': years,
       reportQuarterMultiIndex: [yearIdx, Math.floor((m - 1) / 3)],
       reportSelectedYear: y,
+      detailQuarterMultiIndex: [yearIdx, Math.floor((m - 1) / 3)],
+      detailSelectedYear: y,
       exportPickerDate: `${y}-${mm}`,
       exportDateText: `${y}年${mm}月`,
       exportQuarterMultiIndex: [yearIdx, Math.floor((m - 1) / 3)],
@@ -79,6 +81,7 @@ function createMethods(dependencies) {
     if (savedPCats && savedPCats.length) this.setData({ personalCategories: savedPCats })
     if (savedCCats && savedCCats.length) this.setData({ companyCategories: savedCCats })
     this.updateReportDate()
+    this.updateDetailDate()
     this._updateReportSummary()
     this.initDetailItems()
     this.initSettleItems()
@@ -118,25 +121,11 @@ function createMethods(dependencies) {
 
   // 页面恢复时主动续期 access token，避免 401 风暴
   _proactiveRefresh() {
-    var refreshToken = wx.getStorageSync('refreshToken')
-    if (!refreshToken) return
     // 节流：10 分钟内只主动续一次
     var now = Date.now()
     if (now - (this._lastProactiveRefresh || 0) < 10 * 60 * 1000) return
     this._lastProactiveRefresh = now
-    var that = this
-    wx.request({
-      url: 'https://symbioticuniverse.xyz/api/auth/refresh',
-      method: 'POST',
-      header: { 'Content-Type': 'application/json' },
-      data: { refreshToken: refreshToken },
-      success: function(r) {
-        if (r.statusCode >= 200 && r.statusCode < 300 && r.data && r.data.token) {
-          wx.setStorageSync('authToken', r.data.token)
-          wx.setStorageSync('refreshToken', r.data.refreshToken)
-        }
-      }
-    })
+    api.refreshAccessToken().catch(function () {})
   },
 
   // 进页面节流同步：以后端为准刷新本地缓存（30s 内最多一次）
@@ -743,10 +732,6 @@ function createMethods(dependencies) {
     if (stored.length === 0) return []
 
     const period = this.data.reportPeriod
-    const now = new Date()
-    const thisMonth = now.getMonth() + 1
-    const thisYear = now.getFullYear()
-
     // Build a map: label -> { income, expense, receivable, payable, net }
     const map = {}
 
@@ -763,36 +748,22 @@ function createMethods(dependencies) {
     }
 
     stored.forEach(item => {
-      const d = new Date(item.date)
-      if (isNaN(d.getTime())) return
-      const y = d.getFullYear()
-      const m = d.getMonth() + 1
-      const day = d.getDate()
+      if (!this._inReportRange(item)) return
+      const date = String(item.date || '').slice(0, 10)
+      const m = parseInt(date.slice(5, 7))
+      const day = parseInt(date.slice(8, 10))
+      if (!Number.isFinite(m) || !Number.isFinite(day)) return
 
-      if (period === 0 || period === 3) {
-        // 月度/日度: 按天聚合
-        const pickerDate = this.data.reportPickerDate || `${thisYear}-${String(thisMonth).padStart(2, '0')}`
-        const [py, pm] = pickerDate.split('-').map(Number)
-        if (y === py && m === pm) {
-          addToLabel(String(day), item)
-        }
+      if (period === 0) {
+        addToLabel(String(day), item)
+      } else if (period === 3) {
+        addToLabel(`${m}月${day}日`, item)
       } else if (period === 1) {
-        // 季度: 按月聚合
-        const pickerDate = this.data.reportPickerDate || `${thisYear}-${String(thisMonth).padStart(2, '0')}`
-        const [qy] = pickerDate.split('-').map(Number)
-        const qStart = Math.floor((thisMonth - 1) / 3) * 3 + 1
-        if (y === qy && m >= qStart && m <= qStart + 2) {
-          addToLabel(`${m}月`, item)
-        }
+        addToLabel(`${m}月`, item)
       } else if (period === 2) {
-        // 年度: 按季度聚合
-        const pickerDate = this.data.reportPickerDate || String(thisYear)
-        const [ay] = pickerDate.split('-').map(Number)
-        if (y === ay) {
-          const qi = Math.floor((m - 1) / 3)
-          const quarters = ['Q1', 'Q2', 'Q3', 'Q4']
-          addToLabel(quarters[qi], item)
-        }
+        const qi = Math.floor((m - 1) / 3)
+        const quarters = ['Q1', 'Q2', 'Q3', 'Q4']
+        addToLabel(quarters[qi], item)
       }
     })
 

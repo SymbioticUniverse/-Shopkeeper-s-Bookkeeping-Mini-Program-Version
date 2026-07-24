@@ -327,38 +327,12 @@ function createMethods(dependencies) {
     const stored = api.getItems(scope)
     if (stored.length === 0) return { income: [], expense: [] }
 
-    const period = this.data.reportPeriod
-    const now = new Date()
-    const thisMonth = now.getMonth() + 1
-    const thisYear = now.getFullYear()
-
     // Filter items by scope and period, then aggregate by category
     const incomeMap = {}
     const expenseMap = {}
 
-    const pickerDate = this.data.reportPickerDate || `${thisYear}-${String(thisMonth).padStart(2, '0')}`
-
     stored.forEach(item => {
-
-      const d = new Date(item.date)
-      if (isNaN(d.getTime())) return
-      const y = d.getFullYear()
-      const m = d.getMonth() + 1
-
-      let inPeriod = false
-      if (period === 0 || period === 3) {
-        const [py, pm] = pickerDate.split('-').map(Number)
-        if (y === py && m === pm) inPeriod = true
-      } else if (period === 1) {
-        const [qy] = pickerDate.split('-').map(Number)
-        const qStart = Math.floor((thisMonth - 1) / 3) * 3 + 1
-        if (y === qy && m >= qStart && m <= qStart + 2) inPeriod = true
-      } else if (period === 2) {
-        const [ay] = pickerDate.split('-').map(Number)
-        if (y === ay) inPeriod = true
-      }
-
-      if (!inPeriod) return
+      if (!this._inReportRange(item)) return
 
       const amount = parseFloat(item.amount) || 0
       const cat = item.category || '未分类'
@@ -927,6 +901,7 @@ function createMethods(dependencies) {
         this.setData({
           reportQuarterIndex: Math.floor((m - 1) / 3),
           reportQuarterMultiIndex: [this.data.reportQuarterRange[0].indexOf(String(y)), Math.floor((m - 1) / 3)],
+          reportSelectedYear: y,
         })
         break
       case 2: text = `${y}年（截至${mm}月）`; this.setData({ reportPickerDate: `${y}` }); break

@@ -330,7 +330,7 @@ function createMethods(dependencies) {
     wx.showToast({ title: '请点击上方微信登录按钮', icon: 'none' })
   },
 
-  onGuideCompanyCreate() {
+  async onGuideCompanyCreate() {
     playTap()
     const { companyUid, companyName, companyBossTitle } = this.data
     if (!companyUid) {
@@ -342,10 +342,17 @@ function createMethods(dependencies) {
       return
     }
     const info = { companyUid, companyName: companyName.trim(), companyBossTitle: companyBossTitle.trim() || 'BOSS', companyRole: 'boss' }
-    api.saveCompanyInfo(info)
-    this._setupBossCompanyKeys()
-    wx.showToast({ title: '创建成功', icon: 'success' })
-    this.onGuideComplete()
+    wx.showLoading({ title: '创建中...' })
+    try {
+      await api.createCompany(info)
+      await this._setupBossCompanyKeys()
+      wx.showToast({ title: '创建成功', icon: 'success' })
+      this.onGuideComplete()
+    } catch (e) {
+      wx.showToast({ title: (e && e.error) || '创建失败，请重试', icon: 'none' })
+    } finally {
+      wx.hideLoading()
+    }
   },
 
   onGuideEmployeeJoin() {

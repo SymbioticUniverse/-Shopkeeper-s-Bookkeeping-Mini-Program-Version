@@ -941,6 +941,10 @@ function createMethods(dependencies) {
     const itemsKey = from === 'settle' ? 'settleItems' : 'detailItems'
     const found = this.data[itemsKey].find(item => item.id === id)
     if (!found) return
+    if (found._voided) {
+      wx.showToast({ title: '作废账单不能结清，请先恢复', icon: 'none' })
+      return
+    }
 
     const ci = api.getCompanyInfo()
     const isBoss = !!(ci && ci.companyRole === 'boss')
@@ -1018,6 +1022,10 @@ function createMethods(dependencies) {
     const from = e.currentTarget.dataset.from || 'settle'
     const itemsKey = from === 'settle' ? 'settleItems' : 'detailItems'
     const found = this.data[itemsKey].find(item => item.id === id)
+    if (found && found._voided) {
+      wx.showToast({ title: '作废账单不能确认结清', icon: 'none' })
+      return
+    }
     const validStatus = found && (found.settleStatus === 'pending_confirm' || found.settleStatus === 'company_settled')
     if (!validStatus) return
 
@@ -1204,8 +1212,8 @@ function createMethods(dependencies) {
     }
     const quarter = this.data.quarterOptions[quarterIdx]
     this.setData({
-      reportQuarterMultiIndex: [yearIdx, quarterIdx],
-      reportSelectedYear: parseInt(year),
+      detailQuarterMultiIndex: [yearIdx, quarterIdx],
+      detailSelectedYear: parseInt(year),
       detailDateText: `${year}年${quarter}`,
     })
     this.initDetailItems()
@@ -1223,7 +1231,13 @@ function createMethods(dependencies) {
 
     switch (this.data.detailPeriod) {
       case 0: this.setData({ detailPickerDate: `${y}-${mm}`, detailDateText: `${y}年${mm}月` }); break
-      case 1: this.setData({ detailDateText: `${y}年${q}` }); break
+      case 1:
+        this.setData({
+          detailQuarterMultiIndex: [this.data.reportQuarterRange[0].indexOf(String(y)), Math.floor((m - 1) / 3)],
+          detailSelectedYear: y,
+          detailDateText: `${y}年${q}`,
+        })
+        break
       case 2: this.setData({ detailPickerDate: `${y}`, detailDateText: `${y}年（截至${mm}月）` }); break
       case 3: this.setData({ detailPickerDate: `${y}-${mm}-${dd}`, detailDateText: `${y}年${mm}月${dd}日` }); break
     }
@@ -1252,8 +1266,26 @@ function createMethods(dependencies) {
       .sort((a, b) => {
         const da = (a.date || '').slice(0, 10), db2 = (b.date || '').slice(0, 10)
         if (da !== db2) return da < db2 ? 1 : -1
-        return (Number(b.id) || 0) - (Number(a.id) || 0)
+        const aid = String(a.id || ''), bid = String(b.id || '')
+        if (/^\d{10,16}$/.test(aid) && /^\d{10,16}$/.test(bid)) {
+          return Number(bid) - Number(aid)
+        }
+        return aid === bid ? 0 : (aid < bid ? 1 : -1)
       })
+  },
+
+  _inDetailRange(it) {
+    const date = (it && it.date ? String(it.date) : '').slice(0, 10)
+    if (!date) return false
+    const { detailPeriod, detailPickerDate } = this.data
+    if (detailPeriod === 0) return date.slice(0, 7) === detailPickerDate
+    if (detailPeriod === 2) return date.slice(0, 4) === String(detailPickerDate)
+    if (detailPeriod === 3) return date === detailPickerDate
+    const year = this.data.detailSelectedYear
+    const quarter = (this.data.detailQuarterMultiIndex || [0, 0])[1]
+    const month = parseInt(date.slice(5, 7))
+    return parseInt(date.slice(0, 4)) === parseInt(year) &&
+      month >= quarter * 3 + 1 && month <= quarter * 3 + 3
   },
 
   _buildDetailGroups(items) {
@@ -1293,7 +1325,8 @@ function createMethods(dependencies) {
   initDetailItems() {
     const scope = this.data.detailType === 1 ? 'company' : 'personal'
     // 明细只展示原始记账：隐藏后端结清生成的自动对账记录（_autoSettle）；统计口径不受影响（仍用 api.getItems 全量）
-    const list = api.getItems(scope).filter(it => !it._autoSettle)
+    const list = api.getItemsIncludingVoided(scope)
+      .filter(it => !it._autoSettle && this._inDetailRange(it))
     var items = this._buildDetailList(scope, list)
     this.setData({ detailItems: items, detailGroups: this._buildDetailGroups(items) })
   },

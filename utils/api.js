@@ -35,7 +35,7 @@ function generateId() {
   var hex = ''
   // timestamp 48bit MSB-first → 时间排序依靠此前缀
   for (var i = 5; i >= 0; i--) {
-    hex += ((ms >> (i * 8)) & 0xff).toString(16).padStart(2, '0')
+    hex += (Math.floor(ms / Math.pow(256, i)) % 256).toString(16).padStart(2, '0')
   }
   // version 0x7 + rand[0] low nibble
   hex += (0x70 | (rand[0] & 0x0f)).toString(16)
@@ -120,8 +120,14 @@ async function _tryRefreshAccessToken() {
       return result.token
     } catch (e) {
       console.warn('[API] refresh token 换证失败:', e)
-      _setToken('')
-      _setRefreshToken('')
+      const isNetworkError = !!(e && (
+        (e.errMsg && e.errMsg.indexOf('fail') >= 0) ||
+        e.errno
+      ))
+      if (!isNetworkError) {
+        _setToken('')
+        _setRefreshToken('')
+      }
       return null
     } finally {
       _refreshPromise = null
@@ -129,6 +135,10 @@ async function _tryRefreshAccessToken() {
   })()
 
   return _refreshPromise
+}
+
+function refreshAccessToken() {
+  return _tryRefreshAccessToken()
 }
 
 function _handleAuthExpired(msg) {
@@ -361,14 +371,18 @@ function _pushBackend(method, path, data) {
 // ==================== 账单 ====================
 
 function getItems(scope) {
-  const key = scope === 'company' ? 'companyItems' : 'personalItems'
-  const items = wx.getStorageSync(key) || []
+  const items = getItemsIncludingVoided(scope)
   // 过滤已软删除的条目（append-only 策略）
   var result = []
   for (var i = 0; i < items.length; i++) {
     if (!items[i]._voided) result.push(items[i])
   }
   return result
+}
+
+function getItemsIncludingVoided(scope) {
+  const key = scope === 'company' ? 'companyItems' : 'personalItems'
+  return wx.getStorageSync(key) || []
 }
 
 /**
@@ -549,12 +563,15 @@ function settleConfirm(id, settleInfo) {
 /** 结清后轻量重拉：只覆盖两个 scope 的账单本地缓存（比整包 syncFromCloud 省） */
 async function refreshItems() {
   if (!_getToken()) return
-  const [p, c] = await Promise.all([
-    _request('GET', '/items?scope=personal'),
-    _request('GET', '/items?scope=company'),
+  const results = await Promise.allSettled([
+    _request('GET', '/items?scope=personal&includeVoided=1'),
+    _request('GET', '/items?scope=company&includeVoided=1'),
   ])
-  _save('personalItems', p || [])
-  _save('companyItems', c || [])
+  if (results[0].status === 'fulfilled') _save('personalItems', results[0].value || [])
+  if (results[1].status === 'fulfilled') _save('companyItems', results[1].value || [])
+  if (results[0].status === 'rejected' && results[1].status === 'rejected') {
+    throw results[0].reason
+  }
 }
 
 // ==================== 分类 ====================
@@ -577,22 +594,32 @@ function getCompanyInfo() {
 }
 
 function saveCompanyInfo(info) {
-  _save('companyInfo', info)
-  _pushBackend('POST', '/company', info)
+  cacheCompanyInfo(info)
+}
+
+function cacheCompanyInfo(info) {
+  if (info) _save('companyInfo', info)
+  else wx.removeStorageSync('companyInfo')
+}
+
+async function createCompany(info) {
+  const result = await _request('POST', '/company', info)
+  cacheCompanyInfo({ ...info, ...(result && result.companyInfo ? result.companyInfo : {}), companyStatus: 'approved' })
+  return result
 }
 
 async function joinCompany(info) {
   const result = await _request('POST', '/company', info)
-  _save('companyInfo', info)
+  cacheCompanyInfo({ ...info, ...(result && result.companyInfo ? result.companyInfo : {}), companyStatus: 'pending' })
   return result
 }
 
-function removeCompanyInfo() {
+async function removeCompanyInfo() {
+  if (_getToken()) await _request('DELETE', '/company')
   wx.removeStorageSync('companyInfo')
   // 清除旧公司密钥（换公司 = 换公钥）
   var crypto = _getCrypto()
   if (crypto && crypto.clearCompanyKeys) crypto.clearCompanyKeys()
-  return _pushBackend('DELETE', '/company')
 }
 
 /** 员工是否已通过公司审核（boss 永远为 true） */
@@ -1156,8 +1183,8 @@ async function syncFromCloud() {
   try {
     // Step 2: 拉取服务端全量数据
     var results = await Promise.allSettled([
-      _request('GET', '/items?scope=personal'),
-      _request('GET', '/items?scope=company'),
+      _request('GET', '/items?scope=personal&includeVoided=1'),
+      _request('GET', '/items?scope=company&includeVoided=1'),
       _request('GET', '/categories?scope=personal'),
       _request('GET', '/categories?scope=company'),
       _request('GET', '/company'),
@@ -1699,8 +1726,10 @@ function incrementUsage(type) {
 
 module.exports = {
   generateId,
+  refreshAccessToken,
 
   getItems,
+  getItemsIncludingVoided,
   addItem,
   updateItem,
   removeItem,
@@ -1715,6 +1744,8 @@ module.exports = {
 
   getCompanyInfo,
   saveCompanyInfo,
+  cacheCompanyInfo,
+  createCompany,
   joinCompany,
   removeCompanyInfo,
   isCompanyApproved,

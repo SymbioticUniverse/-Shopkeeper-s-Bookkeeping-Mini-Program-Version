@@ -171,11 +171,18 @@ function createMethods(dependencies) {
         wx.showModal({
           title: '重新选择公司',
           content: '将清除当前公司绑定并重新选择，确定继续吗？',
-          success: (res) => {
+          success: async (res) => {
             if (res.confirm) {
-              api.removeCompanyInfo()
-              this.setData({ showSettingsPage: false, showCompanyShare: true, companyShareStep: 1, companyRole: 'employee', employeeUid: '' })
-              wx.showToast({ title: '请重新选择公司', icon: 'none' })
+              wx.showLoading({ title: '处理中...' })
+              try {
+                await api.removeCompanyInfo()
+                this.setData({ showSettingsPage: false, showCompanyShare: true, companyShareStep: 1, companyRole: 'employee', employeeUid: '' })
+                wx.showToast({ title: '请重新选择公司', icon: 'none' })
+              } catch (e) {
+                wx.showToast({ title: '退出公司失败，请重试', icon: 'none' })
+              } finally {
+                wx.hideLoading()
+              }
             }
           }
         })
@@ -184,12 +191,19 @@ function createMethods(dependencies) {
         wx.showModal({
           title: '解散公司',
           content: '解散后所有员工将无法查看公司账本，此操作不可撤销，确定解散吗？',
-          success: (res) => {
+          success: async (res) => {
             if (res.confirm) {
-              api.removeCompanyInfo()
-              api.removeAuditList()
-              this.setData({ settingsLedgerRole: 'personal', showSettingsPage: false, hasPendingAudit: false })
-              wx.showToast({ title: '公司已解散', icon: 'success' })
+              wx.showLoading({ title: '解散中...' })
+              try {
+                await api.removeCompanyInfo()
+                api.removeAuditList()
+                this.setData({ settingsLedgerRole: 'personal', showSettingsPage: false, hasPendingAudit: false })
+                wx.showToast({ title: '公司已解散', icon: 'success' })
+              } catch (e) {
+                wx.showToast({ title: '解散失败，请重试', icon: 'none' })
+              } finally {
+                wx.hideLoading()
+              }
             }
           }
         })
@@ -225,7 +239,7 @@ function createMethods(dependencies) {
               if (lang) api.saveSetting('appLanguage', lang)
               if (darkMode) api.saveSetting('appDarkMode', darkMode)
               if (userInfo) api.saveUserInfo(userInfo)
-              if (companyInfo) api.saveCompanyInfo(companyInfo)
+              if (companyInfo) api.cacheCompanyInfo(companyInfo)
               if (privacyAnalytics !== undefined) api.saveSetting('privacy_allowAnalytics', privacyAnalytics)
               if (privacyCrash !== undefined) api.saveSetting('privacy_allowCrashReport', privacyCrash)
               if (authToken) wx.setStorageSync('authToken', authToken)
@@ -271,6 +285,9 @@ function createMethods(dependencies) {
                 if (isBoss) await api.removeCompanyInfo()
               } catch (e) {
                 console.error('[deactivateLedger] 服务端清理失败:', e)
+                wx.hideLoading()
+                wx.showToast({ title: '服务端清理失败，未注销账本', icon: 'none' })
+                return
               }
               // 3. 清空加密密钥（员工只清个人，不动公司）
               if (isBoss) crypto.clearCompanyKeys()
@@ -291,7 +308,7 @@ function createMethods(dependencies) {
               if (darkMode) api.saveSetting('appDarkMode', darkMode)
               if (privacyAnalytics !== undefined) api.saveSetting('privacy_allowAnalytics', privacyAnalytics)
               if (privacyCrash !== undefined) api.saveSetting('privacy_allowCrashReport', privacyCrash)
-              if (companyInfo) api.saveCompanyInfo(companyInfo)
+              if (companyInfo) api.cacheCompanyInfo(companyInfo)
               // 7. 重置页面状态
               this.setData({
                 isLoggedIn: false,
@@ -341,12 +358,19 @@ function createMethods(dependencies) {
         wx.showModal({
           title: '退出登录',
           content: '确定要退出当前账号吗？',
-          success: (res) => {
+          success: async (res) => {
             if (res.confirm) {
-              api.logout()
-              wx.removeStorageSync('guideCompleted')
-              this.setData({ isLoggedIn: false, userInfo: null, showSettingsPage: false, showGuide: true, guideStep: 0 })
-              wx.showToast({ title: '已退出登录', icon: 'success' })
+              wx.showLoading({ title: '退出中...' })
+              try {
+                await api.logout()
+                wx.removeStorageSync('guideCompleted')
+                this.setData({ isLoggedIn: false, userInfo: null, showSettingsPage: false, showGuide: true, guideStep: 0 })
+                wx.showToast({ title: '已退出登录', icon: 'success' })
+              } catch (e) {
+                wx.showToast({ title: '退出失败，请重试', icon: 'none' })
+              } finally {
+                wx.hideLoading()
+              }
             }
           }
         })
@@ -535,7 +559,7 @@ function createMethods(dependencies) {
     this.setData({ companyUid: uid })
   },
 
-  onCompanyCreate() {
+  async onCompanyCreate() {
     playTap()
     const { companyUid, companyName, companyBossTitle } = this.data
     if (!companyUid) {
@@ -547,11 +571,18 @@ function createMethods(dependencies) {
       return
     }
     const info = { companyUid, companyName: companyName.trim(), companyBossTitle: companyBossTitle.trim() || 'BOSS', companyRole: 'boss' }
-    api.saveCompanyInfo(info)
-    this._syncOverviewCards()
-    this._setupBossCompanyKeys()
-    wx.showToast({ title: '创建成功', icon: 'success' })
-    this.setData({ companyShareStep: 2, companyName: info.companyName, companyBossTitle: info.companyBossTitle, companyUid: info.companyUid })
+    wx.showLoading({ title: '创建中...' })
+    try {
+      await api.createCompany(info)
+      this._syncOverviewCards()
+      await this._setupBossCompanyKeys()
+      wx.showToast({ title: '创建成功', icon: 'success' })
+      this.setData({ companyShareStep: 2, companyName: info.companyName, companyBossTitle: info.companyBossTitle, companyUid: info.companyUid })
+    } catch (e) {
+      wx.showToast({ title: (e && e.error) || '创建失败，请重试', icon: 'none' })
+    } finally {
+      wx.hideLoading()
+    }
   },
 
   onShareCompany() {

@@ -9,7 +9,14 @@ function cloneCategories(categories) {
   return categories.map((category) => Object.assign({}, category))
 }
 
+function getStoredVibrationLevel() {
+  const stored = wx.getStorageSync('tapVibration')
+  const level = Number(stored)
+  return stored !== '' && Number.isInteger(level) && level >= 0 && level <= 4 ? level : 1
+}
+
 function createInitialData() {
+  const vibrationLevel = getStoredVibrationLevel()
   return {
     t: {},
     showHeader: true,
@@ -82,6 +89,8 @@ function createInitialData() {
     currentMode: 0, // 0=个人(蓝) 1=公司(金)，用于顶部模式色带
     detailPeriod: 0,
     detailPickerDate: '2026-06',
+    detailQuarterMultiIndex: [6, 1],
+    detailSelectedYear: 2026,
     maxDate: (function () { var d = new Date(); return d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2) })(), // 图表/明细日期选择器上限：今天，禁止选未来
     detailDateText: '2026年06月',
     detailItems: [],
@@ -267,8 +276,8 @@ function createInitialData() {
     encryptionCompanyKeyReady: false,
     encryptionCompanyIsBoss: false,
     tapVolumePercent: Math.round(getVolume() * 100),
-    tapVibrationLevel: wx.getStorageSync('tapVibration') || 1,
-    tapVibrationLabel: ['关闭', '轻度 ~50ms', '中度 ~150ms', '高度 ~200ms', '最高 ~300ms'][wx.getStorageSync('tapVibration') || 1],
+    tapVibrationLevel: vibrationLevel,
+    tapVibrationLabel: ['关闭', '轻度 ~50ms', '中度 ~150ms', '高度 ~200ms', '最高 ~300ms'][vibrationLevel],
     _vibrationLabels: ['关闭', '轻度 ~50ms', '中度 ~150ms', '高度 ~200ms', '最高 ~300ms'],
     auditList: [],
     notifyList: [],

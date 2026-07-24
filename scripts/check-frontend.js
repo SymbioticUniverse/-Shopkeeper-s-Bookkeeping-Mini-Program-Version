@@ -3,6 +3,7 @@ const path = require('path')
 
 const root = path.resolve(__dirname, '..')
 const pageRoot = path.join(root, 'pages/mingxi')
+const storage = { tapVibration: 0 }
 
 function fail(message) {
   console.error(`前端完整性检查失败：${message}`)
@@ -22,7 +23,9 @@ function createAudioContext() {
 }
 
 global.wx = new Proxy({
-  getStorageSync() { return '' },
+  getStorageSync(key) { return Object.prototype.hasOwnProperty.call(storage, key) ? storage[key] : '' },
+  setStorageSync(key, value) { storage[key] = value },
+  removeStorageSync(key) { delete storage[key] },
   createInnerAudioContext: createAudioContext,
   arrayBufferToBase64() { return '' },
 }, {
@@ -121,7 +124,80 @@ for (const item of createTabItems()) {
   }
 }
 
+if (pageDefinition.data.tapVibrationLevel !== 0 || pageDefinition.data.tapVibrationLabel !== '关闭') {
+  fail('震动设置为关闭后被错误恢复成轻度')
+}
+
+const api = require(path.join(root, 'utils/api'))
+const originalNow = Date.now
+const fixedTimestamp = Number.parseInt('0190abcdef12', 16)
+Date.now = () => fixedTimestamp
+const generatedId = api.generateId()
+Date.now = originalNow
+if (!generatedId.startsWith('0190abcdef12')) {
+  fail(`UUID v7 时间戳前缀错误：${generatedId.slice(0, 12)}`)
+}
+
+const reportItems = [
+  { id: 'a', date: '2024-01-15', type: 'in', typeLabel: '收入', amount: '10', category: '工资' },
+  { id: 'b', date: '2024-08-15', type: 'in', typeLabel: '收入', amount: '99', category: '奖金' },
+]
+const reportApi = { getItems() { return reportItems } }
+const reportMethods = require(path.join(featureDir, 'report.js'))({ api: reportApi })
+const lifecycleMethods = require(path.join(featureDir, 'lifecycle.js'))({ api: reportApi })
+const reportContext = {
+  data: {
+    reportType: 0,
+    reportPeriod: 1,
+    reportPickerDate: '2024-08',
+    reportSelectedYear: 2024,
+    reportQuarterMultiIndex: [0, 0],
+  },
+  _inReportRange: reportMethods._inReportRange,
+}
+const quarterChart = lifecycleMethods._aggregateChartData.call(reportContext, 'personal')
+if (quarterChart.length !== 1 || quarterChart[0].label !== '1月' || quarterChart[0].income !== 10) {
+  fail('季度图表没有严格使用已选择的季度范围')
+}
+const quarterPie = reportMethods.generatePieData.call(reportContext, 'personal')
+if (quarterPie.income.length !== 1 || quarterPie.income[0].name !== '工资' || quarterPie.income[0].value !== 10) {
+  fail('季度饼图与报表汇总的日期范围不一致')
+}
+
+const detailSource = [
+  { id: 'a', date: '2026-07-01', typeLabel: '支出', category: '餐饮', amount: '20' },
+  { id: 'b', date: '2026-06-01', typeLabel: '支出', category: '餐饮', amount: '10', _voided: true },
+]
+const detailApi = {
+  getItemsIncludingVoided() { return detailSource },
+  getCategories() { return [{ name: '餐饮', emoji: '🍚' }] },
+}
+const transactionMethods = require(path.join(featureDir, 'transactions.js'))({ api: detailApi })
+const detailContext = {
+  data: {
+    detailType: 0,
+    detailPeriod: 0,
+    detailPickerDate: '2026-06',
+    detailQuarterMultiIndex: [0, 0],
+    detailSelectedYear: 2026,
+    searchText: '',
+    personalCategories: [],
+    companyCategories: [],
+  },
+  _inDetailRange: transactionMethods._inDetailRange,
+  _matchSearch: transactionMethods._matchSearch,
+  _buildDetailList: transactionMethods._buildDetailList,
+  _buildDetailGroups: transactionMethods._buildDetailGroups,
+  setData(patch) { Object.assign(this.data, patch) },
+}
+transactionMethods.initDetailItems.call(detailContext)
+if (detailContext.data.detailItems.length !== 1 ||
+    detailContext.data.detailItems[0].date !== '2026-06-01' ||
+    detailContext.data.detailItems[0]._voided !== true) {
+  fail('明细周期筛选或作废记录恢复入口失效')
+}
+
 console.log(
   `前端完整性检查通过：${registeredMethods.length} 个页面方法，` +
-  `${eventHandlers.size} 个事件绑定，${wxmlFiles.length} 个 WXML 文件`
+  `${eventHandlers.size} 个事件绑定，${wxmlFiles.length} 个 WXML 文件，5 组行为回归`
 )
