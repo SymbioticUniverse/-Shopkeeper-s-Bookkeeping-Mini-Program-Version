@@ -382,7 +382,7 @@ function createMethods(dependencies) {
       this.setData({ showGuide: false })
       if (this.data._isNewUser && !this._tutorialDone) {
         setTimeout(() => this._startSpotlight('tutorial'), 300)
-      } else if (this.data._isNewUser && this._tutorialDone && this._afterPrivacyAction) {
+      } else if (this.data._isNewUser && this._tutorialDone) {
         // 新用户完成引导+教程+资料保存 → 弹隐私声明
         this.setData({ showPrivacyNotice: true })
       }
@@ -394,13 +394,6 @@ function createMethods(dependencies) {
     this._privacyConfirming = true
     playTap()
     this.setData({ showPrivacyNotice: false })
-    var action = this._afterPrivacyAction
-    this._afterPrivacyAction = null
-    if (action && !action.isNew) {
-      // 老用户：完成引导设置
-      this.onGuideComplete()
-    }
-    // 新用户（action.isNew）：完整引导已在资料保存前完成，无需额外操作
   },
 
   onProfileSkip() {
@@ -740,9 +733,10 @@ function createMethods(dependencies) {
     const addToLabel = (label, item) => {
       if (!map[label]) map[label] = { label, income: 0, expense: 0, receivable: 0, payable: 0, net: 0 }
       const amount = parseFloat(item.amount) || 0
-      if (item.type === 'in') {
+      // 口径对齐 _updateReportSummary：收入=收入，支出=支出+垫付，应付不计入收支
+      if (item.typeLabel === '收入') {
         map[label].income += amount
-      } else {
+      } else if (item.typeLabel === '支出' || item.typeLabel === '垫付') {
         map[label].expense += amount
       }
       if (item.typeLabel === '垫付') map[label].receivable += amount

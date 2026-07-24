@@ -431,6 +431,8 @@ function createMethods(dependencies) {
     const now = new Date()
     const msgs = []
     if (!this.data.showChat || !this.data.chatMessages.length) {
+      // 首次打开聊天时，同步用户自定义分类到选择器
+      this._syncChatCatOptions()
       msgs.push({
         role: 'assistant',
         text: '你好！我是你的 语音记账助手\n\n试试对我说：\n• "午餐 25"\n• "打车 15 交通"\n• "收到工资 8000"',
@@ -1291,6 +1293,25 @@ function createMethods(dependencies) {
   onAiVoiceEnd() {
     if (!this.data.chatRecording) return
     this._stopRecognize() // 结果在 onStop → _onRecognizeDone('chat')：填输入框并发送
+  },
+
+  // ---- 分类选择器 ----
+
+  /** 同步用户自定义分类到 AI 选择器的 catOptions */
+  _syncChatCatOptions() {
+    var defaults = ['餐饮', '交通', '购物', '饮品', '人情', '通讯', '医疗', '住房', '工资', '办公', '金融', '服饰', '娱乐', '数码', '其他']
+    try {
+      var cats = require('../../utils/api.js').getCategories('personal') || []
+      if (cats && cats.length) {
+        var names = cats.map(function (c) { return c.name }).filter(Boolean)
+        // 合并去重：用户自定义在前，默认兜底在后
+        var merged = names.slice()
+        for (var i = 0; i < defaults.length; i++) {
+          if (merged.indexOf(defaults[i]) < 0) merged.push(defaults[i])
+        }
+        this.setData({ catOptions: merged })
+      }
+    } catch (_) {}
   },
 
   // ---- VIP 升级 ----

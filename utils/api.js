@@ -2201,8 +2201,8 @@ function getVipStatus() {
  * @param {number} planId — 套餐 ID（0-7）
  * @returns {Promise<{ ok, vipLevel, vipExpiresAt }>}
  */
-function subscribeVip(planId) {
-  return _request('POST', '/vip/subscribe', { planId }).then(function (data) {
+function subscribeVip(body) {
+  return _request('POST', '/vip/subscribe', body).then(function (data) {
     // 订阅成功后刷新缓存
     getVipStatus().catch(function () {})
     return data

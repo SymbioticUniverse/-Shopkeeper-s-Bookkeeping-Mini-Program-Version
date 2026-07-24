@@ -132,7 +132,7 @@ function createMethods(dependencies) {
       success: function (res) {
         if (res.confirm) {
           wx.showLoading({ title: '处理中...' })
-          api.subscribeVip(body.planId).then(function () {
+          api.subscribeVip(body).then(function () {
             wx.hideLoading()
             wx.showToast({ title: '订阅成功', icon: 'success' })
             // 刷新页面级 VIP 状态

@@ -187,7 +187,7 @@ function _flushUpload() {
   LEARN_QUEUE = []
 
   var token = ''
-  try { token = wx.getStorageSync('token') || '' } catch (e) {}
+  try { token = wx.getStorageSync('authToken') || '' } catch (e) {}
   var baseUrl = 'https://symbioticuniverse.xyz/api'
   try { baseUrl = wx.getStorageSync('api_base_url') || baseUrl } catch (e) {}
 

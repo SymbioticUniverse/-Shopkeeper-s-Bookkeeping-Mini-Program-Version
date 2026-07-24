@@ -21,7 +21,7 @@
               <view wx:elif="{{!item._voided && item.typeLabel === '应付' && (item.settleStatus === 'pending_confirm' || item.settleStatus === 'company_settled') && settleIsBoss}}" class="bill-act-btn bill-act-confirm" catchtap="onBillSettle" data-id="{{item.id}}" data-from="settle">确认收款</view>
               <view wx:elif="{{!item._voided && item.typeLabel === '应付' && !item.settleStatus}}" class="bill-act-btn bill-act-settle" catchtap="onBillSettle" data-id="{{item.id}}" data-from="settle">结清</view>
               <view wx:elif="{{!item._voided && item.typeLabel === '垫付' && !item.settleStatus && settleIsBoss}}" class="bill-act-btn bill-act-settle" catchtap="onBillSettle" data-id="{{item.id}}" data-from="settle">发起结清</view>
-              <view wx:if="{{item.scope !== 'company'}}" class="bill-act-btn bill-act-delete" catchtap="onBillDelete" data-id="{{item.id}}" data-from="settle">删除</view>
+              <view wx:if="{{!item._autoSettle && item.typeLabel !== '垫付' && item.settleStatus !== 'settled' && item.scope !== 'company'}}" class="bill-act-btn bill-act-delete" catchtap="onBillDelete" data-id="{{item.id}}" data-from="settle">删除</view>
               <view wx:if="{{item._ownedByMe !== false && !item._voided}}" class="bill-act-btn bill-act-void" catchtap="onBillVoid" data-id="{{item.id}}" data-from="settle">作废</view>
               <view wx:elif="{{item._ownedByMe !== false}}" class="bill-act-btn bill-act-unvoid" catchtap="onBillUnvoid" data-id="{{item.id}}" data-from="settle">恢复</view>
             </view>
