@@ -317,7 +317,7 @@ function createMethods(dependencies) {
       const parts = groups.filter(s => s)
       return { multiResult: total.toFixed(2), multiCount: parts.length }
     } catch (_) {
-      return {}
+      return { multiResult: '0.00', multiCount: 0 }
     }
   },
 

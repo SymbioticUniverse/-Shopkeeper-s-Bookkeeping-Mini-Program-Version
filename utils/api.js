@@ -122,7 +122,8 @@ async function _tryRefreshAccessToken() {
       console.warn('[API] refresh token 换证失败:', e)
       const isNetworkError = !!(e && (
         (e.errMsg && e.errMsg.indexOf('fail') >= 0) ||
-        e.errno
+        e.errno ||
+        (e.statusCode && e.statusCode >= 500)
       ))
       if (!isNetworkError) {
         _setToken('')
@@ -231,8 +232,13 @@ function _initNetworkListener() {
   })
 }
 
+var _replayingQueue = false
+
 /** 重放离线队列：逐条推送到后端，成功的移除，失败的保留等下次 */
 async function _replayQueue() {
+  if (_replayingQueue) return
+  _replayingQueue = true
+  try {
   const queue = _getQueue()
   if (!queue.length) return
   console.log('[API] 离线队列重放中，共 ' + queue.length + ' 条')
@@ -276,6 +282,9 @@ async function _replayQueue() {
     console.log('[API] 离线队列全部重放成功')
   } else if (remaining.length > 0) {
     console.warn('[API] 离线队列 ' + remaining.length + ' 条重试失败，等待下次网络恢复')
+  }
+  } finally {
+    _replayingQueue = false
   }
 }
 
@@ -537,7 +546,7 @@ function _secureQueuedItemPayload(op) {
 
   // 普通条目更新需要用本地完整记录重建密文。结清端点和仅软删除请求
   // 不包含敏感字段，可以按原样重放。
-  var updateMatch = op.action === 'PUT' && op.path.match(/^\/items\/([^/]+)$/)
+  var updateMatch = op.action === 'PUT' && op.path.match(/^\/items\/([^/?]+)/)
   if (updateMatch) {
     var keys = Object.keys(data)
     if (keys.length === 1 && keys[0] === '_voided') return data
@@ -849,10 +858,15 @@ function getCategories(scope) {
 
 function saveCategories(scope, list) {
   const key = scope === 'company' ? 'companyCategories' : 'personalCategories'
+  const data = { scope, list }
+  if (scope === 'company') {
+    const ci = getCompanyInfo()
+    if (ci && ci.companyUid) data.company_uid = ci.companyUid
+  }
   return _saveWithBackendRollback(
     key,
     list,
-    _pushBackend('POST', '/categories', { scope, list })
+    _pushBackend('POST', '/categories', data)
   )
 }
 
@@ -1352,7 +1366,7 @@ async function _pushDirtyItems() {
     } else {
       // 已同步过的修改 → PUT（含软删除 _voided）
       try {
-        var encryptedUpdate = _prepareItemForUpload(item)
+        var encryptedUpdate = _prepareItemUpdateForUpload(item, true, item._voided)
         await _request('PUT', '/items/' + item.id, encryptedUpdate)
         _markClean(item.id, scope)
       } catch (e) {
@@ -1399,7 +1413,7 @@ async function _pushAllItemsOnce() {
           var crypto = _getCrypto()
           if (crypto && crypto.isEncryptionEnabled()) {
             try {
-              await _request('PUT', '/items/' + items[i].id, encryptedItem)
+              await _request('PUT', '/items/' + items[i].id, _prepareItemUpdateForUpload(items[i], true, items[i]._voided))
               _markClean(items[i].id, scope)
             } catch (_) {
               // 保持本地记录，后续增量同步继续迁移。
@@ -1667,24 +1681,31 @@ async function syncFromCloud() {
   var meta = _getSyncMeta()
 
   // Step 1a: 首次启动全量推送兜底，之后只推脏条目
-  if (!meta.initialized) {
-    await _pushAllItemsOnce()
-    meta.initialized = true
-    _saveSyncMeta(meta)
-  } else {
-    await _pushDirtyItems()
-  }
+  try {
+    if (!meta.initialized) {
+      await _pushAllItemsOnce()
+      meta.initialized = true
+      _saveSyncMeta(meta)
+    } else {
+      await _pushDirtyItems()
+    }
 
-  // Step 1b: 重放离线队列
-  await _replayQueue()
+    // Step 1b: 重放离线队列
+    await _replayQueue()
+  } catch (e) {
+    console.error('[sync] preSync 推送失败，跳过继续拉取:', e.message)
+    // 推送失败不阻断拉取，脏条目下次同步重试
+  }
 
   try {
     // Step 2: 拉取服务端全量数据
+    var ci = getCompanyInfo()
+    var cuid = (ci && ci.companyUid) || ''
     var results = await Promise.allSettled([
       _request('GET', '/items?scope=personal&includeVoided=1'),
       _request('GET', '/items?scope=company&includeVoided=1'),
       _request('GET', '/categories?scope=personal'),
-      _request('GET', '/categories?scope=company'),
+      _request('GET', '/categories?scope=company' + (cuid ? '&company_uid=' + encodeURIComponent(cuid) : '')),
       _request('GET', '/company'),
       _request('GET', '/audit'),
       _request('GET', '/notify'),
@@ -1861,7 +1882,9 @@ function _saveWithBackendRollback(key, value, pushPromise) {
 function _findScope(id) {
   const p = wx.getStorageSync('personalItems') || []
   if (p.some(it => it.id === id)) return 'personal'
-  return 'company'
+  const c = wx.getStorageSync('companyItems') || []
+  if (c.some(it => it.id === id)) return 'company'
+  return 'personal'
 }
 
 /** 当前后端 origin（去掉 BASE_URL 末尾的 /api） */
@@ -2208,7 +2231,7 @@ function checkUsage(type) {
     return { allowed: true, used: 0, limit: -1 }
   }
   var limit = status.limits[type]
-  if (limit === -1) return { allowed: true, used: status.usage[type] || 0, limit: -1 }
+  if (limit == null || limit === -1) return { allowed: true, used: status.usage[type] || 0, limit: -1 }
   var used = status.usage[type] || 0
   return { allowed: used < limit, used: used, limit: limit }
 }

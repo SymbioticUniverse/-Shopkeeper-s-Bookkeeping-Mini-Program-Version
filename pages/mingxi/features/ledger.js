@@ -170,6 +170,7 @@ function createMethods(dependencies) {
     const saved = api.getCompanyInfo()
     if (!saved || saved.companyRole !== 'boss' || !saved.companyUid) {
       wx.showToast({ title: '请先注册公司', icon: 'none' })
+      return
     }
     const list = api.getAuditList()
     this.setData({ showAuditPage: true, auditList: list })
@@ -417,7 +418,7 @@ function createMethods(dependencies) {
     const rows = all.filter(it => this._inExportRange(it)).sort((a, b) => {
       const da = (a.date || '').slice(0, 10), db = (b.date || '').slice(0, 10)
       if (da !== db) return da < db ? 1 : -1
-      return (Number(b.id) || 0) - (Number(a.id) || 0)
+      return String(b.id).localeCompare(String(a.id))
     })
     if (!rows.length) {
       wx.showToast({ title: '该时间范围暂无账单', icon: 'none' })

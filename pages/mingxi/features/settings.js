@@ -382,7 +382,7 @@ function createMethods(dependencies) {
               const companyWasDissolved = !!(deactivateResult && deactivateResult.companyDissolved)
               const retainCompany = !!(deactivateResult && deactivateResult.companyRetained)
               // 3. 清空加密密钥（员工只清个人，不动公司）
-              if (companyWasDissolved) crypto.clearCompanyKeys()
+              if (companyWasDissolved) { try { require('../../utils/crypto.js').clearCompanyKeys() } catch (_) {} }
               try { wx.removeStorageSync('e2e_master_key') } catch (_) {}
               try { wx.removeStorageSync('e2e_enabled') } catch (_) {}
               try { wx.removeStorageSync('e2e_advanced') } catch (_) {}

@@ -42,8 +42,7 @@ function createMethods(dependencies) {
             this._refreshAvatarDisplay(userInfo)
           }
           wx.showToast({ title: '登录成功', icon: 'success' })
-          const phone = result.phone || wx.getStorageSync('user_phone') || ''
-          this._ensureCryptoReady(phone).then(() => {
+          this._ensureCryptoReady().then(() => {
           this._initCrypto().then(() => {
             api.syncFromCloud().then((syncResult) => {
               if (syncResult && syncResult.hasConflicts) { this._handleSyncResult(syncResult); return }
@@ -89,7 +88,7 @@ function createMethods(dependencies) {
   },
 
   /** 确保主密钥已生成且有效，登录后立即调用。已有有效密钥或服务器有 blob 时跳过（避免覆盖高级安全 blob） */
-  _ensureCryptoReady(phone) {
+  _ensureCryptoReady() {
     var crypto = this._getCrypto()
     if (!crypto) return Promise.resolve()
     try {

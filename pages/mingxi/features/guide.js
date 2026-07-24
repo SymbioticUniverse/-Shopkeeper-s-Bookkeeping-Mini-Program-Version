@@ -238,7 +238,7 @@ function createMethods(dependencies) {
           }
           wx.showToast({ title: '登录成功（开发模式）', icon: 'success' })
           // 登录后立即确保主密钥存在且有效，完成后再同步
-          that._ensureCryptoReady(result.phone).then(function () {
+          that._ensureCryptoReady().then(function () {
           that._initCrypto().then(function () {
           api.syncFromCloud().then(function(syncResult) {
             if (syncResult && syncResult.hasConflicts) { that._handleSyncResult(syncResult); return }
@@ -297,7 +297,7 @@ function createMethods(dependencies) {
           }
           wx.showToast({ title: '登录成功', icon: 'success' })
           // 登录后立即确保主密钥存在且有效（非全零），完成后再同步
-          that._ensureCryptoReady(result.phone).then(function () {
+          that._ensureCryptoReady().then(function () {
           that._initCrypto().then(function () {
             api.syncFromCloud().then(function(syncResult) {
             if (syncResult && syncResult.hasConflicts) { that._handleSyncResult(syncResult); return }
