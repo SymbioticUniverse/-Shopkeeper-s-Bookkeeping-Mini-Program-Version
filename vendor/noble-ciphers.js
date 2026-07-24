@@ -196,8 +196,8 @@ function randomBytes(bytesLength = 32) {
   // WeChat mini-program: use wx.getRandomValues; fallback to globalThis.crypto
   if (typeof wx !== 'undefined' && typeof wx.getRandomValues === 'function') {
     var arr = new Uint8Array(bytesLength);
-    var result = wx.getRandomValues(arr);
-    return result || arr;
+    wx.getRandomValues(arr);
+    return arr;
   }
   const cr = typeof globalThis === "object" ? globalThis.crypto : null;
   if (cr == null || typeof cr.getRandomValues !== "function")

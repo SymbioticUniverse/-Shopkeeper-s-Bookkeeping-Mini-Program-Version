@@ -499,6 +499,19 @@ Page({
     auditList: [],
     notifyList: [],
     hasPendingAudit: false,
+    settingsHasAdvancedBlob: false,
+    showEncryptionSheet: false,
+    encryptionSheetItems: [],
+    encryptionSheetTapIndex: -1,
+    // 自定义 Modal（替代 wx.showModal，真机不渲染）
+    showCustomModal: false,
+    customModalTitle: '',
+    customModalContent: '',
+    customModalConfirm: '确认',
+    customModalCancel: '取消',
+    customModalShowInput: false,
+    customModalPlaceholder: '',
+    customModalInputValue: '',
     notifySwipeId: '',
     notifyTouchStartX: 0,
     notifyTouchStartY: 0,
@@ -1149,6 +1162,7 @@ Page({
     const next = {
       nickName: name || cur.nickName,
       avatarUrl: this.data.profileAvatarUrl || cur.avatarUrl || '',
+      phone: cur.phone || '',
       updatedAt: cur.updatedAt  // 把服务端时间戳回传，避免 409 冲突
     }
     api.saveUserInfo(next)
@@ -2342,16 +2356,20 @@ Page({
   initLineChart() {
     clearTimeout(this._tooltipTimer)
     this._tooltipIdx = null
+    // 如果图表被浮层隐藏，跳过绘制（等待浮层关闭后再重绘）
+    var d = this.data
+    if (d.showBookPopup || d.showCamera || d.scanRecognizing || d.showExpandMenu || d.modalItem || d.showChat || d.chatRecording || d.searchRecording) return
     const query = this.createSelectorQuery()
     query.select('#lineChart')
       .fields({ node: true, size: true })
       .exec((res) => {
-        console.log('initLineChart res:', res)
         if (!res || !res[0] || !res[0].node) {
-          console.log('no node, retrying...')
+          this._lineChartRetries = (this._lineChartRetries || 0) + 1
+          if (this._lineChartRetries > 8) { this._lineChartRetries = 0; return }
           setTimeout(() => this.initLineChart(), 500)
           return
         }
+        this._lineChartRetries = 0
         const canvas = res[0].node
         const ctx = canvas.getContext('2d')
         let w = res[0].width || 300
@@ -4576,23 +4594,43 @@ Page({
           confirmText: '清除',
           success: (res) => {
             if (res.confirm) {
-              // 保留的用户设置
+              // 保留的关键数据
               const lang = api.getSetting('appLanguage')
               const darkMode = api.getSetting('appDarkMode')
               const userInfo = api.getUserInfo()
               const companyInfo = api.getCompanyInfo()
               const privacyAnalytics = api.getSetting('privacy_allowAnalytics')
               const privacyCrash = api.getSetting('privacy_allowCrashReport')
+              const authToken = wx.getStorageSync('authToken')
+              const refreshToken = wx.getStorageSync('refreshToken')
+              const masterKey = wx.getStorageSync('e2e_master_key')
+              const e2eEnabled = wx.getStorageSync('e2e_enabled')
+              const e2eAdvanced = wx.getStorageSync('e2e_advanced')
+              const e2eAdvancedDowngraded = wx.getStorageSync('e2e_advanced_downgraded')
+              const companyPriv = wx.getStorageSync('e2e_company_private_key')
+              const companyPub = wx.getStorageSync('e2e_company_public_key')
+              const companyKeyId = wx.getStorageSync('e2e_company_key_id')
+              const vipStatus = wx.getStorageSync('vipStatus')
               wx.clearStorageSync()
-              // 恢复用户设置
+              // 恢复关键数据
               if (lang) api.saveSetting('appLanguage', lang)
               if (darkMode) api.saveSetting('appDarkMode', darkMode)
               if (userInfo) api.saveUserInfo(userInfo)
               if (companyInfo) api.saveCompanyInfo(companyInfo)
               if (privacyAnalytics !== undefined) api.saveSetting('privacy_allowAnalytics', privacyAnalytics)
               if (privacyCrash !== undefined) api.saveSetting('privacy_allowCrashReport', privacyCrash)
+              if (authToken) wx.setStorageSync('authToken', authToken)
+              if (refreshToken) wx.setStorageSync('refreshToken', refreshToken)
+              if (masterKey) wx.setStorageSync('e2e_master_key', masterKey)
+              if (e2eEnabled) wx.setStorageSync('e2e_enabled', e2eEnabled)
+              if (e2eAdvanced) wx.setStorageSync('e2e_advanced', e2eAdvanced)
+              if (e2eAdvancedDowngraded) wx.setStorageSync('e2e_advanced_downgraded', e2eAdvancedDowngraded)
+              if (companyPriv) wx.setStorageSync('e2e_company_private_key', companyPriv)
+              if (companyPub) wx.setStorageSync('e2e_company_public_key', companyPub)
+              if (companyKeyId) wx.setStorageSync('e2e_company_key_id', companyKeyId)
+              if (vipStatus) wx.setStorageSync('vipStatus', vipStatus)
               wx.showToast({ title: '缓存已清除', icon: 'success' })
-              // 刷新明细列表等数据
+              // 刷新页面数据
               this.initDetailItems()
               this.initSettleItems()
               this.updateReportDate()
@@ -4615,32 +4653,36 @@ Page({
             : '将清除个人密钥、登录状态和本地个人数据。' + (isEmployee ? '公司关系保留。' : '') + '\n\n适用于：丢失高级安全密钥、重置个人账本等场景。\n\n此操作不可撤销，确定继续吗？',
           confirmText: '确定注销',
           confirmColor: '#fa5151',
-          success: (res) => {
+          success: async (res) => {
             if (res.confirm) {
-              // 1. 清理服务端个人数据（必须先于 clearStorage，token 在 Storage 里）
-              api.deletePersonalItems()
-              // 2. 清空加密密钥（员工只清个人，不动公司）
+              wx.showLoading({ title: '注销中...' })
+              try {
+                await api.deletePersonalItems()
+                // 2. boss 解散公司后端（同时 void 所有公司账目）
+                if (isBoss) await api.removeCompanyInfo()
+              } catch (e) {
+                console.error('[deactivateLedger] 服务端清理失败:', e)
+              }
+              // 3. 清空加密密钥（员工只清个人，不动公司）
               if (isBoss) crypto.clearCompanyKeys()
               try { wx.removeStorageSync('e2e_master_key') } catch (_) {}
               try { wx.removeStorageSync('e2e_enabled') } catch (_) {}
               try { wx.removeStorageSync('e2e_advanced') } catch (_) {}
               try { wx.removeStorageSync('e2e_advanced_downgraded') } catch (_) {}
-              // 3. 保留用户设置 + 公司信息（员工保公司关系）
+              // 4. 保留用户设置 + 公司信息（员工保公司关系）
               const lang = api.getSetting('appLanguage')
               const darkMode = api.getSetting('appDarkMode')
               const privacyAnalytics = api.getSetting('privacy_allowAnalytics')
               const privacyCrash = api.getSetting('privacy_allowCrashReport')
               const companyInfo = isEmployee ? api.getCompanyInfo() : null
-              // 4. 全量清除
+              // 5. 全量清除
               wx.clearStorageSync()
-              // 5. 恢复
+              // 6. 恢复
               if (lang) api.saveSetting('appLanguage', lang)
               if (darkMode) api.saveSetting('appDarkMode', darkMode)
               if (privacyAnalytics !== undefined) api.saveSetting('privacy_allowAnalytics', privacyAnalytics)
               if (privacyCrash !== undefined) api.saveSetting('privacy_allowCrashReport', privacyCrash)
               if (companyInfo) api.saveCompanyInfo(companyInfo)
-              // 6. boss 解散公司后端（同时 void 所有公司账目）
-              if (isBoss) api.removeCompanyInfo()
               // 7. 重置页面状态
               this.setData({
                 isLoggedIn: false,
@@ -4654,15 +4696,38 @@ Page({
                 encryptionTier: '',
                 encryptionCompanyIsBoss: false,
                 encryptionCompanyKeyReady: false,
-                hasPendingAudit: false
+                hasPendingAudit: false,
+                settingsHasAdvancedBlob: false
               })
               this.initDetailItems()
+              wx.hideLoading()
               wx.showToast({ title: '账本已注销', icon: 'success' })
             }
           }
         })
         break
       }
+      case 'deleteAccount':
+        wx.showModal({
+          title: '注销账号',
+          content: '将永久删除此账号下的所有数据（账目、分类、公司、密钥等），不可恢复。\n\n确定注销账号吗？',
+          confirmText: '确定注销',
+          confirmColor: '#fa5151',
+          success: (res) => {
+            if (res.confirm) {
+              wx.showLoading({ title: '注销中...' })
+              api.deleteAccount().then(() => {
+                wx.hideLoading()
+                this.setData({ isLoggedIn: false, userInfo: null, showSettingsPage: false, showGuide: true, guideStep: 0 })
+                wx.showToast({ title: '账号已注销', icon: 'success' })
+              }).catch(() => {
+                wx.hideLoading()
+                wx.showToast({ title: '注销失败，请重试', icon: 'none' })
+              })
+            }
+          }
+        })
+        break
       case 'logout':
         wx.showModal({
           title: '退出登录',
@@ -5521,6 +5586,8 @@ Page({
             this._refreshAvatarDisplay(userInfo)
           }
           wx.showToast({ title: '登录成功', icon: 'success' })
+          const phone = result.phone || wx.getStorageSync('user_phone') || ''
+          this._ensureCryptoReady(phone).then(() => {
           this._initCrypto().then(() => {
             api.syncFromCloud().then((syncResult) => {
               if (syncResult && syncResult.hasConflicts) { this._handleSyncResult(syncResult); return }
@@ -5534,6 +5601,7 @@ Page({
               this.updateAuditBadge()
             })
           }).catch(function () {})
+          })
         }).catch((err) => {
           const msg = (err && err.error) || '登录失败'
           wx.showToast({ title: msg, icon: 'none', duration: 3000 })
@@ -5549,6 +5617,34 @@ Page({
 
   _getCrypto() {
     try { return require('../../utils/crypto.js') } catch (_) { return null }
+  },
+
+  /** 确保主密钥已生成且有效，登录后立即调用。已有有效密钥或服务器有 blob 时跳过（避免覆盖高级安全 blob） */
+  _ensureCryptoReady(phone) {
+    var crypto = this._getCrypto()
+    if (!crypto || !phone) return Promise.resolve()
+    var masterKey = crypto.exportMasterKey()
+    // 已有有效密钥 → 跳过
+    if (masterKey && !/^0+$/.test(masterKey)) return Promise.resolve()
+    // 无有效密钥 → 先检查服务器是否有 blob，有则不覆盖（交给 _initCrypto 走恢复流程）
+    var that = this
+    return crypto.fetchKeyBlob().then(function (result) {
+      if (result && result.blob) {
+        console.log('[crypto] 服务器已有 blob（tier=' + (result.tier || 'unknown') + '），跳过自动生成')
+        return
+      }
+      // 服务器无 blob → 首次使用，生成并上传
+      console.log('[crypto] 首次使用，初始化主密钥...')
+      var setupResult = crypto.setupEncryption(phone)
+      return crypto.uploadKeyBlob(setupResult.encryptedBlob, setupResult.salt, setupResult.tier).then(function () {
+        console.log('[crypto] 主密钥已生成并上传')
+      }).catch(function (err) {
+        console.error('[crypto] 主密钥上传失败:', err && err.message || err)
+      })
+    }).catch(function () {
+      // 网络错误，不阻塞
+      console.warn('[crypto] 无法检查服务器 blob，跳过')
+    })
   },
 
   _initCrypto() {
@@ -5570,8 +5666,29 @@ Page({
       encryptionAdvancedEnabled: hasKey && crypto.isAdvancedSecurityEnabled()
     })
 
-    // 已有主密钥 → 无需恢复，同步公司密钥后返回
-    if (hasKey) return this._syncCompanyKeys()
+    // 已有主密钥 → 检测是否为零值损坏密钥（旧版 randomBytes bug），是则自动重新生成
+    if (hasKey) {
+      if (/^0+$/.test(masterKey)) {
+        console.warn('[crypto] 检测到损坏的主密钥（全零），自动重新生成')
+        var phone = wx.getStorageSync('user_phone') || ''
+        if (phone) {
+          try {
+            var that0 = this
+            var setupResult = crypto.setupEncryption(phone)
+            crypto.uploadKeyBlob(setupResult.encryptedBlob, setupResult.salt, setupResult.tier).then(function () {
+              that0.setData({ encryptionEnabled: true, encryptionAdvancedEnabled: false })
+              console.log('[crypto] 主密钥已重新生成，新 blob 已上传')
+            }).catch(function (err) {
+              console.error('[crypto] 新密钥 blob 上传失败，服务器仍保留旧（可能损坏的）blob:', err && err.message || err)
+              that0.setData({ encryptionEnabled: true, encryptionAdvancedEnabled: false })
+            })
+          } catch (e) {
+            console.error('[crypto] 主密钥重新生成失败:', e.message)
+          }
+        }
+      }
+      return this._syncCompanyKeys()
+    }
 
     // 未登录 → 无 token，等登录后重试
     if (!wx.getStorageSync('authToken')) return Promise.resolve()
@@ -5588,11 +5705,12 @@ Page({
               var setupResult = crypto.setupEncryption(phone)
               crypto.uploadKeyBlob(setupResult.encryptedBlob, setupResult.salt, setupResult.tier).then(function () {
                 that.setData({ encryptionEnabled: true, encryptionAdvancedEnabled: false })
-                console.log('[crypto] 默认加密已自动初始化')
+                console.log('[crypto] 默认加密已自动初始化，blob 已上传')
                 resolveSetup()
-              }).catch(function () {
-                that.setData({ encryptionEnabled: true, encryptionAdvancedEnabled: false })
+              }).catch(function (err) {
+                console.error('[crypto] 默认加密 blob 上传失败:', err && err.message || err)
                 console.warn('[crypto] 默认加密已初始化但 blob 上传失败')
+                that.setData({ encryptionEnabled: true, encryptionAdvancedEnabled: false })
                 resolveSetup()
               })
             } catch (e) {
@@ -5611,19 +5729,19 @@ Page({
       return new Promise(function (resolveRecover) {
         function _doRecover(phone) {
           if (result.tier === 'advanced') {
+            // 服务器有高级 blob，标记以供设置页显示"恢复高级安全"入口
+            that.setData({ settingsHasAdvancedBlob: true })
             that._showAdvancedKeyInput(function (advancedKey) {
               if (!advancedKey) {
-                // Boss 取消输入 → 不覆盖旧 blob，保留恢复机会
                 console.warn('[crypto] 高级密钥恢复已取消，跳过初始化')
                 resolveRecover()
                 return
               }
               var ok = crypto.recoverMasterKeyAdvanced(phone, advancedKey, result.blob, result.salt)
               if (ok) {
-                that.setData({ encryptionEnabled: true, encryptionAdvancedEnabled: true })
+                that.setData({ encryptionEnabled: true, encryptionAdvancedEnabled: true, settingsHasAdvancedBlob: false })
                 console.log('[crypto] 密钥已恢复')
               } else {
-                // 密钥错误 → 不覆盖旧 blob，等 Boss 下次重试
                 wx.showToast({ title: '密钥不正确', icon: 'none' })
               }
               resolveRecover()
@@ -5631,7 +5749,13 @@ Page({
           } else {
             var ok = crypto.recoverMasterKey(phone, result.blob, result.salt)
             if (ok) {
-              that.setData({ encryptionEnabled: true, encryptionAdvancedEnabled: false })
+              // 检查恢复出的密钥是否损坏（全零），是则自动重新初始化
+              if (/^0+$/.test(crypto.exportMasterKey())) {
+                console.warn('[crypto] 从服务器恢复的密钥为全零，重新初始化')
+                _reinitCrypto(phone)
+              } else {
+                that.setData({ encryptionEnabled: true, encryptionAdvancedEnabled: false })
+              }
             } else {
               // 恢复失败 → 静默重新初始化（个人端不卡用户）
               _reinitCrypto(phone)
@@ -5737,6 +5861,25 @@ Page({
     }
   },
 
+  /** 设置页手动触发公司密钥重新生成 */
+  onRegenerateCompanyKeys() {
+    var that = this
+    this._showCustomModal({
+      title: '重新生成公司密钥',
+      content: '将重新生成公司加密密钥对。\n\n旧数据若用旧密钥加密将无法解密。',
+      confirm: '确定',
+      cancel: '取消',
+      cb: function (confirmed) {
+        if (confirmed) {
+          wx.showLoading({ title: '生成中...' })
+          that._setupBossCompanyKeys()
+          wx.hideLoading()
+          wx.showToast({ title: '密钥已重新生成', icon: 'success' })
+        }
+      }
+    })
+  },
+
   /** 老板创建公司后，生成本地密钥对并初始化企业加密 */
   _setupBossCompanyKeys() {
     var crypto = this._getCrypto()
@@ -5784,6 +5927,7 @@ Page({
       }
     } catch (e) {
       console.error('[crypto] 公司密钥对生成失败:', e.message)
+      wx.showToast({ title: '密钥生成失败：' + (e.message || '未知错误'), icon: 'none', duration: 3000 })
     }
   },
 
@@ -5886,71 +6030,161 @@ Page({
   /** 点击「数据加密」— 加密为默认开启，不可关闭 */
   _onEncryptionTap() {
     var crypto = this._getCrypto()
+    console.log('[encryption] _onEncryptionTap 调用, crypto=', !!crypto)
     if (!crypto) {
       wx.showToast({ title: '加密模块加载失败', icon: 'none' })
       return
     }
     var that = this
-    var isVip = api.isVip()
+    var vipStatus = wx.getStorageSync('vipStatus') || null
+    var isEnterpriseVip = !!(vipStatus && vipStatus.vipLevel >= 2)
+    var hasCompany = !!api.getCompanyInfo()
+    console.log('[encryption] vip=', isEnterpriseVip, 'hasCompany=', hasCompany)
     var isAdvanced = crypto.isAdvancedSecurityEnabled()
     var isBoss = crypto.isCompanyBoss()
     var itemList = ['导出主密钥（备份）']
 
-    if (isVip) {
+    if (isEnterpriseVip && hasCompany) {
       itemList.unshift(isAdvanced ? '关闭高级安全' : '开启高级安全（28位密钥）')
+    } else {
+      var tip = !isEnterpriseVip ? '开启高级安全（需企业VIP）' : '开启高级安全（需创建公司）'
+      itemList.unshift(tip)
     }
     if (isBoss) {
       itemList.push('导出公司私钥（备份）')
     }
 
-    wx.showActionSheet({
-      itemList: itemList,
-      success: function (res) {
-        switch (itemList[res.tapIndex]) {
-          case '开启高级安全（28位密钥）':
-            that._enableAdvancedSecurity()
-            break
-          case '关闭高级安全':
-            that._disableAdvancedSecurity()
-            break
-          case '导出主密钥（备份）':
-            that._exportMasterKey()
-            break
-          case '导出公司私钥（备份）':
-            that._exportCompanyPrivateKey()
-            break
-        }
+    console.log('[encryption] customSheet items:', JSON.stringify(itemList))
+    this.setData({ showEncryptionSheet: true, encryptionSheetItems: itemList, encryptionSheetTapIndex: -1 })
+  },
+
+  /** 加密弹窗 - 点击选项 */
+  onEncryptionSheetTap(e) {
+    var index = e.currentTarget.dataset.idx
+    var label = this.data.encryptionSheetItems[index]
+    console.log('[encryption] 点击选项:', label, 'index:', index)
+    var that = this
+    this.setData({ showEncryptionSheet: false, encryptionSheetTapIndex: index })
+
+    // 延迟执行，等弹窗关闭动画
+    setTimeout(function () {
+      console.log('[encryption] 延迟执行:', label)
+      switch (label) {
+        case '开启高级安全（28位密钥）':
+          that._enableAdvancedSecurity()
+          break
+        case '关闭高级安全':
+          that._disableAdvancedSecurity()
+          break
+        case '开启高级安全（需企业VIP）':
+          wx.showModal({
+            title: '企业VIP功能',
+            content: '高级安全加密需要企业VIP + 创建公司后才能使用。',
+            showCancel: false,
+            confirmText: '知道了'
+          })
+          break
+        case '开启高级安全（需创建公司）':
+          wx.showModal({
+            title: '需创建公司',
+            content: '高级安全加密需要先创建或加入一个公司。',
+            showCancel: false,
+            confirmText: '知道了'
+          })
+          break
+        case '导出主密钥（备份）':
+          that._exportMasterKey()
+          break
+        case '导出公司私钥（备份）':
+          that._exportCompanyPrivateKey()
+          break
       }
+    }, 200)
+  },
+
+  /** 加密弹窗 - 关闭 */
+  onEncryptionSheetClose() {
+    this.setData({ showEncryptionSheet: false })
+  },
+
+  noop() {},
+
+  /** 自定义 Modal — 替代 wx.showModal（真机不渲染） */
+  _showCustomModal(opts) {
+    this._customModalCb = opts.cb || null
+    this.setData({
+      showCustomModal: true,
+      customModalTitle: opts.title || '',
+      customModalContent: opts.content || '',
+      customModalConfirm: opts.confirm || '确认',
+      customModalCancel: opts.cancel || '取消',
+      customModalShowInput: !!opts.showInput,
+      customModalPlaceholder: opts.placeholder || '',
+      customModalInputValue: '',
     })
+  },
+
+  _hideCustomModal() {
+    this.setData({ showCustomModal: false, customModalInputValue: '' })
+    this._customModalCb = null
+  },
+
+  onCustomModalConfirm() {
+    var cb = this._customModalCb
+    var inputVal = this.data.customModalInputValue
+    // 输入框模式：校验密钥长度
+    if (this.data.customModalShowInput) {
+      var key = (inputVal || '').trim()
+      if (key.length < 28) {
+        wx.showToast({ title: '密钥格式不正确（需28位）', icon: 'none' })
+        return
+      }
+    }
+    this._hideCustomModal()
+    if (cb) cb(true, inputVal)
+  },
+
+  onCustomModalCancel() {
+    var cb = this._customModalCb
+    this._hideCustomModal()
+    if (cb) cb(false)
+  },
+
+  onCustomModalInput(e) {
+    this.setData({ customModalInputValue: e.detail.value })
   },
 
   /** 开启高级安全（企业用户） */
   _enableAdvancedSecurity() {
+    console.log('[encryption] _enableAdvancedSecurity 调用')
     var crypto = this._getCrypto()
-    if (!crypto) return
+    if (!crypto) {
+      wx.showToast({ title: '加密模块未就绪，请重试', icon: 'none' })
+      return
+    }
     var that = this
 
-    // 第一次确认：警告说明，还未生成密钥
-    wx.showModal({
+    // 第1步：警告
+    this._showCustomModal({
       title: '⚠️ 开启高级安全（1/2）',
       content: '将生成 28 位高级安全密钥。\n\n此密钥丢失后永久无法恢复！\n公司加密数据将永远无法解密！！',
-      confirmText: '我已知晓，下一步',
-      cancelText: '取消',
-      success: function (res1) {
-        if (!res1.confirm) return
+      confirm: '我已知晓，下一步',
+      cancel: '取消',
+      cb: function (confirmed) {
+        if (!confirmed) return
 
         // 用户确认后才生成密钥
         var advancedKey = crypto.generateAdvancedKey()
         wx.setClipboardData({ data: advancedKey })
 
-        // 第二次确认：展示密钥
-        wx.showModal({
+        // 第2步：展示密钥
+        that._showCustomModal({
           title: '⚠️ 保存密钥（2/2）',
           content: '以下 28 位密钥已复制到剪贴板，请立即保存到安全的地方：\n\n' + advancedKey,
-          confirmText: '已保存，确认开启',
-          cancelText: '取消',
-          success: function (res2) {
-            if (!res2.confirm) {
+          confirm: '已保存，确认开启',
+          cancel: '取消',
+          cb: function (confirmed2) {
+            if (!confirmed2) {
               wx.showToast({ title: '高级安全开启失败，密钥已丢弃', icon: 'none', duration: 2500 })
               return
             }
@@ -5967,7 +6201,7 @@ Page({
                 wx.hideLoading()
                 wx.setStorageSync('e2e_advanced', true)
                 wx.removeStorageSync('e2e_advanced_downgraded')
-                that.setData({ encryptionAdvancedEnabled: true })
+                that.setData({ encryptionAdvancedEnabled: true, settingsHasAdvancedBlob: false })
                 wx.showToast({ title: '高级安全已开启', icon: 'success' })
               }).catch(function () {
                 wx.hideLoading()
@@ -5989,15 +6223,16 @@ Page({
     if (!crypto) return
     var that = this
 
-    wx.showModal({
+    this._showCustomModal({
       title: '输入高级安全密钥以验证身份',
-      editable: true,
-      placeholderText: '请输入28位密钥',
-      confirmText: '验证',
-      cancelText: '取消',
-      success: function (res) {
-        if (!res.confirm || !res.content) return
-        var key = (res.content || '').trim()
+      content: '',
+      showInput: true,
+      placeholder: '请输入28位密钥',
+      confirm: '验证',
+      cancel: '取消',
+      cb: function (confirmed, inputVal) {
+        if (!confirmed || !inputVal) return
+        var key = (inputVal || '').trim()
         if (!crypto.isValidAdvancedKey(key)) {
           wx.showToast({ title: '密钥格式不正确（需28位）', icon: 'none' })
           return
@@ -6036,6 +6271,15 @@ Page({
     var masterKey = crypto.exportMasterKey()
     if (!masterKey) {
       wx.showToast({ title: '无主密钥', icon: 'none' })
+      return
+    }
+    if (/^0+$/.test(masterKey)) {
+      wx.showModal({
+        title: '密钥异常',
+        content: '主密钥校验失败，可能因版本兼容问题导致。\n\n请重启小程序，系统将自动修复。',
+        showCancel: false,
+        confirmText: '知道了'
+      })
       return
     }
     wx.setClipboardData({ data: masterKey })
@@ -6092,17 +6336,47 @@ Page({
 
   /** 显示高级安全密钥输入框 */
   _showAdvancedKeyInput(callback) {
-    wx.showModal({
+    this._showCustomModal({
       title: '高级安全 — 请输入28位密钥',
-      editable: true,
-      placeholderText: '输入28位密钥以恢复数据',
-      confirmText: '确定',
-      cancelText: '取消',
-      success: function (res) {
-        if (!res.confirm) { callback(''); return }
-        var key = (res.content || '').trim()
-        callback(key)
+      content: '',
+      showInput: true,
+      placeholder: '输入28位密钥以恢复数据',
+      confirm: '确定',
+      cancel: '取消',
+      cb: function (confirmed, inputVal) {
+        if (!confirmed) { callback(''); return }
+        callback((inputVal || '').trim())
       }
+    })
+  },
+
+  /** 手动触发高级密钥恢复（设置页入口 / 点击加密账单） */
+  promptAdvancedKeyRecovery() {
+    var crypto = this._getCrypto()
+    if (!crypto) { wx.showToast({ title: '加密模块未加载', icon: 'none' }); return }
+    var phone = wx.getStorageSync('user_phone') || ''
+    if (!phone) { wx.showToast({ title: '请先绑定手机号', icon: 'none' }); return }
+    var that = this
+    crypto.fetchKeyBlob().then(function (result) {
+      if (!result || !result.blob || result.tier !== 'advanced') {
+        wx.showToast({ title: '未开启高级安全', icon: 'none' })
+        return
+      }
+      that._showAdvancedKeyInput(function (advancedKey) {
+        if (!advancedKey) return
+        var ok = crypto.recoverMasterKeyAdvanced(phone, advancedKey, result.blob, result.salt)
+        if (ok) {
+          that.setData({ encryptionEnabled: true, encryptionAdvancedEnabled: true, settingsHasAdvancedBlob: false })
+          // 重新解密已加载的数据
+          that.initDetailItems()
+          that._syncOverviewCards()
+          wx.showToast({ title: '密钥已恢复', icon: 'success' })
+        } else {
+          wx.showToast({ title: '密钥不正确', icon: 'none' })
+        }
+      })
+    }).catch(function () {
+      wx.showToast({ title: '网络异常，请稍后重试', icon: 'none' })
     })
   },
 
@@ -6358,7 +6632,8 @@ Page({
             that._refreshAvatarDisplay(userInfo)
           }
           wx.showToast({ title: '登录成功（开发模式）', icon: 'success' })
-          // 登录后恢复加密密钥，完成后再同步
+          // 登录后立即确保主密钥存在且有效，完成后再同步
+          that._ensureCryptoReady(result.phone).then(function () {
           that._initCrypto().then(function () {
           api.syncFromCloud().then(function(syncResult) {
             if (syncResult && syncResult.hasConflicts) { that._handleSyncResult(syncResult); return }
@@ -6370,6 +6645,7 @@ Page({
             api.getVipStatus().then(function(s) { that.setData({ vipStatus: s, vipTrialDays: that._computeTrialDays(s), vipExpiresText: that._formatVipExpiry(s) }); that._checkEncryptionTierAlignment() }).catch(function() {})
             that.updateNotifyBadge()
             that.updateAuditBadge()
+          })
           })
           })
         }).catch(function(err) {
@@ -6415,7 +6691,8 @@ Page({
             that._refreshAvatarDisplay(userInfo)
           }
           wx.showToast({ title: '登录成功', icon: 'success' })
-          // 登录后恢复加密密钥，完成后再同步（否则加密数据无法解密）
+          // 登录后立即确保主密钥存在且有效（非全零），完成后再同步
+          that._ensureCryptoReady(result.phone).then(function () {
           that._initCrypto().then(function () {
             api.syncFromCloud().then(function(syncResult) {
             if (syncResult && syncResult.hasConflicts) { that._handleSyncResult(syncResult); return }
@@ -6427,6 +6704,7 @@ Page({
             api.getVipStatus().then(function(s) { that.setData({ vipStatus: s, vipTrialDays: that._computeTrialDays(s), vipExpiresText: that._formatVipExpiry(s) }); that._checkEncryptionTierAlignment() }).catch(function() {})
             that.updateNotifyBadge()
             that.updateAuditBadge()
+          })
           })
           })
         }).catch(function(err) {

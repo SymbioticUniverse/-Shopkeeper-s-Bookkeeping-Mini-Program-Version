@@ -1,6 +1,6 @@
 <view class="page {{isDarkMode ? 'page--dark' : ''}} {{isTablet ? 'page--tablet' : ''}}">
   <!-- 模式指示色带 -->
-  <view class="mode-accent {{currentMode === 0 ? 'mode-accent--personal' : 'mode-accent--company'}}"></view>
+  <view class="mode-accent {{currentMode === 1 && currentTab === 0 ? 'mode-accent--company' : 'mode-accent--personal'}}"></view>
   <!-- 标题栏 -->
   <view class="header">
     <view class="header-left-group">
@@ -1306,13 +1306,23 @@
               <text class="settings-item-value">{{encryptionAdvancedEnabled ? '高级安全' : '已加密'}}<text wx:if="{{!encryptionEnabled}}" style="color:#fa5151;font-size:22rpx">（未就绪）</text></text>
               <text class="settings-item-arrow">〉</text>
             </view>
-            <view class="settings-item" wx:if="{{encryptionCompanyIsBoss}}">
+            <view class="settings-item" wx:if="{{encryptionCompanyIsBoss && !encryptionCompanyKeyReady}}" bindtap="onRegenerateCompanyKeys">
               <text class="settings-item-label">公司加密状态</text>
-              <text class="settings-item-value" style="{{encryptionCompanyKeyReady ? 'color:#07c160' : 'color:#fa5151'}}">{{encryptionCompanyKeyReady ? '私钥已就绪 ✓' : '私钥缺失！'}}</text>
+              <text class="settings-item-value" style="color:#fa5151">私钥缺失！点击重试</text>
+              <text class="settings-item-arrow">〉</text>
+            </view>
+            <view class="settings-item" wx:elif="{{encryptionCompanyIsBoss && encryptionCompanyKeyReady}}">
+              <text class="settings-item-label">公司加密状态</text>
+              <text class="settings-item-value" style="color:#07c160">私钥已就绪 ✓</text>
             </view>
             <view class="settings-item" wx:if="{{!encryptionCompanyIsBoss && encryptionCompanyKeyReady}}">
               <text class="settings-item-label">公司加密状态</text>
               <text class="settings-item-value" style="color:#07c160">公钥已获取</text>
+            </view>
+            <view class="settings-item" wx:if="{{encryptionEnabled && !encryptionAdvancedEnabled && settingsHasAdvancedBlob}}" bindtap="promptAdvancedKeyRecovery">
+              <text class="settings-item-label">恢复高级安全</text>
+              <text class="settings-item-value" style="color:#f0a000">需要28位密钥</text>
+              <text class="settings-item-arrow">〉</text>
             </view>
             <view class="settings-item">
               <text class="settings-item-label">绑定手机号</text>
@@ -1369,6 +1379,11 @@
             <view class="settings-item" bindtap="onSettingsTap" data-action="about">
               <text class="settings-item-label">{{t.settings_about}}</text>
               <text class="settings-item-value">v1.0.0</text>
+              <text class="settings-item-arrow">〉</text>
+            </view>
+            <view class="settings-item settings-item--warn" bindtap="onSettingsTap" data-action="deleteAccount">
+              <text class="settings-item-label">注销账号</text>
+              <text class="settings-item-value settings-item-value--warn">删除全部数据</text>
               <text class="settings-item-arrow">〉</text>
             </view>
             <view class="settings-item settings-item--last" bindtap="onSettingsTap" data-action="logout">
@@ -2457,6 +2472,37 @@
 
       <view class="conflict-apply {{conflictResolving ? 'conflict-apply--loading' : ''}}" bindtap="onConflictDismiss">
         <text>应用所有选择</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- 自定义 Modal -->
+  <view class="cu-modal-mask" wx:if="{{showCustomModal}}" catchtap="onCustomModalCancel">
+    <view class="cu-modal" catchtap="noop">
+      <view class="cu-modal-title">{{customModalTitle}}</view>
+      <view class="cu-modal-body" wx:if="{{customModalContent}}">{{customModalContent}}</view>
+      <view class="cu-modal-input-wrap" wx:if="{{customModalShowInput}}">
+        <input class="cu-modal-input" placeholder="{{customModalPlaceholder}}" value="{{customModalInputValue}}" bindinput="onCustomModalInput" maxlength="28" placeholder-class="cu-modal-input-ph"/>
+      </view>
+      <view class="cu-modal-btns">
+        <view class="cu-modal-btn cu-modal-btn--cancel" bindtap="onCustomModalCancel">{{customModalCancel}}</view>
+        <view class="cu-modal-btn cu-modal-btn--confirm" bindtap="onCustomModalConfirm">{{customModalConfirm}}</view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 自定义加密操作面板 -->
+  <view class="cu-sheet-mask" wx:if="{{showEncryptionSheet}}" catchtap="onEncryptionSheetClose">
+    <view class="cu-sheet" catchtap="noop">
+      <view class="cu-sheet-handle"></view>
+      <view class="cu-sheet-title">数据加密</view>
+      <view class="cu-sheet-list">
+        <view class="cu-sheet-item {{index > 0 ? 'cu-sheet-item--bordered' : ''}}" wx:for="{{encryptionSheetItems}}" wx:key="*this" data-idx="{{index}}" catchtap="onEncryptionSheetTap">
+          <text class="cu-sheet-item-text">{{item}}</text>
+        </view>
+      </view>
+      <view class="cu-sheet-cancel" catchtap="onEncryptionSheetClose">
+        <text class="cu-sheet-cancel-text">取消</text>
       </view>
     </view>
   </view>

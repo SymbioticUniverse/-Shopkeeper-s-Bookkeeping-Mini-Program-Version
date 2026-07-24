@@ -99,7 +99,19 @@ function _textDecoder() {
 }
 
 function _randomBytes(length) {
-  return noble.randomBytes(length)
+  var bytes = noble.randomBytes(length)
+  // 安全检查：如果 noble 返回全零（wx.getRandomValues 在某些环境失效），用 Math.random 兜底
+  var allZero = true
+  for (var i = 0; i < bytes.length; i++) {
+    if (bytes[i] !== 0) { allZero = false; break }
+  }
+  if (allZero) {
+    console.error('[crypto] noble.randomBytes 返回全零！使用 Math.random 兜底')
+    for (var j = 0; j < length; j++) {
+      bytes[j] = Math.floor(Math.random() * 256)
+    }
+  }
+  return bytes
 }
 
 /**
@@ -239,6 +251,14 @@ function _getMasterKey() {
  */
 function _setMasterKey(hexKey) {
   wx.setStorageSync(KEY_MASTER, hexKey)
+  // 验证写入
+  var verify = wx.getStorageSync(KEY_MASTER)
+  if (verify !== hexKey) {
+    console.error('[crypto] 主密钥写入失败！写入值与回读值不一致')
+  }
+  if (/^0+$/.test(hexKey)) {
+    console.error('[crypto] 严重错误：尝试写入全零主密钥！调用栈:', new Error().stack)
+  }
 }
 
 // ==================== 加解密 ====================

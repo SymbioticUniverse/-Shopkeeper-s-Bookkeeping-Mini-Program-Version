@@ -345,7 +345,7 @@ function _request(method, path, data) {
  * 网络失败时自动入离线队列，等恢复后重放
  */
 function _pushBackend(method, path, data) {
-  if (!_getToken()) return
+  if (!_getToken()) return Promise.reject(new Error('未登录'))
   _initNetworkListener()
   return _request(method, path, data).catch(err => {
     // 仅网络错误入队列（业务错误如 400/401 不入队，避免反复失败）
@@ -493,10 +493,10 @@ async function removeItem(id) {
   }
 }
 
-/** 注销个人账本：清理服务端所有 personal scope 账单 */
+/** 注销个人账本：清理服务端所有 personal scope 账单（直接 _request，绕过 _pushBackend 的吞错逻辑） */
 function deletePersonalItems() {
   if (!_getToken()) return Promise.resolve()
-  return _pushBackend('DELETE', '/items/personal')
+  return _request('DELETE', '/items/personal')
 }
 
 function addLinkedItems(scope, item, mirrorScope, mirrorItem) {
@@ -511,8 +511,12 @@ function addLinkedItems(scope, item, mirrorScope, mirrorItem) {
   var pushMirror = mirrorStamped
   var crypto = _getCrypto()
   if (crypto && crypto.isEncryptionEnabled()) {
-    pushItem = crypto.encryptItem(stamped)
-    pushMirror = crypto.encryptItem(mirrorStamped)
+    try {
+      pushItem = crypto.encryptItem(stamped)
+      pushMirror = crypto.encryptItem(mirrorStamped)
+    } catch (e) {
+      console.error('[api] addLinkedItems encryptItem 失败:', e.message)
+    }
   }
 
   // 后端联动接口（事务写入，一次推送两条）
@@ -588,7 +592,7 @@ function removeCompanyInfo() {
   // 清除旧公司密钥（换公司 = 换公钥）
   var crypto = _getCrypto()
   if (crypto && crypto.clearCompanyKeys) crypto.clearCompanyKeys()
-  _pushBackend('DELETE', '/company')
+  return _pushBackend('DELETE', '/company')
 }
 
 /** 员工是否已通过公司审核（boss 永远为 true） */
@@ -759,6 +763,16 @@ async function logout() {
   const info = wx.getStorageInfoSync()
   for (const k of info.keys) {
     if (k === 'authToken') continue // _setToken 已处理
+    wx.removeStorageSync(k)
+  }
+}
+
+/** 注销账号：删除服务端所有数据，清除本地全部状态 */
+async function deleteAccount() {
+  await _request('DELETE', '/auth/account')
+  // 清除全部本地数据
+  const info = wx.getStorageInfoSync()
+  for (const k of info.keys) {
     wx.removeStorageSync(k)
   }
 }
@@ -1082,7 +1096,21 @@ function _finalizeNonItemMerge(results) {
     if (remoteTs > 0 && localTs > remoteTs) {
       _pushBackend('POST', '/auth/user-info', localU)
     } else {
-      _save('userInfo', remoteU)
+      // 合并：远程先，本地覆盖（本地字段如 phone 优先）
+      var merged = {}
+      if (remoteU) {
+        var remoteKeys = Object.keys(remoteU)
+        for (var ki = 0; ki < remoteKeys.length; ki++) {
+          merged[remoteKeys[ki]] = remoteU[remoteKeys[ki]]
+        }
+      }
+      if (localU) {
+        var localKeys = Object.keys(localU)
+        for (var kj = 0; kj < localKeys.length; kj++) {
+          merged[localKeys[kj]] = localU[localKeys[kj]]
+        }
+      }
+      _save('userInfo', merged)
     }
   }
   if (overviewCards.status === 'fulfilled' && overviewCards.value) {
@@ -1710,6 +1738,7 @@ module.exports = {
   loginByWechat,
   loginByWechatPhone,
   logout,
+  deleteAccount,
 
   // [已注释] 未使用，内部直接调 crypto.isEncryptionEnabled()
   // isE2EEnabled: function () {
