@@ -1,0 +1,121 @@
+  <!-- 语音语音窗口 -->
+  <view class="chat-overlay" wx:if="{{showChat}}" catchtap="onChatOverlayTap" bindtouchend="onChatOverlayTouchEnd" bindtouchcancel="onChatOverlayTouchEnd">
+    <view class="chat-card" catchtap="nop">
+      <view class="chat-header">
+        <text class="chat-title">语音记账助手</text>
+        <view class="chat-close" bindtap="onAiChatClose">×</view>
+      </view>
+      <!-- 录音中指示器 -->
+      <view class="chat-recording-banner" wx:if="{{chatRecording}}">
+        <view class="chat-recording-pulse"></view>
+        <text class="chat-recording-text">正在聆听… 松开发送</text>
+      </view>
+      <scroll-view class="chat-messages" scroll-y enhanced show-scrollbar="{{false}}" scroll-top="{{chatScrollTop}}" scroll-with-animation>
+        <view class="chat-msg" wx:for="{{chatMessages}}" wx:key="index" id="chat-msg-{{index}}">
+          <view class="chat-msg-bubble chat-msg-bubble--{{item.role}} {{item.card ? 'chat-msg-bubble--chat-card' : ''}}">
+            <text class="chat-msg-text">{{item.text}}</text>
+            <!-- 待确认：3行布局卡片 -->
+            <view wx:if="{{item.card && item.confirmed === undefined}}" class="chat-bill-card chat-bill-card--{{item.card.type}}">
+              <!-- Row 1: Amount (大) + Type -->
+              <view class="chat-bill-row chat-bill-row--main">
+                <view class="chat-bill-amount-wrap">
+                  <text class="chat-bill-currency">¥</text>
+                  <input class="chat-bill-amount-input" type="digit" value="{{item.card.amount}}" bindinput="onAiCardAmountInput" data-idx="{{index}}" placeholder="0.00"/>
+                </view>
+                <picker mode="selector" range="{{typeOptions}}" value="{{item._typeIdx}}" bindchange="onAiCardTypeChange" data-idx="{{index}}">
+                  <view class="chat-bill-tag-picker chat-bill-tag-picker--{{item.card.type}}">
+                    <text class="chat-bill-tag-text">{{item.card.typeLabel}}</text>
+                    <text class="chat-bill-arrow">▼</text>
+                  </view>
+                </picker>
+              </view>
+              <!-- Row 2: Category + Date + Target -->
+              <view class="chat-bill-row chat-bill-row--fields">
+                <picker mode="selector" range="{{catOptions}}" value="{{item._catIdx}}" bindchange="onAiCardCatChange" data-idx="{{index}}">
+                  <view class="chat-bill-chip">
+                    <text class="chat-bill-chip-text">{{item.card.category}}</text>
+                    <text class="chat-bill-arrow">▼</text>
+                  </view>
+                </picker>
+                <picker mode="date" value="{{item.card.date}}" bindchange="onAiCardDateChange" data-idx="{{index}}">
+                  <view class="chat-bill-chip">
+                    <text class="chat-bill-chip-text">{{item.card.date}}</text>
+                    <text class="chat-bill-arrow">▼</text>
+                  </view>
+                </picker>
+                <picker mode="selector" range="{{targetOptions}}" value="{{item._targetIdx}}" bindchange="onAiCardTargetChange" data-idx="{{index}}">
+                  <view class="chat-bill-chip">
+                    <text class="chat-bill-chip-text">{{item.card.target || '对象'}}</text>
+                    <text class="chat-bill-arrow">▼</text>
+                  </view>
+                </picker>
+              </view>
+              <!-- Row 3: Note -->
+              <view class="chat-bill-row chat-bill-row--note">
+                <input class="chat-bill-input" value="{{item.card.note}}" bindinput="onChatCardNoteInput" data-idx="{{index}}" placeholder="添加备注..."/>
+              </view>
+              <!-- Buttons -->
+              <view class="chat-bill-btns">
+                <view class="chat-bill-btn chat-bill-btn--reject" catchtap="onChatReject" data-idx="{{index}}">取消</view>
+                <view class="chat-bill-btn chat-bill-btn--confirm" catchtap="onAiConfirm" data-idx="{{index}}">确认记账</view>
+              </view>
+            </view>
+            <!-- 已确认：原卡片 + 链接 -->
+            <view wx:elif="{{item.card && item.confirmed === true}}" class="chat-bill-card chat-bill-card--{{item.card.type}}" catchtap="onAiBillTap" data-idx="{{index}}">
+              <view class="chat-bill-row">
+                <view class="chat-bill-dot"></view>
+                <text class="chat-bill-cat">{{item.card.category}}</text>
+                <text class="chat-bill-type">{{item.card.typeLabel}}</text>
+                <text class="chat-bill-link">查看明细 ></text>
+              </view>
+              <view class="chat-bill-row chat-bill-row--bottom">
+                <text class="chat-bill-amount">¥{{item.card.amount}}</text>
+                <text wx:if="{{item.card.target}}" class="chat-bill-target-confirmed">{{item.card.target}}</text>
+                <text class="chat-bill-date">{{item.card.date}}</text>
+              </view>
+            </view>
+            <!-- 已取消：灰色 + 重新输入提示 -->
+            <view wx:elif="{{item.card && item.confirmed === false}}" class="chat-bill-card chat-bill-card--rejected">
+              <view class="chat-bill-row">
+                <view class="chat-bill-dot"></view>
+                <text class="chat-bill-cat">{{item.card.category}}</text>
+                <text class="chat-bill-type">{{item.card.typeLabel}}</text>
+              </view>
+              <view class="chat-bill-row chat-bill-row--bottom">
+                <text class="chat-bill-amount">¥{{item.card.amount}}</text>
+                <text class="chat-bill-date">已取消</text>
+              </view>
+              <text class="chat-cancel-hint">{{item._ocrIndex !== undefined ? '此笔已跳过' : '识别有误？换个说法再试一次吧'}}</text>
+            </view>
+          </view>
+          <text class="chat-msg-time chat-msg-time--{{item.role}}">{{item.time}}</text>
+        </view>
+        <view class="chat-msg" wx:if="{{chatThinking}}">
+          <view class="chat-msg-bubble chat-msg-bubble--assistant">
+            <view class="chat-thinking-dots">
+              <view class="chat-thinking-dot"></view>
+              <view class="chat-thinking-dot"></view>
+              <view class="chat-thinking-dot"></view>
+            </view>
+          </view>
+        </view>
+      </scroll-view>
+      <view class="chat-input-bar">
+        <view class="chat-input-toggle" bindtap="onChatToggleMode">
+          <text class="chat-toggle-label">{{chatVoiceMode ? 'Aa' : 'mic'}}</text>
+        </view>
+        <block wx:if="{{chatVoiceMode}}">
+          <view class="chat-voice-btn {{chatRecording ? 'chat-voice-btn--recording' : ''}}"
+                bindtouchstart="onAiVoiceStart" bindtouchend="onAiVoiceEnd" bindtouchcancel="onAiVoiceEnd">
+            <text class="chat-voice-text">{{chatRecording ? '松开 结束' : '按住 说话'}}</text>
+          </view>
+        </block>
+        <block wx:else>
+          <input class="chat-input" placeholder="输入记账内容" value="{{chatInputText}}" bindinput="onChatInput" bindconfirm="onChatSend" confirm-type="send"/>
+          <view class="chat-send {{chatInputText ? 'chat-send--active' : ''}}" bindtap="onChatSend">
+            <text class="chat-send-arrow">↑</text>
+          </view>
+        </block>
+      </view>
+    </view>
+  </view>

@@ -1,0 +1,917 @@
+/* 设置页 */
+.settings-card {
+  overflow: hidden;
+}
+
+.settings-scroll {
+  flex: 1;
+  min-height: 0;
+  padding: 16rpx 28rpx;
+}
+
+.ledger-scroll {
+  flex: 1;
+  min-height: 0;
+  padding: 0;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.ledger-scroll-inner {
+  padding: 16rpx 28rpx;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* 明细简览卡：真实流水截断列表 */
+.ov-detail-cols {
+  display: flex;
+  align-items: center;
+  gap: 8rpx;
+  padding: 0 4rpx 6rpx 20rpx;
+  margin-top: 4rpx;
+}
+.ov-detail-col {
+  font-size: 20rpx;
+  font-weight: 500;
+  color: #b0b0b0;
+}
+.ov-detail-row {
+  display: flex;
+  align-items: center;
+  gap: 8rpx;
+  padding: 8rpx 4rpx;
+}
+.ov-detail-dot {
+  width: 8rpx;
+  height: 8rpx;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.18);
+  flex-shrink: 0;
+}
+.ov-detail-dot--in { background: #ef4444; }
+.ov-detail-dot--out { background: #333333; }
+.ov-detail-cat {
+  font-size: 22rpx;
+  font-weight: 500;
+  color: #333;
+  width: 64rpx;
+  flex-shrink: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.ov-detail-type {
+  font-size: 22rpx;
+  color: #888;
+  width: 52rpx;
+  flex-shrink: 0;
+}
+.ov-detail-note {
+  font-size: 22rpx;
+  color: #b0b0b0;
+  flex: 1;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.ov-detail-val {
+  font-size: 22rpx;
+  font-weight: 600;
+  color: #000;
+  min-width: 140rpx;
+  text-align: right;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+.ov-detail-val--in { color: #ef4444; }
+.ov-detail-val--out { color: #333333; }
+.ov-detail-date {
+  font-size: 22rpx;
+  color: #b0b0b0;
+  width: 72rpx;
+  text-align: right;
+  flex-shrink: 0;
+}
+.ov-detail-empty {
+  text-align: center;
+  font-size: 22rpx;
+  color: #b0b0b0;
+  padding: 24rpx 0;
+}
+.ov-detail-cut {
+  text-align: center;
+  font-size: 24rpx;
+  color: rgba(0, 0, 0, 0.18);
+  letter-spacing: 4rpx;
+  margin-top: 2rpx;
+}
+.page--dark .ov-detail-col,
+.page--dark .ov-detail-note,
+.page--dark .ov-detail-date,
+.page--dark .ov-detail-empty { color: #888; }
+.page--dark .ov-detail-cat { color: #ddd; }
+.page--dark .ov-detail-type { color: #aaa; }
+.page--dark .ov-detail-val { color: #eee; }
+.page--dark .ov-detail-cut { color: rgba(255, 255, 255, 0.2); }
+
+/* ==================== 账本页：本月概览 + 月度预算 ==================== */
+.ledger-card {
+  flex: 1 1 auto;
+  width: 100%;
+  box-sizing: border-box;
+  align-self: stretch;
+  overflow: visible;
+}
+.ledger-sec {
+  background: #fff;
+  border-radius: 24rpx;
+  box-shadow: 0 4rpx 24rpx rgba(0, 0, 0, 0.05);
+  padding: 28rpx 30rpx;
+  margin-bottom: 24rpx;
+  width: 100%;
+  box-sizing: border-box;
+}
+.ledger-sec-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 24rpx;
+}
+.ledger-sec-title {
+  font-size: 30rpx;
+  font-weight: 600;
+  color: #1a1a1a;
+}
+.ledger-sec-sub {
+  font-size: 22rpx;
+  color: #b0b0b0;
+}
+/* 三栏统计 */
+.ledger-stat-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 28rpx;
+}
+.ledger-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10rpx;
+  min-width: 120rpx;
+}
+.ledger-stat-sep {
+  width: 1rpx;
+  height: 48rpx;
+  background: rgba(0, 0, 0, 0.06);
+}
+.ledger-asset-divider {
+  height: 1rpx;
+  background: rgba(0, 0, 0, 0.06);
+  margin: 18rpx 0;
+}
+.ledger-stat-val {
+  font-size: 36rpx;
+  font-weight: 700;
+  color: #1a1a1a;
+  text-align: center;
+}
+.ledger-stat-val--in { color: #ef4444; }
+.ledger-stat-val--out { color: #333333; }
+.ledger-stat-label {
+  font-size: 22rpx;
+  color: #999;
+  text-align: center;
+}
+/* 预算进度 */
+.ledger-budget-remain {
+  font-size: 24rpx;
+  font-weight: 500;
+  color: #ef4444;
+}
+.ledger-budget-remain--over { color: #333333; }
+.ledger-budget-bar {
+  width: 100%;
+  height: 16rpx;
+  border-radius: 8rpx;
+  background: rgba(0, 0, 0, 0.06);
+  overflow: hidden;
+}
+.ledger-budget-fill {
+  height: 100%;
+  border-radius: 8rpx;
+  background: #ef4444;
+  transition: width 0.3s ease;
+}
+.ledger-budget-fill--over { background: #333333; }
+.ledger-budget-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 14rpx;
+}
+.ledger-budget-meta-txt {
+  font-size: 22rpx;
+  color: #b0b0b0;
+}
+/* 预算编辑 */
+.ledger-budget-edit {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+  margin-top: 26rpx;
+}
+.ledger-budget-input-wrap {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 8rpx;
+  height: 72rpx;
+  padding: 0 24rpx;
+  border-radius: 18rpx;
+  background: rgba(0, 0, 0, 0.04);
+}
+.ledger-budget-cny {
+  font-size: 28rpx;
+  color: #999;
+}
+.ledger-budget-input {
+  flex: 1;
+  font-size: 28rpx;
+  color: #1a1a1a;
+}
+.ledger-budget-ph { color: #c0c0c0; }
+.ledger-budget-save {
+  height: 72rpx;
+  padding: 0 40rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 18rpx;
+  background: #ef4444;
+  color: #fff;
+  font-size: 28rpx;
+  font-weight: 500;
+  box-shadow: 0 4rpx 16rpx rgba(0, 208, 66, 0.28);
+}
+/* 暗色 */
+.page--dark .ledger-sec {
+  background: #1e1e1e;
+  box-shadow: 0 4rpx 24rpx rgba(0, 0, 0, 0.25);
+}
+.page--dark .ledger-sec-title { color: #f0f0f0; }
+.page--dark .ledger-sec-sub,
+.page--dark .ledger-budget-meta-txt { color: #777; }
+.page--dark .ledger-stat-val { color: #f0f0f0; }
+.page--dark .ledger-stat-label { color: #888; }
+.page--dark .ledger-stat-sep { background: rgba(255, 255, 255, 0.08); }
+.page--dark .ledger-asset-divider { background: rgba(255, 255, 255, 0.08); }
+.page--dark .ledger-budget-bar { background: rgba(255, 255, 255, 0.08); }
+.page--dark .ledger-budget-input-wrap { background: rgba(255, 255, 255, 0.06); }
+.page--dark .ledger-budget-input { color: #f0f0f0; }
+.page--dark .ledger-budget-cny { color: #888; }
+.page--dark .ledger-budget-ph { color: #666; }
+/* 往来款 */
+.ledger-due-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18rpx 6rpx;
+  border-radius: 14rpx;
+}
+.ledger-due-row:active { background: rgba(0, 0, 0, 0.03); }
+.ledger-due-left {
+  display: flex;
+  flex-direction: column;
+  gap: 8rpx;
+}
+.ledger-due-name {
+  font-size: 28rpx;
+  font-weight: 500;
+  color: #1a1a1a;
+}
+.ledger-due-desc {
+  font-size: 22rpx;
+  color: #b0b0b0;
+}
+.ledger-due-right {
+  display: flex;
+  align-items: center;
+  gap: 14rpx;
+}
+.ledger-due-val {
+  font-size: 30rpx;
+  font-weight: 600;
+  color: #1a1a1a;
+}
+.ledger-due-val--in { color: #ef4444; }
+.ledger-due-val--out { color: #333333; }
+.ledger-due-arrow {
+  width: 14rpx;
+  height: 14rpx;
+  border-top: 3rpx solid #c8c8c8;
+  border-right: 3rpx solid #c8c8c8;
+  transform: rotate(45deg);
+}
+.ledger-due-net {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 8rpx;
+  padding: 18rpx 6rpx 2rpx;
+  border-top: 1rpx solid rgba(0, 0, 0, 0.06);
+}
+.ledger-due-net-label {
+  font-size: 24rpx;
+  color: #999;
+}
+.ledger-due-net-val {
+  font-size: 30rpx;
+  font-weight: 700;
+}
+.ledger-due-empty {
+  text-align: center;
+  font-size: 24rpx;
+  color: #b0b0b0;
+  padding: 28rpx 0 12rpx;
+}
+.page--dark .ledger-due-row:active { background: rgba(255, 255, 255, 0.04); }
+.page--dark .ledger-due-name { color: #f0f0f0; }
+.page--dark .ledger-due-desc,
+.page--dark .ledger-due-net-label,
+.page--dark .ledger-due-empty { color: #777; }
+.page--dark .ledger-due-val { color: #f0f0f0; }
+.page--dark .ledger-due-arrow { border-color: #666; }
+.page--dark .ledger-due-net { border-top-color: rgba(255, 255, 255, 0.08); }
+
+.settings-group {
+  margin-bottom: 28rpx;
+  padding: 0 60rpx 0 8rpx;
+}
+
+.settings-group-title {
+  display: block;
+  font-size: 24rpx;
+  color: #a0a0a0;
+  padding: 0 8rpx 12rpx 8rpx;
+}
+
+.settings-item {
+  display: flex;
+  align-items: center;
+  padding: 24rpx 20rpx;
+  background: #fff;
+  border-radius: 0;
+}
+
+.settings-item + .settings-item {
+  border-top: 1rpx solid #f0f0f0;
+}
+
+.settings-item:first-child {
+  border-radius: 16rpx 16rpx 0 0;
+}
+
+.settings-item--last {
+  border-radius: 0 0 16rpx 16rpx;
+}
+
+.settings-item:first-child:last-child {
+  border-radius: 16rpx;
+}
+
+.settings-item-label {
+  flex: 1;
+  font-size: 28rpx;
+  color: #333;
+}
+
+.settings-item-value {
+  font-size: 26rpx;
+  color: #a0a0a0;
+  margin-right: 8rpx;
+}
+
+.settings-item-value--warn {
+  color: #333333;
+}
+
+.settings-item-arrow {
+  font-size: 28rpx;
+  color: #ccc;
+}
+
+.settings-item--slider {
+  flex-direction: column;
+  align-items: stretch;
+  padding-top: 18rpx;
+  padding-bottom: 22rpx;
+}
+
+.settings-slider-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8rpx;
+}
+
+.settings-slider-head .settings-item-label {
+  flex: none;
+}
+
+.settings-slider-head .settings-item-value {
+  margin-right: 0;
+}
+
+.settings-slider {
+  width: 100%;
+  margin: 0;
+}
+
+/* ======== 深色模式 ======== */
+.page--dark {
+  background: linear-gradient(to top, #1a1a2e 0%, #16213e 37%, #1a1a3e 62%, #16213e 100%);
+}
+
+/* 卡片 */
+.page--dark .card,
+.page--dark .my-card {
+  background: rgba(30, 30, 46, 0.92) !important;
+}
+
+/* 标题文字 */
+.page--dark .tab-label-active,
+.page--dark .card-title,
+.page--dark .my-item-title,
+.page--dark .my-nickname,
+.page--dark .custom-cat-title,
+.page--dark .settings-item-label,
+.page--dark .settings-group-title,
+.page--dark .contact-gift-info-title,
+.page--dark .contact-gift-links-title,
+.page--dark .contact-gift-link-label,
+.page--dark .report-date-text,
+.page--dark .report-period-text--active,
+.page--dark .detail-date-text,
+.page--dark .bill-item-title,
+.page--dark .settle-item-title,
+.page--dark .company-boss-title,
+.page--dark .company-employee-success-title,
+.page--dark .export-bill-section-label,
+.page--dark .export-bill-format-label,
+.page--dark .export-bill-range-label,
+.page--dark .my-login-text,
+.page--dark .notify-text,
+.page--dark .audit-item-name {
+  color: #e0e0e0 !important;
+}
+
+/* 次要文字 */
+.page--dark .my-item-sub,
+.page--dark .card-subtitle,
+.page--dark .settings-item-value,
+.page--dark .contact-gift-info-desc,
+.page--dark .contact-gift-link-value,
+.page--dark .bill-item-sub,
+.page--dark .settle-item-sub,
+.page--dark .notify-time,
+.page--dark .audit-status,
+.page--dark .detail-date-label,
+.page--dark .report-date-label,
+.page--dark .export-bill-grid-text {
+  color: #888 !important;
+}
+
+/* ===== 导出账本卡片（重做：个人/公司两卡片） ===== */
+.export-book-body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 8rpx 24rpx 0;
+}
+
+.export-bill-card .report-period-bar {
+  margin-top: 24rpx;
+}
+
+.export-book-picker {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  transform: translateY(-50rpx);
+}
+
+.export-book-lead {
+  margin: 28rpx 6rpx 0;
+  font-size: 22rpx;
+  color: #9a9a9a;
+  letter-spacing: 1rpx;
+}
+
+.export-book-card {
+  display: flex;
+  align-items: center;
+  padding: 34rpx 30rpx;
+  margin-bottom: 28rpx;
+  border-radius: 28rpx;
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 10rpx 30rpx rgba(0, 0, 0, 0.06);
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
+}
+
+.export-book-card--press {
+  transform: scale(0.97);
+  box-shadow: 0 4rpx 16rpx rgba(0, 0, 0, 0.09);
+}
+
+.export-book-badge {
+  width: 96rpx;
+  height: 96rpx;
+  border-radius: 26rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.export-book-card--personal .export-book-badge {
+  background: linear-gradient(135deg, rgba(0, 208, 66, 0.18), rgba(0, 208, 66, 0.05));
+}
+
+.export-book-card--company .export-book-badge {
+  background: linear-gradient(135deg, rgba(58, 140, 255, 0.18), rgba(58, 140, 255, 0.05));
+}
+
+.export-book-icon {
+  width: 56rpx;
+  height: 56rpx;
+}
+
+.export-book-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  margin-left: 26rpx;
+}
+
+.export-book-title {
+  font-size: 32rpx;
+  font-weight: 600;
+  color: #1a1a1a;
+}
+
+.export-book-desc {
+  margin-top: 8rpx;
+  font-size: 22rpx;
+  color: #9a9a9a;
+}
+
+.export-book-arrow {
+  width: 16rpx;
+  height: 16rpx;
+  border-top: 4rpx solid #c6c6c6;
+  border-right: 4rpx solid #c6c6c6;
+  transform: rotate(45deg);
+  flex-shrink: 0;
+  margin-left: 12rpx;
+}
+
+.page--dark .export-book-card {
+  background: rgba(44, 44, 46, 0.92);
+  box-shadow: 0 10rpx 30rpx rgba(0, 0, 0, 0.3);
+}
+
+.page--dark .export-book-title {
+  color: #f0f0f0;
+}
+
+.page--dark .export-book-lead,
+.page--dark .export-book-desc {
+  color: #8a8a8a;
+}
+
+.page--dark .export-book-arrow {
+  border-color: #6a6a6a;
+}
+
+/* 普通文字 */
+.page--dark .tab-label {
+  color: #888;
+}
+
+/* 标题文字（补全遗漏） */
+.page--dark .header-title,
+.page--dark .date-month-num,
+.page--dark .date-month-label,
+.page--dark .row-label,
+.page--dark .report-title,
+.page--dark .detail-title,
+.page--dark .settle-title,
+.page--dark .report-type-text--active,
+	.page--dark .vip-plan-name,
+.page--dark .vip-price-int,
+.page--dark .vip-price-unit,
+.page--dark .vip-price-yen,
+.page--dark .company-boss-success-tip,
+.page--dark .company-success-val,
+.page--dark .company-employee-note-strong,
+.page--dark .company-employee-success-note-strong,
+.page--dark .company-employee-success-role,
+.page--dark .custom-edit-card-name,
+.page--dark .custom-glass-label-name,
+.page--dark .custom-section-title,
+.page--dark .edit-mode-title,
+.page--dark .ghost-card-name,
+.page--dark .popup-slot-card-name,
+.page--dark .template-panel-title,
+.page--dark .placeholder-card,
+.page--dark .settle-warn,
+.page--dark .audit-name {
+  color: #e0e0e0 !important;
+}
+
+/* 弹窗/输入框文字 */
+.page--dark .bill-modal-value,
+.page--dark .bill-modal-input,
+.page--dark .bill-cat,
+.page--dark .bill-type,
+.page--dark .back-text {
+  color: #e0e0e0 !important;
+}
+
+/* 箭头指示器 */
+.page--dark .date-arrow {
+  border-top-color: #e0e0e0 !important;
+}
+.page--dark .back-arrow {
+  border-left-color: #ccc !important;
+  border-bottom-color: #ccc !important;
+}
+.page--dark .header-back-btn {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.3);
+  box-shadow: 0 4rpx 16rpx rgba(0,0,0,0.2);
+}
+.page--dark .header-search {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.3);
+  box-shadow: 0 4rpx 16rpx rgba(0,0,0,0.2);
+}
+.page--dark .header-search-input { color: #e0e0e0; }
+.page--dark .mic-head { background: #999; }
+.page--dark .mic-base { border-color: #999; }
+.page--dark .mic-base::after { background: #999; }
+.page--dark .card-arrow {
+  color: #888 !important;
+}
+
+/* 卡片边框（暗色可见） */
+.page--dark .card,
+.page--dark .my-card {
+  border-color: rgba(255, 255, 255, 0.12) !important;
+}
+
+/* 年份文字 */
+.page--dark .year-text {
+  color: #888 !important;
+}
+
+/* 设置条目 */
+.page--dark .settings-item {
+  background: #2a2a3a !important;
+}
+.page--dark .settings-item + .settings-item {
+  border-top-color: #333 !important;
+}
+.page--dark .about-app-name {
+  color: #e0e0e0 !important;
+}
+.page--dark .about-desc {
+  color: #aaa !important;
+}
+.page--dark .about-info-value {
+  color: #ccc !important;
+}
+.page--dark .about-divider {
+  background: #333 !important;
+}
+
+/* 关于我们 */
+.about-scroll {
+  flex: 1;
+  padding: 0;
+}
+
+.about-body {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 48rpx 32rpx;
+}
+
+.about-logo {
+  width: 120rpx;
+  height: 120rpx;
+  border-radius: 28rpx;
+  background: linear-gradient(135deg, #4a90d9, #6c5ce7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 40rpx;
+  font-weight: 600;
+  color: #fff;
+  margin-bottom: 20rpx;
+}
+
+.about-app-name {
+  font-size: 36rpx;
+  font-weight: 600;
+  color: #333;
+}
+
+.about-version {
+  font-size: 26rpx;
+  color: #a0a0a0;
+  margin-top: 6rpx;
+}
+
+.about-divider {
+  width: 100%;
+  height: 1rpx;
+  background: #f0f0f0;
+  margin: 24rpx 0;
+}
+
+.about-desc {
+  font-size: 28rpx;
+  color: #666;
+  text-align: center;
+  line-height: 1.6;
+}
+
+.about-info-row {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  padding: 12rpx 0;
+}
+
+.about-info-label {
+  font-size: 28rpx;
+  color: #a0a0a0;
+  width: 120rpx;
+}
+
+.about-info-value {
+  font-size: 28rpx;
+  color: #333;
+}
+
+.about-copyright {
+  font-size: 22rpx;
+  color: #ccc;
+  margin-top: 16rpx;
+}
+
+/* 输入框 */
+.page--dark .contact-gift-textarea,
+.page--dark .contact-gift-links {
+  background: #2a2a3a;
+}
+.page--dark .contact-gift-textarea {
+  color: #e0e0e0;
+}
+
+/* 分割线 */
+.page--dark .divider,
+.page--dark .custom-cat-divider,
+.page--dark .my-group + .my-group {
+  border-top-color: #333 !important;
+}
+.page--dark .contact-gift-link-item + .contact-gift-link-item {
+  border-top-color: #333 !important;
+}
+
+/* 按钮 */
+.page--dark .contact-gift-btn {
+  background: linear-gradient(135deg, #5a9fe8, #4a7fc4);
+}
+
+/* 弹窗/模态 */
+.page--dark .popup-mask {
+  background: rgba(0, 0, 0, 0.6);
+}
+.page--dark .popup-card,
+.page--dark .cat-modal,
+.page--dark .bill-modal {
+  background: #1e1e2e;
+}
+.page--dark .popup-card-title,
+.page--dark .cat-modal-title,
+.page--dark .bill-modal-title {
+  color: #e0e0e0;
+}
+.page--dark .bill-settle-tag--pending {
+  background: rgba(255, 149, 0, 0.15);
+  border-color: #ff9500;
+}
+.page--dark .bill-settle-tag--auto {
+  background: rgba(76, 175, 80, 0.15);
+  border-color: #ef4444;
+}
+.page--dark .bill-item--pending-confirm {
+  border-left-color: #ff9500 !important;
+}
+.page--dark .bill-modal-auto-tag {
+  color: #66bb6a;
+}
+.page--dark .bill-modal-settle-info {
+  color: #888;
+}
+
+/* 我的页分组 */
+.page--dark .my-item {
+  background: #2a2a3a !important;
+}
+.page--dark .my-item + .my-item {
+  border-top-color: #333 !important;
+}
+
+/* VIP 卡片 */
+.page--dark .vip-plan-card {
+  background: #2a2a3a !important;
+}
+
+/* header */
+.page--dark .header {
+  background: transparent;
+}
+
+/* 卡片玻璃效果 */
+.page--dark .glass-card {
+  background: rgba(30, 30, 46, 0.85);
+}
+
+/* 明细/结清条目 */
+.page--dark .bill-item,
+.page--dark .settle-item {
+  background: #2a2a3a !important;
+}
+.page--dark .bill-item + .bill-item,
+.page--dark .settle-item + .settle-item {
+  border-top-color: #333 !important;
+}
+
+/* 报表期间栏 */
+.page--dark .report-period-bar {
+  background: #2a2a3a;
+}
+.page--dark .report-period-item--active {
+  background: #4a7fc4;
+}
+
+/* 隐私政策页 */
+.privacy-policy-body {
+  padding: 8rpx 0 40rpx 0;
+}
+
+.privacy-policy-update {
+  display: block;
+  font-size: 24rpx;
+  color: #a0a0a0;
+  margin-bottom: 28rpx;
+}
+
+.privacy-policy-section {
+  display: block;
+  font-size: 30rpx;
+  font-weight: 500;
+  color: #333;
+  margin-bottom: 12rpx;
+  margin-top: 24rpx;
+}
+
+.privacy-policy-text {
+  display: block;
+  font-size: 26rpx;
+  color: #666;
+  line-height: 1.8;
+  margin-bottom: 8rpx;
+}
+
+.page--dark .privacy-policy-section {
+  color: #e0e0e0;
+}
+.page--dark .privacy-policy-text {
+  color: #888;
+}
+.page--dark .privacy-policy-update {
+  color: #888;
+}

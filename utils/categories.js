@@ -101,8 +101,7 @@ const DEFAULT_COMPANY_CATEGORIES = [
   { id: 'c_44', name: '租赁款', emoji: '🔑', inOut: 'payable' },
 ]
 
-// [已注释] 整个文件未被引用，暂时禁用导出
-// module.exports = {
-//   DEFAULT_PERSONAL_CATEGORIES,
-//   DEFAULT_COMPANY_CATEGORIES,
-// }
+module.exports = {
+  DEFAULT_PERSONAL_CATEGORIES,
+  DEFAULT_COMPANY_CATEGORIES,
+}

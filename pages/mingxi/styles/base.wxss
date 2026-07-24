@@ -1,0 +1,615 @@
+page {
+  height: 100vh;
+  overflow: hidden;
+}
+
+.page {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  padding: 140rpx 26rpx 0;
+  box-sizing: border-box;
+}
+
+/* ===== 模式指示色带 ===== */
+.mode-accent {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  height: 30vh;
+  z-index: 0;
+  pointer-events: none;
+  transition: background 0.35s ease;
+}
+.mode-accent--personal {
+  background: linear-gradient(180deg, rgba(74, 138, 254, 0.10) 0%, rgba(74, 138, 254, 0.03) 50%, transparent 100%);
+}
+.mode-accent--company {
+  background: linear-gradient(180deg, rgba(255, 50, 50, 0.50) 0%, rgba(255, 50, 50, 0.15) 50%, transparent 100%);
+}
+.page--dark .mode-accent--personal {
+  background: linear-gradient(180deg, rgba(74, 138, 254, 0.08) 0%, rgba(74, 138, 254, 0.01) 50%, transparent 100%);
+}
+.page--dark .mode-accent--company {
+  background: linear-gradient(180deg, rgba(255, 50, 50, 0.40) 0%, rgba(255, 50, 50, 0.10) 50%, transparent 100%);
+}
+
+/* ===== 平板适配：等比缩小关键尺寸（rpx 减半补偿） ===== */
+.page--tablet {
+  padding: 70rpx 13rpx 0;
+}
+.page--tablet .header {
+  height: 40rpx;
+  margin-top: 15rpx;
+  margin-bottom: -10rpx;
+}
+.page--tablet .header-left {
+  transform: translateY(-10rpx);
+}
+.page--tablet .year-text {
+  font-size: 13rpx;
+  top: -15rpx;
+}
+.page--tablet .date-month-num {
+  font-size: 30rpx;
+}
+.page--tablet .date-month-label {
+  font-size: 14rpx;
+  margin-top: 10rpx;
+}
+.page--tablet .header-title {
+  font-size: 18rpx;
+}
+.page--tablet .card {
+  padding: 16rpx 18rpx;
+  border-radius: 16rpx;
+}
+.page--tablet .card-title {
+  font-size: 15rpx;
+}
+.page--tablet .card-subtitle {
+  font-size: 11rpx;
+}
+.page--tablet .card-header {
+  margin-bottom: 8rpx;
+  padding-left: 46rpx;
+}
+.page--tablet .card-grid {
+  overflow: hidden auto;
+}
+.page--tablet .my-profile {
+  margin-bottom: 16rpx;
+}
+.page--tablet .my-avatar {
+  width: 48rpx;
+  height: 48rpx;
+}
+.page--tablet .my-nickname,
+.page--tablet .my-login-text {
+  font-size: 18rpx;
+}
+.page--tablet .my-item {
+  padding: 10rpx 14rpx;
+  border-radius: 14rpx;
+}
+.page--tablet .my-item-icon {
+  width: 36rpx;
+  height: 36rpx;
+  margin-right: 12rpx;
+  border-radius: 8rpx;
+}
+.page--tablet .my-item-title {
+  font-size: 18rpx;
+}
+.page--tablet .my-item-sub {
+  font-size: 14rpx;
+}
+.page--tablet .my-item-arrow {
+  font-size: 16rpx;
+}
+.page--tablet .my-icon-row {
+  padding: 14rpx 10rpx;
+}
+.page--tablet .my-icon-circle {
+  width: 32rpx;
+  height: 32rpx;
+}
+.page--tablet .my-icon-label {
+  font-size: 14rpx;
+}
+.page--tablet .expand-menu-card {
+  padding: 24rpx 20rpx;
+}
+.page--tablet .expand-icon-text {
+  font-size: 18rpx;
+}
+.page--tablet .report-chart-stage {
+  flex-shrink: 1;
+  min-height: 120rpx;
+  max-height: 35vh;
+  overflow: hidden;
+}
+.page--tablet .report-chart-block {
+  min-height: 100rpx;
+  overflow: hidden;
+}
+.page--tablet .report-pie-block {
+  min-height: 180rpx;
+  overflow: hidden;
+}
+.page--tablet .report-canvas {
+  width: 100%;
+  height: 300rpx;
+}
+.page--tablet .report-pie-canvas {
+  width: 180rpx;
+  height: 180rpx;
+}
+.page--tablet .overview-canvas {
+  height: 160rpx;
+}
+.page--tablet .book-sheet {
+  height: 62vh;
+  padding: 16rpx 20rpx 0;
+}
+.page--tablet .book-sheet--with-photo {
+  height: 70vh;
+}
+.page--tablet .book-photo-thumb {
+  width: 80rpx;
+  height: 80rpx;
+}
+.page--tablet .book-photo-tag {
+  font-size: 20rpx;
+}
+.page--tablet .book-photo-hint {
+  font-size: 16rpx;
+}
+.page--tablet .book-photo-remove {
+  width: 36rpx;
+  height: 36rpx;
+  font-size: 18rpx;
+}
+.page--tablet .book-amount-value {
+  font-size: 36rpx;
+}
+.page--tablet .book-key {
+  height: 56rpx;
+  font-size: 26rpx;
+  border-radius: 8rpx;
+}
+.page--tablet .book-keypad {
+  padding: 6rpx 0 12rpx;
+}
+.page--tablet .book-keypad-row {
+  gap: 8rpx;
+  margin-bottom: 8rpx;
+}
+.page--tablet .book-btn-save {
+  padding: 14rpx 0;
+  font-size: 16rpx;
+  border-radius: 10rpx;
+}
+.page--tablet .book-cat-select {
+  padding: 10rpx 0;
+}
+.page--tablet .book-cat-select-val,
+.page--tablet .book-cat-select-label {
+  font-size: 15rpx;
+}
+.page--tablet .book-date-picker {
+  padding: 10rpx 0;
+}
+.page--tablet .book-date-label,
+.page--tablet .book-date-value {
+  font-size: 15rpx;
+}
+.page--tablet .book-note-input {
+  font-size: 15rpx;
+}
+.page--tablet .book-yen {
+  font-size: 28rpx;
+}
+.page--tablet .book-cat-panel {
+  height: 65vh;
+  padding: 18rpx 18rpx 0;
+}
+.page--tablet .book-cat-panel-scope {
+  margin-bottom: 12rpx;
+}
+.page--tablet .book-cat-panel-grid {
+  margin-top: 12rpx;
+}
+.page--tablet .book-type-tab {
+  padding: 12rpx 0;
+  font-size: 18rpx;
+}
+.page--tablet .book-type-bar {
+  gap: 8rpx;
+  margin-bottom: 14rpx;
+}
+.page--tablet .book-cat-panel-emoji {
+  width: 50rpx;
+  height: 50rpx;
+  border-radius: 12rpx;
+  font-size: 24rpx;
+}
+.page--tablet .book-cat-panel-item {
+  gap: 4rpx;
+  padding: 8rpx 0;
+}
+.page--tablet .book-cat-panel-name {
+  font-size: 14rpx;
+}
+.page--tablet .book-cat-panel-icons {
+  gap: 10rpx;
+  padding-bottom: 30rpx;
+}
+.page--tablet .expand-menu-item {
+  padding: 12rpx 14rpx;
+  gap: 10rpx;
+}
+.page--tablet .expand-menu-icon {
+  width: 24rpx;
+  height: 24rpx;
+  border-radius: 6rpx;
+}
+.page--tablet .card-avatar {
+  width: 36rpx;
+  height: 36rpx;
+}
+.page--tablet .tab-icon-img {
+  width: 36rpx;
+  height: 36rpx;
+}
+.page--tablet .tab-icon-center-img {
+  width: 50rpx;
+  height: 50rpx;
+}
+.page--tablet .tab-label {
+  font-size: 16rpx;
+}
+.page--tablet .tab-bar-wrapper {
+  height: 90rpx;
+  margin: 0 -13rpx;
+}
+.page--tablet .tab-bar {
+  height: 72rpx;
+  padding-bottom: 10rpx;
+  border-radius: 20rpx 20rpx 0 0;
+}
+.page--tablet .tab-bar-center-btn {
+  width: 100rpx;
+  height: 100rpx;
+  top: -20rpx;
+}
+.page--tablet .tab-center-label {
+  font-size: 16rpx;
+  bottom: 10rpx;
+}
+.page--tablet .bill-item {
+  padding: 12rpx 0;
+}
+.page--tablet .bill-modal-mask {
+  padding: 30rpx;
+}
+.page--tablet .my-group {
+  margin-bottom: 16rpx;
+}
+.page--tablet .my-card {
+  padding: 24rpx;
+}
+
+/* ---- 标题栏 ---- */
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  height: 80rpx;
+  margin-top: 30rpx;
+  margin-bottom: -20rpx;
+  flex-shrink: 0;
+  position: relative;
+}
+.header-left {
+  position: relative;
+  flex-shrink: 0;
+  transform: translateY(-20rpx);
+}
+.year-text {
+  font-size: 26rpx;
+  color: #a0a0a0;
+  font-weight: 500;
+  position: absolute;
+  top: -30rpx;
+  left: 4rpx;
+}
+.date-badge {
+  display: flex;
+  align-items: center;
+  margin-top: -4rpx;
+  margin-bottom: 12rpx;
+}
+.date-month-num {
+  font-size: 60rpx;
+  font-weight: 500;
+  color: #000;
+}
+.date-month-label {
+  font-size: 28rpx;
+  font-weight: 500;
+  color: #000;
+  margin-top: 20rpx;
+  margin-left: 2rpx;
+}
+.date-arrow {
+  width: 0;
+  height: 0;
+  border-left: 10rpx solid transparent;
+  border-right: 10rpx solid transparent;
+  border-top: 14rpx solid #999;
+  margin-left: 4rpx;
+  margin-top: 24rpx;
+}
+.header-title {
+  font-size: 36rpx;
+  font-weight: 600;
+  color: #000;
+  position: absolute;
+  left: 50%;
+  transform: translate(-50%, -80rpx);
+  align-self: center;
+}
+.header-right-group {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+  margin-top: -16rpx;
+  flex-shrink: 0;
+}
+.header-right-icon {
+  flex-shrink: 0;
+}
+.header-expand-btn {
+  width: 60rpx;
+  height: 60rpx;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.8);
+  border: 1rpx solid rgba(0,0,0,0.06);
+  box-shadow: 0 4rpx 16rpx rgba(0,0,0,0.06);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6rpx;
+}
+.expand-plus {
+  position: relative;
+  width: 32rpx;
+  height: 32rpx;
+}
+.expand-plus::before,
+.expand-plus::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  background: #666;
+  border-radius: 2rpx;
+}
+.expand-plus::before {
+  width: 30rpx;
+  height: 4rpx;
+  transform: translate(-50%, -50%);
+}
+.expand-plus::after {
+  width: 4rpx;
+  height: 30rpx;
+  transform: translate(-50%, -50%);
+}
+.header-left-group {
+  display: flex;
+  align-items: flex-start;
+  gap: 16rpx;
+  flex-shrink: 0;
+}
+.header-back-btn {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+  background: #fff;
+  border: 1rpx solid rgba(0,0,0,0.06);
+  border-radius: 40rpx;
+  padding: 12rpx 26rpx 12rpx 20rpx;
+  flex-shrink: 0;
+  margin-top: -16rpx;
+  box-shadow: 0 4rpx 16rpx rgba(0,0,0,0.06);
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+.header-back-btn:active {
+  transform: translateY(3rpx);
+  box-shadow: 0 2rpx 8rpx rgba(0,0,0,0.04);
+}
+.back-arrow {
+  width: 18rpx;
+  height: 18rpx;
+  border-left: 4rpx solid #888;
+  border-bottom: 4rpx solid #888;
+  transform: rotate(45deg);
+}
+.back-text {
+  font-size: 28rpx;
+  font-weight: 700;
+  color: #000;
+  letter-spacing: 1rpx;
+}
+.header-search {
+  display: flex;
+  align-items: center;
+  gap: 10rpx;
+  width: 380rpx;
+  height: 56rpx;
+  padding: 0 20rpx;
+  background: #fff;
+  border: 1rpx solid rgba(0,0,0,0.06);
+  border-radius: 28rpx;
+  box-shadow: 0 4rpx 16rpx rgba(0,0,0,0.06);
+  box-sizing: border-box;
+}
+.header-search-mic {
+  position: relative;
+  width: 40rpx;
+  height: 40rpx;
+  flex-shrink: 0;
+}
+.mic-head {
+  position: absolute;
+  top: 6rpx;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 14rpx;
+  height: 20rpx;
+  border-radius: 7rpx;
+  background: #888;
+}
+.mic-base {
+  position: absolute;
+  top: 14rpx;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 24rpx;
+  height: 14rpx;
+  border: 2rpx solid #888;
+  border-top: none;
+  border-radius: 0 0 12rpx 12rpx;
+  box-sizing: border-box;
+}
+.mic-base::after {
+  content: '';
+  position: absolute;
+  bottom: -8rpx;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 2rpx;
+  height: 8rpx;
+  background: #888;
+}
+.header-search-input {
+  flex: 1;
+  min-width: 0;
+  font-size: 26rpx;
+  color: #333;
+}
+.header-search-go {
+  flex-shrink: 0;
+  width: 36rpx;
+  height: 36rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.header-search-go:active { opacity: 0.5; }
+.search-go-icon {
+  font-size: 30rpx;
+  line-height: 1;
+  color: #888;
+}
+.invisible {
+  visibility: hidden;
+}
+
+/* 拓展菜单 */
+.expand-menu-overlay {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  z-index: 7500;
+  background: rgba(0,0,0,0.15);
+  animation: expandFadeIn 0.2s ease-out;
+}
+.expand-menu-card {
+  position: absolute;
+  top: 170rpx;
+  right: 30rpx;
+  width: 380rpx;
+  background: rgba(255,255,255,0.95);
+  backdrop-filter: blur(20px);
+  border-radius: 24rpx;
+  border: 1rpx solid rgba(0,0,0,0.06);
+  box-shadow: 0 8rpx 32rpx rgba(0,0,0,0.1);
+  padding: 16rpx 0;
+  animation: expandSlideDown 0.25s ease-out;
+}
+.expand-menu-item {
+  display: flex;
+  align-items: center;
+  padding: 24rpx 28rpx;
+  gap: 20rpx;
+  transition: background 0.15s;
+}
+.expand-menu-item:active { background: rgba(0,0,0,0.04); }
+.expand-menu-icon {
+  width: 48rpx;
+  height: 48rpx;
+  border-radius: 12rpx;
+  flex-shrink: 0;
+}
+.expand-menu-icon--scan { background: #e8f5e9; }
+.expand-menu-icon--category { background: #fff3e0; }
+.expand-menu-icon--chat { background: #e3f2fd; }
+.expand-icon-text { font-size: 28rpx; font-weight: 700; color: #ef4444; }
+.expand-icon-text--cat { font-size: 22rpx; color: #ff9800; letter-spacing: -2rpx; }
+.expand-icon-text--chat { font-size: 32rpx; color: #3a7bfd; }
+.expand-menu-label {
+  font-size: 28rpx;
+  font-weight: 600;
+  color: #1a1a2e;
+  flex: 1;
+}
+.expand-menu-arrow {
+  font-size: 24rpx;
+  color: #ccc;
+  flex-shrink: 0;
+}
+.expand-menu-divider {
+  height: 1rpx;
+  background: rgba(0,0,0,0.06);
+  margin: 8rpx 28rpx;
+}
+@keyframes expandFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes expandSlideDown {
+  from { opacity: 0; transform: translateY(-24rpx); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ---- 卡片网格 ---- */
+.card-grid {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 16rpx;
+  padding: 10rpx 0 20rpx;
+  overflow: hidden;
+  position: relative;
+}
+
+.card {
+  background: rgba(255,255,255,0.8);
+  border: 1rpx solid rgba(0,0,0,0.06);
+  border-radius: 26rpx;
+  padding: 32rpx 28rpx;
+  box-shadow: 0 8rpx 24rpx rgba(0,0,0,0.08);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  animation: fadeIn 0.2s ease-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.grid-span-1 { flex: 1; }
+.grid-span-2 { flex: 2; }
+.grid-span-3 { flex: 3; }

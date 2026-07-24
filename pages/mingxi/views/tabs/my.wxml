@@ -1,0 +1,972 @@
+    <!-- Tab 4: 我的 -->
+    <block wx:if="{{currentTab === 4}}">
+      <!-- VIP升级页 -->
+      <view class="card grid-span-3 my-card vip-main-card" wx:if="{{showVipPage}}">
+        <view class="custom-cat-header">
+          <view class="custom-cat-back" bindtap="onVipBack">
+            <view class="custom-cat-back-arrow"></view>
+          </view>
+          <view class="custom-cat-right"><image class="custom-cat-icon" src="/assets/icons/VIP.png" mode="aspectFit"/><text class="custom-cat-title">{{t.vip_subscribe}}</text></view>
+        </view>
+        <!-- 试用激活横幅 -->
+        <view class="vip-trial-banner" wx:if="{{showTrialBanner}}">
+          <view class="vip-trial-banner-bg">
+            <text class="vip-trial-banner-title">新用户限时福利</text>
+            <text class="vip-trial-banner-desc">领取 3 个月企业版 PRO 免费试用</text>
+            <view class="vip-trial-banner-countdown">
+              <text class="vip-trial-banner-countdown-num">{{trialOfferDays}}</text>
+              <text class="vip-trial-banner-countdown-label">天后截止</text>
+            </view>
+            <text class="vip-trial-banner-date">截止日期 2026-09-25</text>
+            <view class="vip-trial-banner-btn" bindtap="onActivateTrial"><text class="vip-trial-banner-btn-text">立即领取</text></view>
+            <text class="vip-trial-banner-note">试用期间导出账单和凭证扫描仍有广告</text>
+          </view>
+        </view>
+        <!-- 体验版：占位 spacer 保持标题置顶 -->
+        <view style="flex: 1;"></view>
+        <!-- 体验版暂不显示个人/企业版套餐卡 -->
+        <scroll-view wx:if="{{false}}" class="vip-plan-list" scroll-y enhanced show-scrollbar="{{false}}">
+          <!-- 三张卡垂直排列 -->
+          <view class="vip-plan-card vip-plan--{{item.theme}} {{vipSelected === index ? 'vip-plan--selected' : ''}}" wx:for="{{vipCards}}" wx:key="id" wx:for-index="index" bindtap="onVipSelect" data-id="{{index}}">
+            <!-- 卡片头部 -->
+            <view class="vip-plan-hd">
+              <view class="vip-plan-name-row">
+                <text class="vip-plan-name">{{item.name}}</text>
+                <text class="vip-plan-tagline">{{item.tagline}}</text>
+              </view>
+            </view>
+            <!-- 功能列表 -->
+            <view class="vip-plan-features">
+              <view class="vip-plan-feat" wx:for="{{item.features}}" wx:key="*this" wx:for-item="f">
+                <view class="vip-plan-feat-dot"></view>
+                <text class="vip-plan-feat-text">{{f}}</text>
+              </view>
+            </view>
+            <!-- 企业版席位选择器 -->
+            <view class="vip-seats-row" wx:if="{{item.isEnterprise}}">
+              <text class="vip-seats-label">席位人数</text>
+              <view class="vip-seats-ctrl">
+                <view class="vip-seats-btn {{vipEnterpriseSeats <= item.enterpriseSeats.min ? 'vip-seats-btn--disabled' : ''}}" catchtap="onVipSeatsMinus"><text class="vip-seats-btn-text">−</text></view>
+                <text class="vip-seats-num">{{vipEnterpriseSeats}}</text>
+                <view class="vip-seats-btn {{vipEnterpriseSeats >= 20 ? 'vip-seats-btn--disabled' : ''}}" catchtap="onVipSeatsPlus"><text class="vip-seats-btn-text">+</text></view>
+              </view>
+              <text class="vip-seats-hint">4-20人</text>
+            </view>
+            <!-- 价格区域 -->
+            <view class="vip-plan-price">
+              <block wx:if="{{item.isContact}}">
+                <view class="vip-contact-btn"><text class="vip-contact-text">联系我们</text></view>
+              </block>
+              <block wx:elif="{{item.isEnterprise}}">
+                <!-- 企业版动态价格 -->
+                <view class="vip-price-row" wx:if="{{vipEnterpriseSeats <= item.enterpriseSeats.annualOnlyAbove}}">
+                  <text class="vip-price-yen">￥</text>
+                  <text class="vip-price-int">{{item.enterpriseSeats.basePrice + (vipEnterpriseSeats - item.enterpriseSeats.min) * item.enterpriseSeats.pricePerSeat}}</text>
+                  <text class="vip-price-unit">/月</text>
+                </view>
+                <view class="vip-price-row" wx:else>
+                  <text class="vip-price-yen">￥</text>
+                  <text class="vip-price-int">{{(item.enterpriseSeats.basePrice + (vipEnterpriseSeats - item.enterpriseSeats.min) * item.enterpriseSeats.pricePerSeat) * 12 * item.enterpriseSeats.annualDiscount}}</text>
+                  <text class="vip-price-unit">/年</text>
+                  <view class="vip-annual-badge"><text class="vip-annual-badge-text">8.8折</text></view>
+                </view>
+                <text class="vip-price-hint" wx:if="{{vipEnterpriseSeats > item.enterpriseSeats.annualOnlyAbove}}">超过10人仅提供年费</text>
+                <text class="vip-per-seat-hint" wx:else>每增加1席位 +8元/月</text>
+              </block>
+              <block wx:else>
+                <!-- 个人版固定价格 -->
+                <view class="vip-price-row">
+                  <text class="vip-price-yen">￥</text>
+                  <text class="vip-price-int">{{item.price}}</text>
+                  <text class="vip-price-unit">{{item.unit}}</text>
+                </view>
+              </block>
+            </view>
+          </view>
+        </scroll-view>
+        <!-- 体验版暂不显示订阅确认按钮 -->
+        <view class="vip-confirm-wrap" wx:if="{{false}}">
+          <view class="vip-confirm-btn" bindtap="onVipConfirm"><text class="vip-confirm-text">确认订阅</text></view>
+        </view>
+      </view>
+      <!-- 自定义分类页 -->
+      <view class="card grid-span-3 my-card custom-cat-card" wx:elif="{{showCustomCategory}}">
+        <view class="custom-cat-header">
+          <view class="custom-cat-back" bindtap="onCustomCategoryBack">
+            <view class="custom-cat-back-arrow"></view>
+          </view>
+          <view class="custom-cat-right"><image class="custom-cat-icon" src="/assets/icons/fenlei.png" mode="aspectFit"/><text class="custom-cat-title">{{t.custom_cat_title}}</text></view>
+        </view>
+        <view class="custom-cat-divider"></view>
+        <view class="custom-cat-personal-block">
+          <view class="custom-cat-section-hd">
+            <text class="custom-cat-section-label">个人分类</text>
+            <view class="custom-cat-tabs">
+              <view class="custom-cat-tab {{catTabPersonal === 'out' ? 'custom-cat-tab--on' : ''}}" bindtap="onCatTabChange" data-scope="personal" data-tab="out">支出</view>
+              <view class="custom-cat-tab {{catTabPersonal === 'in' ? 'custom-cat-tab--on' : ''}}" bindtap="onCatTabChange" data-scope="personal" data-tab="in">收入</view>
+              <view class="custom-cat-tab {{catTabPersonal === 'payForward' ? 'custom-cat-tab--on' : ''}}" bindtap="onCatTabChange" data-scope="personal" data-tab="payForward">垫付</view>
+              <view class="custom-cat-tab {{catTabPersonal === 'payable' ? 'custom-cat-tab--on' : ''}}" bindtap="onCatTabChange" data-scope="personal" data-tab="payable">应付</view>
+            </view>
+          </view>
+          <view class="custom-cat-scroll-wrap">
+            <scroll-view class="custom-cat-grid-scroll" scroll-y enhanced show-scrollbar="{{false}}" enable-flex>
+              <view class="custom-cat-grid">
+                <view class="custom-cat-item" wx:for="{{personalCategories}}" wx:key="id" wx:if="{{item.inOut === catTabPersonal}}" bindlongtap="onDeleteCategory" data-id="{{item.id}}" data-scope="personal">
+                  <view class="custom-cat-icon-wrap">
+                    <text class="custom-cat-emoji">{{item.emoji}}</text>
+                  </view>
+                  <text class="custom-cat-name">{{item.name}}</text>
+                </view>
+              </view>
+              <view class="custom-cat-add" bindtap="onAddCategory" data-scope="personal">
+                <view class="custom-cat-add-icon">+</view>
+              </view>
+            </scroll-view>
+          </view>
+        </view>
+        <view class="custom-cat-divider" wx:if="{{canSeeCompanyLedger}}"></view>
+        <view class="custom-cat-company-block" wx:if="{{canSeeCompanyLedger}}">
+          <view class="custom-cat-section-hd">
+            <text class="custom-cat-section-label">公司分类</text>
+            <view class="custom-cat-tabs">
+              <view class="custom-cat-tab {{catTabCompany === 'out' ? 'custom-cat-tab--on' : ''}}" bindtap="onCatTabChange" data-scope="company" data-tab="out">支出</view>
+              <view class="custom-cat-tab {{catTabCompany === 'in' ? 'custom-cat-tab--on' : ''}}" bindtap="onCatTabChange" data-scope="company" data-tab="in">收入</view>
+              <view class="custom-cat-tab {{catTabCompany === 'payForward' ? 'custom-cat-tab--on' : ''}}" bindtap="onCatTabChange" data-scope="company" data-tab="payForward">垫付</view>
+              <view class="custom-cat-tab {{catTabCompany === 'payable' ? 'custom-cat-tab--on' : ''}}" bindtap="onCatTabChange" data-scope="company" data-tab="payable">应付</view>
+            </view>
+          </view>
+          <view class="custom-cat-scroll-wrap">
+            <scroll-view class="custom-cat-grid-scroll" scroll-y enhanced show-scrollbar="{{false}}" enable-flex>
+              <view class="custom-cat-grid">
+                <view class="custom-cat-item" wx:for="{{companyCategories}}" wx:key="id" wx:if="{{item.inOut === catTabCompany}}" bindlongtap="onDeleteCategory" data-id="{{item.id}}" data-scope="company">
+                  <view class="custom-cat-icon-wrap">
+                    <text class="custom-cat-emoji">{{item.emoji}}</text>
+                  </view>
+                  <text class="custom-cat-name">{{item.name}}</text>
+                </view>
+              </view>
+              <view class="custom-cat-add" bindtap="onAddCategory" data-scope="company">
+                <view class="custom-cat-add-icon">+</view>
+              </view>
+            </scroll-view>
+          </view>
+        </view>
+        <!-- 添加分类弹窗 -->
+        <view class="cat-modal-mask" wx:if="{{showCatModal}}" bindtap="onCatModalClose"></view>
+        <view class="cat-modal" wx:if="{{showCatModal}}">
+          <view class="cat-modal-hd">
+            <text class="cat-modal-title">添加分类</text>
+            <view class="cat-modal-close" bindtap="onCatModalClose">✕</view>
+          </view>
+          <view class="cat-modal-body">
+            <view class="cat-modal-field">
+              <text class="cat-modal-label">名称</text>
+              <input class="cat-modal-input" value="{{catModalName}}" bindinput="onCatModalNameInput" placeholder="输入分类名称" maxlength="10"/>
+            </view>
+            <view class="cat-modal-field">
+              <text class="cat-modal-label">图标</text>
+              <view class="cat-modal-emoji-grid">
+                <view class="cat-modal-emoji-item {{catModalEmoji === item ? 'cat-modal-emoji--on' : ''}}" wx:for="{{catEmojiList}}" wx:key="*this" wx:for-item="item" bindtap="onCatModalPickEmoji" data-emoji="{{item}}">{{item}}</view>
+              </view>
+            </view>
+          </view>
+          <view class="cat-modal-ft">
+            <view class="cat-modal-btn cat-modal-btn--cancel" bindtap="onCatModalClose">取消</view>
+            <view class="cat-modal-btn cat-modal-btn--confirm" bindtap="onCatModalConfirm">确认</view>
+          </view>
+        </view>
+      </view>
+      <!-- 登录/注册页 -->
+      <view class="card grid-span-3 my-card login-card" wx:elif="{{showLoginPage}}">
+        <view class="custom-cat-header">
+          <view class="custom-cat-back" bindtap="onLoginBack">
+            <view class="custom-cat-back-arrow"></view>
+          </view>
+          <text class="custom-cat-title">{{t.my_login_text}}</text>
+        </view>
+        <view class="custom-cat-divider"></view>
+        <view class="login-body">
+          <view class="login-spacer"></view>
+          <view class="login-form-wrap">
+            <button class="login-wx-btn" open-type="getPhoneNumber" bindgetphonenumber="onGetRealtimePhoneNumber" bindtap="_devLoginFallback">
+              <view class="login-wx-icon">
+                <view class="login-wx-icon-inner"></view>
+              </view>
+              <text class="login-wx-text">微信一键登录</text>
+            </button>
+          </view>
+          <view class="login-spacer"></view>
+          <view class="login-agreement">
+            <text>登录即代表同意《用户协议》和《隐私政策》</text>
+          </view>
+        </view>
+      </view>
+      <!-- 链接公司共享同一账本 -->
+      <view class="card grid-span-3 my-card company-share-card" wx:elif="{{showCompanyShare}}">
+        <view class="custom-cat-header">
+          <view class="custom-cat-back" bindtap="onCompanyShareBack">
+            <view class="custom-cat-back-arrow"></view>
+          </view>
+          <view class="custom-cat-right"><image class="custom-cat-icon" src="/assets/icons/lianjiegongsigongxiangtongyizhangben.png" mode="aspectFit"/><text class="custom-cat-title">{{t.my_link_company}}</text></view>
+        </view>
+        <view class="custom-cat-divider"></view>
+        <view class="company-share-body" wx:if="{{companyShareStep === 0}}">
+          <view class="company-share-btn" bindtap="onBossTap">我是老板</view>
+          <view class="company-share-btn" bindtap="onEmployeeTap">我是员工</view>
+        </view>
+        <!-- 老板：创建公司表单 -->
+        <view class="company-boss-body" wx:elif="{{companyShareStep === 1 && companyRole === 'boss'}}">
+          <view class="company-boss-form">
+            <text class="company-boss-tip">检测到还未创建公司，填写后创建</text>
+            <view class="company-boss-field">
+              <text class="company-boss-label">公司名称</text>
+              <view class="company-boss-input-wrap">
+                <input class="company-boss-input" value="{{companyName}}" placeholder="请输入公司名称" bindinput="onCompanyNameInput"/>
+              </view>
+            </view>
+            <view class="company-boss-field">
+              <text class="company-boss-label">BOSS 称呼</text>
+              <view class="company-boss-input-wrap">
+                <input class="company-boss-input" value="{{companyBossTitle}}" placeholder="BOSS" bindinput="onCompanyBossTitleInput"/>
+              </view>
+            </view>
+            <view class="company-boss-field">
+              <text class="company-boss-label">UID 码</text>
+              <view class="company-boss-input-wrap">
+                <input class="company-boss-input" value="{{companyUid}}" placeholder="点击下方按钮生成" disabled/>
+              </view>
+            </view>
+            <text class="company-boss-note">注：企业版 UID 才可共享</text>
+            <view class="company-boss-uid-btn" bindtap="onCreateUid">创建专属 UID</view>
+          </view>
+          <view class="company-boss-submit" bindtap="onCompanyCreate">确认创建</view>
+        </view>
+        <!-- 员工：加入公司表单 -->
+        <view class="company-boss-body" wx:elif="{{companyShareStep === 1 && companyRole === 'employee'}}">
+          <view class="company-boss-form">
+            <text class="company-boss-tip">检测到还未加入公司，填写 UID 后加入</text>
+            <view class="company-boss-field">
+              <text class="company-boss-label">UID 码</text>
+              <view class="company-boss-input-wrap">
+                <input class="company-boss-input" value="{{employeeUid}}" placeholder="请输入公司 UID 码" bindinput="onEmployeeUidInput"/>
+              </view>
+            </view>
+            <view class="company-employee-note">
+              <text class="company-employee-note-text">加入企业后，获得个人版全部功能，</text>
+              <text class="company-employee-note-strong">无需再次开通</text>
+              <text class="company-employee-note-text">。</text>
+            </view>
+            <view class="company-employee-note">
+              <text class="company-employee-note-text">个人垫付款、采购款等垫资款将</text>
+              <text class="company-employee-note-strong">直接同步</text>
+              <text class="company-employee-note-text">到公司账本。</text>
+            </view>
+            <view class="company-employee-note">
+              <text class="company-employee-note-text">个人记录依旧保存在</text>
+              <text class="company-employee-note-strong">本地</text>
+              <text class="company-employee-note-text">，不会上传至公司。</text>
+            </view>
+          </view>
+          <view class="company-boss-submit" bindtap="onEmployeeJoin">一键加入公司</view>
+        </view>
+        <!-- 老板：创建成功 -->
+        <view class="company-boss-body" wx:elif="{{companyShareStep === 2 && companyRole === 'boss'}}">
+          <view class="company-boss-form">
+            <text class="company-boss-tip company-boss-success-tip">公司创建成功</text>
+            <view class="company-success-card">
+              <view class="company-success-row">
+                <text class="company-success-key">UID 码</text>
+                <text class="company-success-val">{{companyUid}}</text>
+              </view>
+              <text class="company-boss-note company-success-note">注：企业版 UID 才可共享</text>
+              <view class="company-success-row">
+                <text class="company-success-key">公司名称</text>
+                <text class="company-success-val">{{companyName}}</text>
+              </view>
+              <view class="company-success-row">
+                <text class="company-success-key">BOSS 称呼</text>
+                <text class="company-success-val">{{companyBossTitle || 'BOSS'}}</text>
+              </view>
+            </view>
+            <view class="company-share-action-btn" bindtap="onShareCompany">一键分享</view>
+          </view>
+        </view>
+        <!-- 员工：加入成功 -->
+        <view class="company-boss-body" wx:elif="{{companyShareStep === 2 && companyRole === 'employee'}}">
+          <view class="company-boss-form company-employee-success-form">
+            <text class="company-employee-success-role">员工</text>
+            <view class="company-employee-success-spacer"></view>
+            <text class="company-employee-success-title">已链接公司</text>
+            <view class="company-employee-success-spacer"></view>
+            <view class="company-employee-success-notes"><text class="company-employee-success-note-text">注：企业版员工个人记录依旧保存在</text><text class="company-employee-success-note-strong">本地</text><text class="company-employee-success-note-text">，不会上传至公司。个人垫付款，采购款等垫资款将</text><text class="company-employee-success-note-strong">直接同步</text><text class="company-employee-success-note-text">到公司账本。（非实时更新）加入企业后，获得个人版全部功能，</text><text class="company-employee-success-note-strong">无需再次开通</text><text class="company-employee-success-note-text">。公司端结清账单后，你需要确认资金是否到位，再点击</text><text class="company-employee-success-note-strong">确认结清</text><text class="company-employee-success-note-text">，一旦结清，公司则会认为你已经到账，为了避免后续纠纷，请一定要</text><text class="company-employee-success-note-strong">确认清楚</text><text class="company-employee-success-note-text">再点击结清。</text></view>
+          </view>
+        </view>
+      </view>
+      <!-- 导出账单 -->
+      <view class="card grid-span-3 my-card export-bill-card" wx:elif="{{showExportBill}}">
+        <view class="custom-cat-header">
+          <view class="custom-cat-back" bindtap="onExportBillBack">
+            <view class="custom-cat-back-arrow"></view>
+          </view>
+          <view class="custom-cat-right"><image class="custom-cat-icon" src="/assets/icons/daochu.png" mode="aspectFit"/><text class="custom-cat-title">{{t.export_title}}</text></view>
+        </view>
+        <view class="custom-cat-divider"></view>
+        <view class="report-period-bar">
+          <view class="report-period-item {{exportPeriod === 0 ? 'report-period-item--active' : ''}}" bindtap="onExportPeriodTap" data-period="{{0}}">
+            <text class="report-period-text {{exportPeriod === 0 ? 'report-period-text--active' : ''}}">月度</text>
+          </view>
+          <view class="report-period-item {{exportPeriod === 1 ? 'report-period-item--active' : ''}}" bindtap="onExportPeriodTap" data-period="{{1}}">
+            <text class="report-period-text {{exportPeriod === 1 ? 'report-period-text--active' : ''}}">季度</text>
+          </view>
+          <view class="report-period-item {{exportPeriod === 2 ? 'report-period-item--active' : ''}}" bindtap="onExportPeriodTap" data-period="{{2}}">
+            <text class="report-period-text {{exportPeriod === 2 ? 'report-period-text--active' : ''}}">年度</text>
+          </view>
+          <view class="report-period-item {{exportPeriod === 3 ? 'report-period-item--active' : ''}}" bindtap="onExportPeriodTap" data-period="{{3}}">
+            <text class="report-period-text {{exportPeriod === 3 ? 'report-period-text--active' : ''}}">日度</text>
+          </view>
+        </view>
+        <view class="export-book-body">
+          <!-- 时间范围 + 导出格式 -->
+          <view class="export-bill-top">
+            <view class="export-bill-range">
+              <text class="export-bill-range-label">时间</text>
+              <picker wx:if="{{exportPeriod === 0}}" mode="date" fields="month" value="{{exportPickerDate}}" end="{{maxDate}}" bindchange="onExportPickerChange">
+                <view class="detail-date-box">
+                  <text class="report-date-text">{{exportDateText}}</text>
+                  <view class="report-date-arrow"></view>
+                </view>
+              </picker>
+              <picker wx:elif="{{exportPeriod === 1}}" mode="multiSelector" range="{{reportQuarterRange}}" value="{{exportQuarterMultiIndex}}" bindchange="onExportQuarterChange" bindcolumnchange="onExportQuarterColumnChange">
+                <view class="detail-date-box">
+                  <text class="report-date-text">{{exportDateText}}</text>
+                  <view class="report-date-arrow"></view>
+                </view>
+              </picker>
+              <picker wx:elif="{{exportPeriod === 2}}" mode="date" fields="year" value="{{exportPickerDate}}" end="{{maxDate}}" bindchange="onExportPickerChange">
+                <view class="detail-date-box">
+                  <text class="report-date-text">{{exportDateText}}</text>
+                  <view class="report-date-arrow"></view>
+                </view>
+              </picker>
+              <picker wx:elif="{{exportPeriod === 3}}" mode="date" value="{{exportPickerDate}}" end="{{maxDate}}" bindchange="onExportPickerChange">
+                <view class="detail-date-box">
+                  <text class="report-date-text">{{exportDateText}}</text>
+                  <view class="report-date-arrow"></view>
+                </view>
+              </picker>
+            </view>
+            <view class="export-bill-format">
+              <text class="export-bill-format-label">导出格式</text>
+              <picker mode="selector" range="{{exportFormatOptions}}" value="{{exportFormatIndex}}" bindchange="onExportFormatChange">
+                <view class="detail-date-box">
+                  <text class="report-date-text">{{exportFormatOptions[exportFormatIndex]}}</text>
+                  <view class="report-date-arrow"></view>
+                </view>
+              </picker>
+            </view>
+          </view>
+          <text class="export-book-lead">选择要导出的账本</text>
+          <view class="export-book-picker">
+            <view class="export-book-card export-book-card--personal" hover-class="export-book-card--press" hover-stay-time="60" bindtap="onExportPersonal">
+              <view class="export-book-badge"><image class="export-book-icon" src="/assets/icons/gerenzhangben.png" mode="aspectFit"/></view>
+              <view class="export-book-info">
+                <text class="export-book-title">个人账本</text>
+                <text class="export-book-desc">导出你的个人收支明细</text>
+              </view>
+              <view class="export-book-arrow"></view>
+            </view>
+            <view wx:if="{{canSeeCompanyLedger}}" class="export-book-card export-book-card--company" hover-class="export-book-card--press" hover-stay-time="60" bindtap="onExportCompany">
+              <view class="export-book-badge"><image class="export-book-icon" src="/assets/icons/gongsizhangben.png" mode="aspectFit"/></view>
+              <view class="export-book-info">
+                <text class="export-book-title">公司账本</text>
+                <text class="export-book-desc">导出公司收支明细</text>
+              </view>
+              <view class="export-book-arrow"></view>
+            </view>
+          </view>
+        </view>
+      </view>
+      <!-- 审核页 -->
+      <view class="card grid-span-3 my-card audit-card" wx:elif="{{showAuditPage}}">
+        <view class="custom-cat-header">
+          <view class="custom-cat-back" bindtap="onAuditBack">
+            <view class="custom-cat-back-arrow"></view>
+          </view>
+          <view class="custom-cat-right"><image class="custom-cat-icon" src="/assets/icons/shenhe.png" mode="aspectFit"/><text class="custom-cat-title">{{t.audit_title}}</text></view>
+        </view>
+        <view class="custom-cat-divider"></view>
+        <scroll-view class="audit-scroll" scroll-y enhanced show-scrollbar="{{false}}">
+          <block wx:for="{{auditList}}" wx:key="id">
+            <view class="audit-item">
+              <view class="audit-item-left">
+                <image class="audit-avatar" src="{{item.applicantAvatar}}" mode="aspectFill"/>
+                <view class="audit-info">
+                  <text class="audit-name">{{item.applicantName}}</text>
+                  <text class="audit-time">{{item.joinedAt}}</text>
+                </view>
+              </view>
+              <view class="audit-actions" wx:if="{{item.status === 'pending'}}">
+                <view class="audit-btn audit-btn--approve" bindtap="onAuditApprove" data-id="{{item.id}}">
+                  <text>通过</text>
+                </view>
+                <view class="audit-btn audit-btn--reject" bindtap="onAuditReject" data-id="{{item.id}}">
+                  <text>拒绝</text>
+                </view>
+              </view>
+              <text class="audit-status" wx:else>{{item.status === 'approved' ? '已通过' : '已拒绝'}}</text>
+            </view>
+          </block>
+          <view class="audit-empty" wx:if="{{auditList.length === 0}}">
+            <text>暂无审核</text>
+          </view>
+        </scroll-view>
+      </view>
+      <!-- 联系我们获好礼页 -->
+      <view class="card grid-span-3 my-card contact-gift-card" wx:elif="{{showContactPage}}">
+        <view class="custom-cat-header">
+          <view class="custom-cat-back" bindtap="onContactBack">
+            <view class="custom-cat-back-arrow"></view>
+          </view>
+          <view class="custom-cat-right"><image class="custom-cat-icon" src="/assets/icons/screenshot.png" mode="aspectFit"/><text class="custom-cat-title">{{t.contact_title}}</text></view>
+        </view>
+        <view class="custom-cat-divider"></view>
+        <view class="contact-gift-body">
+          <view class="contact-gift-info">
+            <text class="contact-gift-info-title">{{t.contact_info_title}}</text>
+            <text class="contact-gift-info-desc">{{t.contact_info_desc}}</text>
+          </view>
+          <view class="contact-gift-form">
+            <textarea class="contact-gift-textarea" placeholder="{{t.contact_placeholder}}" value="{{contactFeedback}}" bindinput="onContactInput" maxlength="500" auto-height="false"></textarea>
+            <view class="contact-gift-btn" bindtap="onContactSubmit">
+              <text>{{t.contact_submit}}</text>
+            </view>
+          </view>
+          <view class="contact-gift-links">
+            <text class="contact-gift-links-title">{{t.contact_other}}</text>
+            <view class="contact-gift-link-item">
+              <text class="contact-gift-link-label">{{t.contact_email_label}}</text>
+              <text class="contact-gift-link-value">feedback@opc-book.com</text>
+            </view>
+            <view class="contact-gift-link-item">
+              <text class="contact-gift-link-label">微信公众号</text>
+              <text class="contact-gift-link-value">掌柜记账</text>
+            </view>
+          </view>
+        </view>
+      </view>
+      <!-- 隐私政策页 -->
+      <view class="card grid-span-3 my-card privacy-card" wx:elif="{{showPrivacyPolicyPage}}">
+        <view class="custom-cat-header">
+          <view class="custom-cat-back" bindtap="onPrivacyPolicyBack">
+            <view class="custom-cat-back-arrow"></view>
+          </view>
+          <text class="custom-cat-title">隐私政策</text>
+        </view>
+        <view class="custom-cat-divider"></view>
+        <scroll-view class="settings-scroll" scroll-y enhanced show-scrollbar="{{false}}">
+          <view class="privacy-policy-body">
+            <text class="privacy-policy-update">更新日期：2026年06月16日</text>
+            <text class="privacy-policy-section">一、信息收集</text>
+            <text class="privacy-policy-text">我们仅收集实现"公私 OPC 记账"基本功能所必需的信息，包括：您主动录入的账目数据（金额、分类、日期、备注）；您的登录凭证（手机号或微信授权信息）；设备基础信息（系统版本、语言偏好）。</text>
+            <text class="privacy-policy-section">二、信息使用</text>
+            <text class="privacy-policy-text">您的账目数据仅存储在本地设备，用于为您提供记账、报表、结清等核心功能。我们不会将您的账目数据上传至服务器，也不会用于任何商业目的。</text>
+            <text class="privacy-policy-section">三、数据存储与安全</text>
+            <text class="privacy-policy-text">所有账目数据默认存储在您的设备本地。加入企业版后，部分协作数据（如公司账本）将通过加密传输同步至云端。您可以通过"设置-隐私设置"随时关闭数据收集或清除本地数据。</text>
+            <text class="privacy-policy-section">四、您的权利</text>
+            <text class="privacy-policy-text">您有权随时查看、导出或删除您的数据。您可以在隐私设置中管理数据收集偏好，在设置中退出登录或解散/退出公司。</text>
+            <text class="privacy-policy-section">五、联系我们</text>
+            <text class="privacy-policy-text">如有任何隐私相关问题，请通过"我的-联系我们获好礼"提交反馈，或发送邮件至 feedback@opc-book.com。</text>
+          </view>
+        </scroll-view>
+      </view>
+      <!-- 隐私设置页 -->
+      <view class="card grid-span-3 my-card privacy-card" wx:elif="{{showPrivacyPage}}">
+        <view class="custom-cat-header">
+          <view class="custom-cat-back" bindtap="onPrivacyBack">
+            <view class="custom-cat-back-arrow"></view>
+          </view>
+          <text class="custom-cat-title">隐私设置</text>
+        </view>
+        <view class="custom-cat-divider"></view>
+        <scroll-view class="settings-scroll" scroll-y enhanced show-scrollbar="{{false}}">
+          <view class="settings-group">
+            <view class="settings-group-title">数据收集</view>
+            <view class="settings-item">
+              <text class="settings-item-label">使用数据收集</text>
+              <text class="settings-item-value" bindtap="onPrivacyToggle" data-key="allowAnalytics">{{privacyAllowAnalytics ? '已开启' : '已关闭'}}</text>
+            </view>
+            <view class="settings-item settings-item--last">
+              <text class="settings-item-label">崩溃报告</text>
+              <text class="settings-item-value" bindtap="onPrivacyToggle" data-key="allowCrashReport">{{privacyAllowCrashReport ? '已开启' : '已关闭'}}</text>
+            </view>
+          </view>
+          <view class="settings-group">
+            <view class="settings-group-title">隐私政策</view>
+            <view class="settings-item settings-item--last" bindtap="onPrivacyPolicyView">
+              <text class="settings-item-label">查看隐私政策</text>
+              <text class="settings-item-arrow">〉</text>
+            </view>
+          </view>
+        </scroll-view>
+      </view>
+      <!-- 关于我们页 -->
+      <view class="card grid-span-3 my-card about-card" wx:elif="{{showAboutPage}}">
+        <view class="custom-cat-header">
+          <view class="custom-cat-back" bindtap="onAboutBack">
+            <view class="custom-cat-back-arrow"></view>
+          </view>
+          <text class="custom-cat-title">{{t.settings_about}}</text>
+        </view>
+        <view class="custom-cat-divider"></view>
+        <scroll-view class="about-scroll" scroll-y enhanced show-scrollbar="{{false}}">
+          <view class="about-body">
+            <view class="about-logo">掌柜</view>
+            <text class="about-app-name">掌柜记账</text>
+            <text class="about-version">v1.0.0</text>
+            <view class="about-divider"></view>
+            <text class="about-desc">一款简洁高效的个人与公司记账工具，支持多人协作、报表分析、自定义分类等功能。</text>
+            <view class="about-divider"></view>
+            <view class="about-info-row">
+              <text class="about-info-label">官网</text>
+              <text class="about-info-value">www.opc-book.com</text>
+            </view>
+            <view class="about-info-row">
+              <text class="about-info-label">邮箱</text>
+              <text class="about-info-value">feedback@opc-book.com</text>
+            </view>
+            <view class="about-info-row">
+              <text class="about-info-label">开发者</text>
+              <text class="about-info-value">OPC Team</text>
+            </view>
+            <view class="about-divider"></view>
+            <text class="about-copyright">Copyright © 2026 OPC. All rights reserved.</text>
+          </view>
+        </scroll-view>
+      </view>
+      <!-- 设置页 -->
+      <view class="card grid-span-3 my-card settings-card" wx:elif="{{showSettingsPage}}">
+        <view class="custom-cat-header">
+          <view class="custom-cat-back" bindtap="onSettingsBack">
+            <view class="custom-cat-back-arrow"></view>
+          </view>
+          <view class="custom-cat-right"><image class="custom-cat-icon" src="/assets/icons/shezhi.png" mode="aspectFit"/><text class="custom-cat-title">{{t.settings_title}}</text></view>
+        </view>
+        <view class="custom-cat-divider"></view>
+        <scroll-view class="settings-scroll" scroll-y enhanced show-scrollbar="{{false}}">
+          <view class="settings-group">
+            <view class="settings-group-title">{{t.settings_general}}</view>
+            <view class="settings-item" bindtap="onSettingsTap" data-action="language">
+              <text class="settings-item-label">{{t.settings_language}}</text>
+              <text class="settings-item-value">{{settingsLanguageLabel || '简体中文'}}</text>
+              <text class="settings-item-arrow">〉</text>
+            </view>
+            <view class="settings-item" bindtap="onSettingsTap" data-action="darkMode">
+              <text class="settings-item-label">{{t.settings_darkmode}}</text>
+              <text class="settings-item-value">{{settingsDarkModeLabel || '跟随系统'}}</text>
+              <text class="settings-item-arrow">〉</text>
+            </view>
+          </view>
+          <view class="settings-group">
+            <view class="settings-group-title">{{t.settings_privacy}}</view>
+            <view class="settings-item" bindtap="onSettingsTap" data-action="privacy">
+              <text class="settings-item-label">{{t.settings_privacy_item}}</text>
+              <text class="settings-item-arrow">〉</text>
+            </view>
+            <view class="settings-item" bindtap="onSettingsTap" data-action="security">
+              <text class="settings-item-label">数据加密</text>
+              <text class="settings-item-value">{{encryptionAdvancedEnabled ? '高级安全' : '已加密'}}<text wx:if="{{!encryptionEnabled}}" style="color:#fa5151;font-size:22rpx">（未就绪）</text></text>
+              <text class="settings-item-arrow">〉</text>
+            </view>
+            <view class="settings-item" wx:if="{{encryptionCompanyIsBoss && !encryptionCompanyKeyReady}}" bindtap="onRegenerateCompanyKeys">
+              <text class="settings-item-label">公司加密状态</text>
+              <text class="settings-item-value" style="color:#fa5151">私钥缺失！点击重试</text>
+              <text class="settings-item-arrow">〉</text>
+            </view>
+            <view class="settings-item" wx:elif="{{encryptionCompanyIsBoss && encryptionCompanyKeyReady}}">
+              <text class="settings-item-label">公司加密状态</text>
+              <text class="settings-item-value" style="color:#07c160">私钥已就绪 ✓</text>
+            </view>
+            <view class="settings-item" wx:if="{{!encryptionCompanyIsBoss && encryptionCompanyKeyReady}}">
+              <text class="settings-item-label">公司加密状态</text>
+              <text class="settings-item-value" style="color:#07c160">公钥已获取</text>
+            </view>
+            <view class="settings-item" wx:if="{{encryptionEnabled && !encryptionAdvancedEnabled && settingsHasAdvancedBlob}}" bindtap="promptAdvancedKeyRecovery">
+              <text class="settings-item-label">恢复高级安全</text>
+              <text class="settings-item-value" style="color:#f0a000">需要28位密钥</text>
+              <text class="settings-item-arrow">〉</text>
+            </view>
+            <view class="settings-item">
+              <text class="settings-item-label">绑定手机号</text>
+              <text class="settings-item-value">{{settingsPhone || '未绑定'}}</text>
+            </view>
+            <view class="settings-item settings-item--warn settings-item--last" bindtap="onSettingsTap" data-action="deactivateLedger">
+              <text class="settings-item-label">注销账本</text>
+              <text class="settings-item-value settings-item-value--warn">{{settingsLedgerRole === 'boss' ? '清除公司密钥与数据' : '清除个人密钥与数据'}}</text>
+              <text class="settings-item-arrow">〉</text>
+            </view>
+          </view>
+          <view class="settings-group">
+            <view class="settings-group-title">修改公司关系</view>
+            <view class="settings-item" wx:if="{{settingsLedgerRole === 'personal'}}" bindtap="onSettingsTap" data-action="registerOrJoin">
+              <text class="settings-item-label">{{t.settings_ledger_personal}}</text>
+              <text class="settings-item-value settings-item-value--warn">{{t.settings_ledger_personal_val}}</text>
+              <text class="settings-item-arrow">〉</text>
+            </view>
+            <view class="settings-item settings-item--warn" wx:if="{{settingsLedgerRole === 'employee'}}" bindtap="onSettingsTap" data-action="rechooseCompany">
+              <text class="settings-item-label">重新选择公司</text>
+              <text class="settings-item-value settings-item-value--warn">更换绑定的公司</text>
+              <text class="settings-item-arrow">〉</text>
+            </view>
+            <view class="settings-item settings-item--warn settings-item--last" wx:if="{{settingsLedgerRole === 'boss'}}" bindtap="onSettingsTap" data-action="dissolveCompany">
+              <text class="settings-item-label">{{t.settings_dissolve}}</text>
+              <text class="settings-item-value settings-item-value--warn">{{t.settings_dissolve_hint}}</text>
+              <text class="settings-item-arrow">〉</text>
+            </view>
+          </view>
+          <view class="settings-group">
+            <view class="settings-group-title">音效与触感</view>
+            <view class="settings-item settings-item--slider">
+              <view class="settings-slider-head">
+                <text class="settings-item-label">点击音量</text>
+                <text class="settings-item-value">{{tapVolumePercent}}%</text>
+              </view>
+              <slider class="settings-slider" min="0" max="100" value="{{tapVolumePercent}}" block-size="18" activeColor="#3a7bfd" backgroundColor="#e0e0e0" bindchange="onTapVolumeChange" show-value="{{false}}"/>
+            </view>
+            <view class="settings-item settings-item--slider settings-item--last">
+              <view class="settings-slider-head">
+                <text class="settings-item-label">震动强度</text>
+                <text class="settings-item-value">{{tapVibrationLabel}}</text>
+              </view>
+              <slider class="settings-slider" min="0" max="4" step="1" value="{{tapVibrationLevel}}" block-size="18" activeColor="#3a7bfd" backgroundColor="#e0e0e0" bindchange="onTapVibrationChange" show-value="{{false}}"/>
+            </view>
+          </view>
+          <view class="settings-group">
+            <view class="settings-group-title">{{t.settings_other}}</view>
+            <view class="settings-item" bindtap="onSettingsTap" data-action="clearCache">
+              <text class="settings-item-label">{{t.settings_clear_cache}}</text>
+              <text class="settings-item-value settings-item-value--warn">{{cacheSize}}</text>
+              <text class="settings-item-arrow">〉</text>
+            </view>
+            <view class="settings-item" bindtap="onSettingsTap" data-action="about">
+              <text class="settings-item-label">{{t.settings_about}}</text>
+              <text class="settings-item-value">v1.0.0</text>
+              <text class="settings-item-arrow">〉</text>
+            </view>
+            <view class="settings-item settings-item--warn" bindtap="onSettingsTap" data-action="deleteAccount">
+              <text class="settings-item-label">注销账号</text>
+              <text class="settings-item-value settings-item-value--warn">删除全部数据</text>
+              <text class="settings-item-arrow">〉</text>
+            </view>
+            <view class="settings-item settings-item--last" bindtap="onSettingsTap" data-action="logout">
+              <text class="settings-item-label">{{t.settings_logout}}</text>
+              <text class="settings-item-value settings-item-value--warn"></text>
+              <text class="settings-item-arrow">〉</text>
+            </view>
+          </view>
+        </scroll-view>
+      </view>
+      <!-- 通知页 -->
+      <view class="card grid-span-3 my-card notify-card" wx:elif="{{showNotifyPage}}">
+        <view class="custom-cat-header">
+          <view class="custom-cat-back" bindtap="onNotifyBack">
+            <view class="custom-cat-back-arrow"></view>
+          </view>
+          <view class="custom-cat-right"><image class="custom-cat-icon" src="/assets/icons/tongzhi.png" mode="aspectFit"/><text class="custom-cat-title">{{t.notify_title}}</text></view>
+        </view>
+        <view class="custom-cat-divider"></view>
+        <scroll-view class="notify-scroll" scroll-y enhanced show-scrollbar="{{false}}">
+          <block wx:for="{{notifyList}}" wx:key="id">
+            <view class="notify-swipe {{notifySwipeId === item.id ? 'notify-swipe--open' : ''}}">
+              <view class="notify-delete" bindtap="onNotifyDelete" data-id="{{item.id}}"><text>删除</text></view>
+              <view class="notify-item {{notifySwipeId === item.id ? 'notify-item--open' : ''}}" bindtouchstart="onNotifyTouchStart" bindtouchmove="onNotifyTouchMove" bindtouchend="onNotifyTouchEnd" bindtap="onNotifyRead" data-id="{{item.id}}">
+                <view class="notify-dot" wx:if="{{!item.read}}"></view>
+                <text class="notify-text">{{item.text}}</text>
+                <text class="notify-time">{{item._timeText}}</text>
+              </view>
+            </view>
+          </block>
+          <view class="notify-empty" wx:if="{{notifyList.length === 0}}">
+            <text>暂无通知</text>
+          </view>
+        </scroll-view>
+      </view>
+      <!-- 账本页（个人/公司） -->
+      <view class="card grid-span-3 my-card ledger-card" wx:elif="{{showLedgerPage}}">
+        <view class="custom-cat-header">
+          <view class="custom-cat-back" bindtap="onLedgerBack">
+            <view class="custom-cat-back-arrow"></view>
+          </view>
+          <view class="custom-cat-right"><image class="custom-cat-icon" src="{{ledgerScope === 'company' ? '/assets/icons/gongsizhangben.png' : '/assets/icons/gerenzhangben.png'}}" mode="aspectFit"/><text class="custom-cat-title">{{ledgerScope === 'company' ? t.detail_company_ledger : t.detail_personal_ledger}}</text></view>
+        </view>
+        <view class="custom-cat-divider"></view>
+        <scroll-view class="ledger-scroll" scroll-y enhanced show-scrollbar="{{false}}" scroll-into-view="{{ledgerScrollTo}}">
+          <view class="ledger-scroll-inner">
+          <!-- 个人账本：本月概览 + 往来款 -->
+          <view wx:if="{{ledgerScope === 'personal'}}" class="ledger-demo-area" id="ledger-overview">
+            <view class="ledger-sec ledger-overview-sec">
+              <view class="ledger-sec-head">
+                <text class="ledger-sec-title">本月概览</text>
+                <text class="ledger-sec-sub">{{ledgerMonthLabel}}</text>
+              </view>
+              <view class="ledger-stat-row">
+                <view class="ledger-stat">
+                  <text class="ledger-stat-val ledger-stat-val--in">{{ledgerMonthIncome}}</text>
+                  <text class="ledger-stat-label">收入</text>
+                </view>
+                <view class="ledger-stat-sep"></view>
+                <view class="ledger-stat">
+                  <text class="ledger-stat-val ledger-stat-val--out">{{ledgerMonthExpense}}</text>
+                  <text class="ledger-stat-label">支出</text>
+                </view>
+                <view class="ledger-stat-sep"></view>
+                <view class="ledger-stat">
+                  <text class="ledger-stat-val {{ledgerMonthBalancePos ? 'ledger-stat-val--in' : 'ledger-stat-val--out'}}">{{ledgerMonthBalance}}</text>
+                  <text class="ledger-stat-label">结余</text>
+                </view>
+              </view>
+            </view>
+            <!-- 往来款 -->
+            <view class="ledger-sec ledger-due-sec">
+              <view class="ledger-sec-head">
+                <text class="ledger-sec-title">往来款</text>
+                <text class="ledger-sec-sub">未结清</text>
+              </view>
+              <block wx:if="{{ledgerReceivableCount > 0 || ledgerPayableCount > 0}}">
+                <view class="ledger-due-row" bindtap="onLedgerGotoSettle">
+                  <view class="ledger-due-left">
+                    <text class="ledger-due-name">应收</text>
+                    <text class="ledger-due-desc">别人欠我 · {{ledgerReceivableCount}} 笔</text>
+                  </view>
+                  <view class="ledger-due-right">
+                    <text class="ledger-due-val ledger-due-val--in">+{{ledgerReceivable}}</text>
+                    <view class="ledger-due-arrow"></view>
+                  </view>
+                </view>
+                <view class="ledger-due-row" bindtap="onLedgerGotoSettle">
+                  <view class="ledger-due-left">
+                    <text class="ledger-due-name">应付</text>
+                    <text class="ledger-due-desc">我欠别人 · {{ledgerPayableCount}} 笔</text>
+                  </view>
+                  <view class="ledger-due-right">
+                    <text class="ledger-due-val ledger-due-val--out">-{{ledgerPayable}}</text>
+                    <view class="ledger-due-arrow"></view>
+                  </view>
+                </view>
+                <view class="ledger-due-net">
+                  <text class="ledger-due-net-label">净往来</text>
+                  <text class="ledger-due-net-val {{ledgerNetPos ? 'ledger-due-val--in' : 'ledger-due-val--out'}}">{{ledgerNetPos ? '+' : ''}}{{ledgerNet}}</text>
+                </view>
+              </block>
+              <view wx:else class="ledger-due-empty">暂无未结清往来款</view>
+            </view>
+          </view>
+
+          <!-- 公司账本：资产概览 -->
+          <view wx:if="{{ledgerScope === 'company'}}" class="ledger-sec">
+            <view class="ledger-sec-head">
+              <text class="ledger-sec-title">资产概览</text>
+              <text class="ledger-sec-sub">{{ledgerMonthLabel}}</text>
+            </view>
+            <view class="ledger-stat-row">
+              <view class="ledger-stat">
+                <text class="ledger-stat-val">{{ledgerFunds}}</text>
+                <text class="ledger-stat-label">总资金</text>
+              </view>
+              <view class="ledger-stat-sep"></view>
+              <view class="ledger-stat">
+                <text class="ledger-stat-val ledger-stat-val--out">{{ledgerLiability}}</text>
+                <text class="ledger-stat-label">总负债</text>
+              </view>
+            </view>
+            <view class="ledger-asset-divider"></view>
+            <view class="ledger-stat-row">
+              <view class="ledger-stat">
+                <text class="ledger-stat-val {{ledgerNetAssetsPos ? 'ledger-stat-val--in' : 'ledger-stat-val--out'}}">{{ledgerNetAssets}}</text>
+                <text class="ledger-stat-label">净资产</text>
+              </view>
+              <view class="ledger-stat-sep"></view>
+              <view class="ledger-stat">
+                <text class="ledger-stat-val {{ledgerDisposablePos ? 'ledger-stat-val--in' : 'ledger-stat-val--out'}}">{{ledgerDisposable}}</text>
+                <text class="ledger-stat-label">可支配资产</text>
+              </view>
+            </view>
+          </view>
+
+          <!-- 往来款（公司账本） -->
+          <view wx:if="{{ledgerScope === 'company'}}" class="ledger-sec">
+            <view class="ledger-sec-head">
+              <text class="ledger-sec-title">往来款</text>
+              <text class="ledger-sec-sub">未结清</text>
+            </view>
+            <block wx:if="{{ledgerReceivableCount > 0 || ledgerPayableCount > 0}}">
+              <view class="ledger-due-row" bindtap="onLedgerGotoSettle">
+                <view class="ledger-due-left">
+                  <text class="ledger-due-name">应收</text>
+                  <text class="ledger-due-desc">别人欠我 · {{ledgerReceivableCount}} 笔</text>
+                </view>
+                <view class="ledger-due-right">
+                  <text class="ledger-due-val ledger-due-val--in">+{{ledgerReceivable}}</text>
+                  <view class="ledger-due-arrow"></view>
+                </view>
+              </view>
+              <view class="ledger-due-row" bindtap="onLedgerGotoSettle">
+                <view class="ledger-due-left">
+                  <text class="ledger-due-name">应付</text>
+                  <text class="ledger-due-desc">我欠别人 · {{ledgerPayableCount}} 笔</text>
+                </view>
+                <view class="ledger-due-right">
+                  <text class="ledger-due-val ledger-due-val--out">-{{ledgerPayable}}</text>
+                  <view class="ledger-due-arrow"></view>
+                </view>
+              </view>
+              <view class="ledger-due-net">
+                <text class="ledger-due-net-label">净往来</text>
+                <text class="ledger-due-net-val {{ledgerNetPos ? 'ledger-due-val--in' : 'ledger-due-val--out'}}">{{ledgerNetPos ? '+' : ''}}{{ledgerNet}}</text>
+              </view>
+            </block>
+            <view wx:else class="ledger-due-empty">暂无未结清往来款</view>
+          </view>
+
+          <!-- 月度预算（仅个人账本） -->
+          <view wx:if="{{ledgerScope === 'personal'}}" class="ledger-sec ledger-budget-sec" id="ledger-budget">
+            <view class="ledger-sec-head">
+              <text class="ledger-sec-title">月度预算</text>
+              <text class="ledger-budget-remain {{ledgerOverBudget ? 'ledger-budget-remain--over' : ''}}">{{ledgerBudgetRemainText}}</text>
+            </view>
+
+            <view wx:if="{{ledgerBudget > 0}}" class="ledger-budget-bar">
+              <view class="ledger-budget-fill {{ledgerOverBudget ? 'ledger-budget-fill--over' : ''}}" style="width: {{ledgerBudgetUsedPct}}%;"></view>
+            </view>
+            <view wx:if="{{ledgerBudget > 0}}" class="ledger-budget-meta">
+              <text class="ledger-budget-meta-txt">已用 ¥{{ledgerBudgetUsed}}</text>
+              <text class="ledger-budget-meta-txt">{{ledgerBudgetUsedPct}}%</text>
+              <text class="ledger-budget-meta-txt">预算 ¥{{ledgerBudget}}</text>
+            </view>
+
+            <view class="ledger-budget-edit">
+              <view class="ledger-budget-input-wrap">
+                <text class="ledger-budget-cny">¥</text>
+                <input class="ledger-budget-input" type="digit" placeholder="设置本月预算" placeholder-class="ledger-budget-ph" value="{{ledgerBudgetInput}}" bindinput="onLedgerBudgetInput"/>
+              </view>
+              <view class="ledger-budget-save" bindtap="onLedgerBudgetSave">保存</view>
+            </view>
+          </view>
+          </view>
+        </scroll-view>
+      </view>
+      <!-- 正常我的页面 -->
+      <view class="card grid-span-3 my-card" wx:else>
+        <view class="my-profile">
+          <text class="my-login-text" bindtap="onLoginEntry" wx:if="{{isLoggedIn === false}}">{{t.my_login_register}}</text>
+          <text class="my-nickname" bindtap="onMyAvatarTap" wx:else>{{userInfo.nickName}}</text>
+          <image class="my-avatar" src="{{avatarDisplay}}" wx:if="{{isLoggedIn && avatarDisplay}}" mode="aspectFill" bindtap="onMyAvatarTap"></image>
+          <view class="my-avatar my-avatar--empty" wx:elif="{{isLoggedIn}}" bindtap="onMyAvatarTap"><text class="my-avatar-plus">＋</text></view>
+          <view class="my-avatar" wx:else></view>
+        </view>
+        <view class="my-group">
+          <view class="my-item {{vipStatus && vipStatus.vipLevel > 0 ? 'my-item--vip' : 'my-item--vip-free'}}" bindtap="onVipEntry">
+            <view class="my-item-icon-wrap">
+              <image class="my-item-icon" src="/assets/icons/VIP.png" mode="aspectFit"/>
+              <view class="my-item-vip-badge" wx:if="{{vipStatus && vipStatus.vipLevel > 0}}"><text class="my-item-vip-badge-text">PRO</text></view>
+            </view>
+            <view class="my-item-body">
+              <text class="my-item-title {{vipStatus && vipStatus.vipLevel > 0 ? 'my-item-title--vip' : ''}}">{{vipStatus && vipStatus.vipLevel > 0 ? vipCards[vipStatus.vipLevel - 1].name : t.vip_title}}</text>
+              <text class="my-item-sub" wx:if="{{!vipStatus || vipStatus.vipLevel === 0}}">{{vipStatus ? '' + vipStatus.usage.asr + '/' + vipStatus.limits.asr + ' · 导出 ' + vipStatus.usage.export + '/' + vipStatus.limits.export : t.vip_sub}}</text>
+              <view class="my-item-vip-expire" wx:else>
+                <text class="my-item-vip-expire-text">{{vipExpiresText}}</text>
+                <text class="my-item-vip-expire-days" wx:if="{{vipTrialDays > 0}}">剩 {{vipTrialDays}} 天</text>
+              </view>
+            </view>
+            <view class="my-item-arrow-wrap">
+              <text class="my-item-arrow my-item-arrow--vip" wx:if="{{vipStatus && vipStatus.vipLevel > 0}}">〉</text>
+              <text class="my-item-arrow" wx:else>〉</text>
+            </view>
+          </view>
+          <view class="my-icon-row">
+            <view class="my-icon-item" bindtap="onGotoPersonalLedger"><image class="my-icon-circle" src="/assets/icons/gerenzhangben.png" mode="aspectFit"/><text class="my-icon-label">{{t.detail_personal_ledger}}</text></view>
+            <view class="my-icon-item" wx:if="{{canSeeCompanyLedger}}" bindtap="onGotoCompanyLedger"><image class="my-icon-circle" src="/assets/icons/gongsizhangben.png" mode="aspectFit"/><text class="my-icon-label">{{t.detail_company_ledger}}</text></view>
+            <view class="my-icon-item" bindtap="onAuditEntry">
+              <view class="my-icon-circle my-icon-circle--badge-host">
+                <image class="my-icon-circle-img" src="/assets/icons/shenhe.png" mode="aspectFit"/>
+                <view class="notify-badge" wx:if="{{hasPendingAudit}}"></view>
+              </view>
+              <text class="my-icon-label">{{t.my_audit}}</text>
+            </view>
+            <view class="my-icon-item" bindtap="onNotifyEntry">
+              <view class="my-icon-circle my-icon-circle--badge-host">
+                <image class="my-icon-circle-img" src="/assets/icons/tongzhi.png" mode="aspectFit"/>
+                <view class="notify-badge" wx:if="{{hasUnreadNotify}}"></view>
+              </view>
+              <text class="my-icon-label">{{t.my_notify}}</text>
+            </view>
+          </view>
+        </view>
+        <view class="my-group">
+          <view class="my-item" bindtap="onCustomOverviewEntry">
+            <image class="my-item-icon" src="/assets/icons/jianlan.png" mode="aspectFit"/>
+            <view class="my-item-body">
+              <text class="my-item-title">{{t.custom_overview_title}}</text>
+              <text class="my-item-sub">{{t.custom_overview_sub}}</text>
+            </view>
+            <text class="my-item-arrow">〉</text>
+          </view>
+          <view class="my-item" bindtap="onCustomCategoryEntry">
+            <image class="my-item-icon" src="/assets/icons/fenlei.png" mode="aspectFit"/>
+            <view class="my-item-body">
+              <text class="my-item-title">{{t.custom_cat_title}}</text>
+              <text class="my-item-sub">{{t.custom_cat_sub}}</text>
+            </view>
+            <text class="my-item-arrow">〉</text>
+          </view>
+          <view class="my-item my-share-entry" bindtap="onCompanyShareEntry">
+            <image class="my-item-icon" src="/assets/icons/lianjiegongsigongxiangtongyizhangben.png" mode="aspectFit"/>
+            <view class="my-item-body">
+              <!-- 员工待审核 -->
+              <block wx:if="{{settingsLedgerRole === 'employee' && settingsCompanyStatus === 'pending'}}">
+                <text class="my-item-title" style="color:#fa9d3b">等待审核中...</text>
+                <text class="my-item-sub">请联系老板通过审核</text>
+              </block>
+              <!-- 员工已通过 -->
+              <block wx:elif="{{settingsLedgerRole === 'employee' && settingsCompanyStatus === 'approved'}}">
+                <text class="my-item-title" style="color:#07c160">{{companyName || '公司账本'}}</text>
+                <text class="my-item-sub">{{companyBossTitle || 'BOSS'}}</text>
+              </block>
+              <!-- 老板 -->
+              <block wx:elif="{{settingsLedgerRole === 'boss'}}">
+                <text class="my-item-title" style="color:#07c160">{{companyName || t.my_share_ledger}}</text>
+                <text class="my-item-sub">{{companyBossTitle || 'BOSS'}}</text>
+              </block>
+              <!-- 未加入 -->
+              <block wx:else>
+                <text class="my-item-title">{{t.my_share_ledger}}</text>
+                <text class="my-item-sub">{{t.my_share_sub}}</text>
+              </block>
+            </view>
+            <text class="my-item-arrow">〉</text>
+          </view>
+          <view class="my-item" bindtap="onExportBillEntry">
+            <image class="my-item-icon" src="/assets/icons/daochu.png" mode="aspectFit"/>
+            <view class="my-item-body">
+              <text class="my-item-title">{{t.my_export}}</text>
+              <text class="my-item-sub">{{t.my_export_sub}}</text>
+            </view>
+            <text class="my-item-arrow">〉</text>
+          </view>
+        </view>
+        <view class="my-group">
+          <view class="my-item" bindtap="onContactEntry">
+            <image class="my-item-icon" src="/assets/icons/screenshot.png" mode="aspectFit"/>
+            <view class="my-item-body">
+              <text class="my-item-title">{{t.my_contact}}</text>
+              <text class="my-item-sub">{{t.my_contact_sub}}</text>
+            </view>
+            <text class="my-item-arrow">〉</text>
+          </view>
+          <view class="my-item my-item-last" bindtap="onSettingsEntry">
+            <image class="my-item-icon" src="/assets/icons/shezhi.png" mode="aspectFit"/>
+            <view class="my-item-body"><text class="my-item-title">{{t.my_settings}}</text></view>
+            <text class="my-item-arrow">〉</text>
+          </view>
+        </view>
+      </view>
+    </block>

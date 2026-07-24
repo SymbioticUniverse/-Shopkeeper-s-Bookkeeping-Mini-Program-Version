@@ -1,0 +1,63 @@
+    <!-- ===== 默认简览（动态渲染 overviewCards） ===== -->
+    <block wx:if="{{!showCustomOverview && showOverview}}">
+      <view class="card grid-span-{{item.span}}" wx:for="{{overviewCards}}" wx:key="id" bindtap="onOverviewCardTap" data-type="{{item.type}}">
+        <view class="card-header {{item.span >= 2 ? 'compact' : ''}}">
+          <image class="card-avatar" wx:if="{{item.hasAvatar && avatarDisplay}}" src="{{avatarDisplay}}" mode="aspectFill"></image>
+              <view class="card-avatar card-avatar--empty" wx:elif="{{item.hasAvatar}}"></view>
+          <text class="card-title">{{item.name}}</text>
+          <text class="card-arrow">〉</text>
+          <text class="card-subtitle">{{item.subtitle}}</text>
+        </view>
+        <view class="card-divider card-divider--down"></view>
+        <!-- 折线图 canvas（复用报表页 drawStockChart） -->
+        <canvas wx:if="{{item.previewStyle === 'chart_line'}}" type="2d" id="ovLine_{{item.id}}" class="overview-canvas"></canvas>
+        <!-- 柱状图 canvas（复用报表页 drawBarChart） -->
+        <canvas wx:if="{{item.previewStyle === 'chart_bar'}}" type="2d" id="ovBar_{{item.id}}" class="overview-canvas"></canvas>
+        <!-- 饼状图 canvas（复用报表页 drawPieChart） -->
+        <canvas wx:if="{{item.previewStyle === 'chart_pie'}}" type="2d" id="ovPie_{{item.id}}" class="overview-canvas"></canvas>
+        <!-- 非图表卡片：渲染 rows（简览/汇总样式） -->
+        <block wx:if="{{!item.previewStyle || item.previewStyle === 'overview'}}" wx:for="{{item.rows}}" wx:key="label" wx:for-item="row">
+          <block wx:if="{{!row.threeCol}}">
+            <view class="card-row">
+              <text class="row-label">{{row.label}}</text>
+              <view class="value-tag {{row.color}}">
+                <text class="value-yen">¥</text>
+                <text class="value-num">{{row.value}}</text>
+              </view>
+            </view>
+          </block>
+          <block wx:else>
+            <view class="card-divider card-divider--tight"></view>
+            <view class="card-row three-col">
+              <text class="col-label" wx:for="{{row.labels}}" wx:key="*this" wx:for-item="lbl">{{lbl}}</text>
+            </view>
+            <view class="card-row three-col">
+              <view class="value-tag {{row.colors[ci]}}" wx:for="{{row.values}}" wx:key="*this" wx:for-item="val" wx:for-index="ci">
+                <text class="value-yen">¥</text>
+                <text class="value-num">{{val}}</text>
+              </view>
+            </view>
+          </block>
+        </block>
+        <!-- 明细页风格：真实流水截断列表 -->
+        <block wx:if="{{item.previewStyle === 'detail'}}">
+          <view class="ov-detail-cols">
+            <text class="ov-detail-col" style="width:64rpx">分类</text>
+            <text class="ov-detail-col" style="width:52rpx">类型</text>
+            <text class="ov-detail-col" style="flex:1">备注</text>
+            <text class="ov-detail-col" style="width:88rpx;text-align:right">金额</text>
+            <text class="ov-detail-col" style="width:72rpx;text-align:right">日期</text>
+          </view>
+          <view class="ov-detail-row" wx:for="{{item.previewItems}}" wx:key="index" wx:for-item="bill">
+            <view class="ov-detail-dot {{bill.type === 'in' ? 'ov-detail-dot--in' : 'ov-detail-dot--out'}}"></view>
+            <text class="ov-detail-cat">{{bill.category}}</text>
+            <text class="ov-detail-type">{{bill.typeLabel}}</text>
+            <text class="ov-detail-note">{{bill.note}}</text>
+            <text class="ov-detail-val {{bill.type === 'in' ? 'ov-detail-val--in' : 'ov-detail-val--out'}}">¥{{bill.amount}}</text>
+            <text class="ov-detail-date">{{bill.dateShort}}</text>
+          </view>
+          <view class="ov-detail-empty" wx:if="{{!item.previewItems || item.previewItems.length === 0}}">暂无流水</view>
+          <view class="ov-detail-cut" wx:if="{{item.previewItems.length >= 4}}">···</view>
+        </block>
+      </view>
+    </block>

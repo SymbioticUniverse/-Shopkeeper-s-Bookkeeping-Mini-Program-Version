@@ -1,0 +1,10 @@
+  <!-- 凭证识别中 -->
+  <view class="scan-recog-mask" wx:if="{{scanRecognizing}}">
+    <view class="scan-recog-card">
+      <view class="scan-recog-frame">
+        <image class="scan-recog-photo" src="{{bookPhoto}}" mode="aspectFill"></image>
+        <view class="scan-recog-line"></view>
+      </view>
+      <text class="scan-recog-text">正在识别凭证…</text>
+    </view>
+  </view>

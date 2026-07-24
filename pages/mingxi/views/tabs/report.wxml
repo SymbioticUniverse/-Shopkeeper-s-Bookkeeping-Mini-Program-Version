@@ -1,0 +1,145 @@
+    <!-- Tab 1: 报表 -->
+    <block wx:if="{{currentTab === 1}}">
+      <view class="card grid-span-3 report-card">
+        <view class="report-header">
+          <text class="report-title">报表</text>
+          <view class="report-type-toggle" bindtap="switchReportType">
+            <view class="report-type-bg"></view>
+            <view class="report-type-slider {{reportType === 1 ? 'report-type-slider--right' : ''}}"></view>
+            <text class="report-type-text {{reportType === 0 ? 'report-type-text--active' : ''}}">个人</text>
+            <text class="report-type-text {{reportType === 1 ? 'report-type-text--active' : ''}}">公司</text>
+          </view>
+        </view>
+        <view class="report-period-bar">
+          <view class="report-period-item {{reportPeriod === 0 ? 'report-period-item--active' : ''}}" bindtap="switchReportPeriod" data-period="{{0}}">
+            <text class="report-period-text {{reportPeriod === 0 ? 'report-period-text--active' : ''}}">月度</text>
+          </view>
+          <view class="report-period-item {{reportPeriod === 1 ? 'report-period-item--active' : ''}}" bindtap="switchReportPeriod" data-period="{{1}}">
+            <text class="report-period-text {{reportPeriod === 1 ? 'report-period-text--active' : ''}}">季度</text>
+          </view>
+          <view class="report-period-item {{reportPeriod === 2 ? 'report-period-item--active' : ''}}" bindtap="switchReportPeriod" data-period="{{2}}">
+            <text class="report-period-text {{reportPeriod === 2 ? 'report-period-text--active' : ''}}">年度</text>
+          </view>
+          <view class="report-period-item {{reportPeriod === 3 ? 'report-period-item--active' : ''}}" bindtap="switchReportPeriod" data-period="{{3}}">
+            <text class="report-period-text {{reportPeriod === 3 ? 'report-period-text--active' : ''}}">日度</text>
+          </view>
+        </view>
+        <view class="report-chart-area">
+          <view class="report-info-row">
+            <picker wx:if="{{reportPeriod === 0}}" mode="date" fields="month" value="{{reportPickerDate}}" end="{{maxDate}}" bindchange="onReportPickerChange">
+              <view class="report-date-box">
+                <text class="report-date-text">{{reportDateText}}</text>
+                <view class="report-date-arrow"></view>
+              </view>
+            </picker>
+            <picker wx:elif="{{reportPeriod === 1}}" mode="multiSelector" range="{{reportQuarterRange}}" value="{{reportQuarterMultiIndex}}" bindchange="onReportQuarterChange" bindcolumnchange="onReportQuarterColumnChange">
+              <view class="report-date-box">
+                <text class="report-date-text">{{reportDateText}}</text>
+                <view class="report-date-arrow"></view>
+              </view>
+            </picker>
+            <picker wx:elif="{{reportPeriod === 2}}" mode="date" fields="year" value="{{reportPickerDate}}" end="{{maxDate}}" bindchange="onReportPickerChange">
+              <view class="report-date-box">
+                <text class="report-date-text">{{reportDateText}}</text>
+                <view class="report-date-arrow"></view>
+              </view>
+            </picker>
+            <picker wx:elif="{{reportPeriod === 3}}" mode="date" value="{{reportPickerDate}}" end="{{maxDate}}" bindchange="onReportPickerChange">
+              <view class="report-date-box">
+                <text class="report-date-text">{{reportDateText}}</text>
+                <view class="report-date-arrow"></view>
+              </view>
+            </picker>
+            <view class="report-inout-box">
+              <view class="report-inout-item">
+                <view class="report-dot report-dot--green"></view>
+                <text class="report-inout-label">收入</text>
+              </view>
+              <view class="report-inout-item">
+                <view class="report-dot report-dot--red"></view>
+                <text class="report-inout-label">支出</text>
+              </view>
+            </view>
+          </view>
+          <view class="report-chart-tabs">
+            <view class="rct-tab {{reportChartType === 0 ? 'rct-tab--active' : ''}}" bindtap="switchReportChart" data-t="{{0}}">折线图</view>
+            <view class="rct-tab {{reportChartType === 1 ? 'rct-tab--active' : ''}}" bindtap="switchReportChart" data-t="{{1}}">柱状图</view>
+            <view class="rct-tab {{reportChartType === 2 ? 'rct-tab--active' : ''}}" bindtap="switchReportChart" data-t="{{2}}">饼图</view>
+          </view>
+          <view class="report-chart-stage">
+            <view wx:if="{{reportChartType === 0 && !showExpandMenu && !showCamera && !scanRecognizing && !showBookPopup && !modalItem && !showChat && !chatRecording && !searchRecording}}" class="report-chart-block">
+              <canvas type="2d" id="lineChart" class="report-canvas" bindtouchstart="onChartTap"></canvas>
+            </view>
+            <view wx:elif="{{reportChartType === 1 && !showExpandMenu && !showCamera && !scanRecognizing && !showBookPopup && !modalItem && !showChat && !chatRecording && !searchRecording}}" class="report-chart-block">
+              <canvas type="2d" id="barChart" class="report-canvas"></canvas>
+            </view>
+            <view wx:elif="{{reportChartType === 2 && !showExpandMenu && !showCamera && !scanRecognizing && !showBookPopup && !modalItem && !showChat && !chatRecording && !searchRecording}}" class="report-pie-block">
+              <view class="report-pie-row">
+                <view class="report-pie-cell">
+                  <text class="report-pie-label">收入来源</text>
+                  <canvas type="2d" id="pieIncome" class="report-pie-canvas" bindtouchstart="onPieIncomeTap"></canvas>
+                </view>
+                <view class="report-pie-cell">
+                  <text class="report-pie-label">支出类别</text>
+                  <canvas type="2d" id="pieExpense" class="report-pie-canvas" bindtouchstart="onPieExpenseTap"></canvas>
+                </view>
+              </view>
+            </view>
+          </view>
+          <!-- 报表筛选汇总：图表下方独立滚动区；分类拆解 proUnlocked 预留鉴权 -->
+          <scroll-view class="report-summary-scroll" scroll-y enhanced show-scrollbar="{{false}}">
+          <view class="report-summary">
+            <view class="rsum-totals">
+              <view class="rsum-tot">
+                <text class="rsum-tot-label">总收入</text>
+                <text class="rsum-tot-val rsum-tot-val--in">{{reportSummary.income}}</text>
+              </view>
+              <view class="rsum-tot">
+                <text class="rsum-tot-label">总支出</text>
+                <text class="rsum-tot-val rsum-tot-val--out">{{reportSummary.expense}}</text>
+              </view>
+              <view class="rsum-tot">
+                <text class="rsum-tot-label">结余</text>
+                <text class="rsum-tot-val {{reportSummary.balanceNeg ? 'rsum-tot-val--out' : 'rsum-tot-val--in'}}">{{reportSummary.balance}}</text>
+              </view>
+            </view>
+            <view wx:if="{{reportSummary.empty}}" class="rsum-empty">本期暂无记录</view>
+            <block wx:elif="{{reportSummary.proUnlocked}}">
+              <view wx:if="{{reportSummary.expenseCats.length}}" class="rsum-group">
+                <view class="rsum-group-title">
+                  <text class="rsum-group-name">支出分类</text>
+                  <text class="rsum-group-sum rsum-group-sum--out">-{{reportSummary.expense}}</text>
+                </view>
+                <view wx:for="{{reportSummary.expenseCats}}" wx:key="name" class="rsum-cat">
+                  <text class="rsum-cat-emoji">{{item.emoji}}</text>
+                  <text class="rsum-cat-name">{{item.name}}</text>
+                  <view class="rsum-cat-bar"><view class="rsum-cat-bar-fill rsum-cat-bar-fill--out" style="width:{{item.pct}}%"></view></view>
+                  <text class="rsum-cat-pct">{{item.pct}}%</text>
+                  <text class="rsum-cat-amt rsum-cat-amt--out">{{item.amount}}</text>
+                </view>
+              </view>
+              <view wx:if="{{reportSummary.incomeCats.length}}" class="rsum-group">
+                <view class="rsum-group-title">
+                  <text class="rsum-group-name">收入分类</text>
+                  <text class="rsum-group-sum rsum-group-sum--in">+{{reportSummary.income}}</text>
+                </view>
+                <view wx:for="{{reportSummary.incomeCats}}" wx:key="name" class="rsum-cat">
+                  <text class="rsum-cat-emoji">{{item.emoji}}</text>
+                  <text class="rsum-cat-name">{{item.name}}</text>
+                  <view class="rsum-cat-bar"><view class="rsum-cat-bar-fill rsum-cat-bar-fill--in" style="width:{{item.pct}}%"></view></view>
+                  <text class="rsum-cat-pct">{{item.pct}}%</text>
+                  <text class="rsum-cat-amt rsum-cat-amt--in">{{item.amount}}</text>
+                </view>
+              </view>
+            </block>
+            <!-- 预留：未解锁分类拆解时显示（后期接入鉴权后作为升级引导入口） -->
+            <view wx:else class="rsum-locked">升级后可查看分类明细</view>
+            <view class="rsum-footer">
+              <text class="rsum-more-tip">更多详细请导出报表</text>
+              <view class="rsum-export-btn" bindtap="onExportBillEntry">导出账单</view>
+            </view>
+          </view>
+        </scroll-view>
+        </view>
+      </view>
+    </block>

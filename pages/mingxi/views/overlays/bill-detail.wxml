@@ -1,0 +1,64 @@
+  <!-- 账单详情弹窗 -->
+  <view class="bill-modal-mask" wx:if="{{modalItem}}" catchtap="onModalClose">
+    <view class="bill-modal" catchtap="nop">
+      <text class="bill-modal-title">{{modalItem.category}}</text>
+      <view wx:if="{{modalItem._autoSettle}}" class="bill-modal-auto-tag">系统自动生成</view>
+      <view class="bill-modal-divider"></view>
+      <view class="bill-modal-row">
+        <text class="bill-modal-label">类型</text>
+        <text class="bill-modal-value {{modalItem.type === 'in' ? 'bill-modal-value--in' : 'bill-modal-value--out'}}">{{modalItem.typeLabel}}</text>
+      </view>
+      <view class="bill-modal-row">
+        <text class="bill-modal-label">分类</text>
+        <text wx:if="{{modalItem._readonly}}" class="bill-modal-value">{{modalEdit.category}}</text>
+        <input wx:else class="bill-modal-input" value="{{modalEdit.category}}" bindinput="onModalFieldEdit" data-field="category"/>
+      </view>
+      <view class="bill-modal-row">
+        <text class="bill-modal-label">金额</text>
+        <text wx:if="{{modalItem._readonly}}" class="bill-modal-value">¥{{modalEdit.amount}}</text>
+        <input wx:else class="bill-modal-input" value="{{modalEdit.amount}}" bindinput="onModalFieldEdit" data-field="amount" type="digit"/>
+      </view>
+      <view class="bill-modal-row">
+        <text class="bill-modal-label">备注</text>
+        <text wx:if="{{modalItem._readonly}}" class="bill-modal-value">{{modalEdit.note || '-'}}</text>
+        <input wx:else class="bill-modal-input" value="{{modalEdit.note}}" bindinput="onModalFieldEdit" data-field="note"/>
+      </view>
+      <view class="bill-modal-row">
+        <text class="bill-modal-label">时间</text>
+        <text class="bill-modal-value">{{modalItem._timeText || modalItem.date}}</text>
+      </view>
+      <view wx:if="{{modalItem.voucher}}" class="bill-modal-row">
+        <text class="bill-modal-label">凭证</text>
+        <image class="bill-modal-voucher" src="{{modalItem.voucher}}" mode="aspectFill" catchtap="onVoucherPreview" data-src="{{modalItem.voucher}}"></image>
+      </view>
+      <view wx:if="{{modalItem.settleInfo}}" class="bill-modal-row">
+        <text class="bill-modal-label">结清</text>
+        <text class="bill-modal-settle-info">{{modalItem._settleText || modalItem.settleInfo}}</text>
+      </view>
+      <!-- 多笔记账明细 -->
+      <view wx:if="{{modalItem.isMulti}}" class="bill-modal-multi">
+        <view class="bill-modal-multi-header">
+          <text class="bill-modal-multi-title">明细（共{{modalItem.multiCount}}笔）</text>
+          <text class="bill-modal-multi-date">{{modalItem.multiDateStart}}</text>
+          <text wx:if="{{modalItem.multiDateEnd}}"> ~ {{modalItem.multiDateEnd}}</text>
+        </view>
+        <view class="bill-modal-multi-items">
+          <view class="bill-modal-multi-item" wx:for="{{modalItem.multiItems}}" wx:key="idx" wx:for-item="sub" wx:for-index="idx">
+            <text class="bill-modal-multi-idx">{{idx + 1}}.</text>
+            <text class="bill-modal-multi-amount">¥{{sub.amount}}</text>
+          </view>
+        </view>
+      </view>
+      <view class="bill-modal-divider"></view>
+      <view class="bill-modal-btns">
+        <view wx:if="{{!modalItem._readonly}}" class="bill-modal-btn bill-modal-save" bindtap="onModalSave">保存</view>
+        <view wx:if="{{modalItem.typeLabel === '垫付' && (modalItem.settleStatus === 'pending_confirm' || modalItem.settleStatus === 'company_settled')}}" class="bill-modal-btn bill-modal-settle" bindtap="onBillSettle" data-id="{{modalItem.id}}" data-from="{{modalFrom}}">确认到账</view>
+        <view wx:elif="{{modalItem.typeLabel === '应付' && (modalItem.settleStatus === 'pending_confirm' || modalItem.settleStatus === 'company_settled') && settleIsBoss}}" class="bill-modal-btn bill-modal-settle" bindtap="onBillSettle" data-id="{{modalItem.id}}" data-from="{{modalFrom}}">确认收款</view>
+        <view wx:elif="{{modalItem.typeLabel === '应付' && !modalItem.settleStatus}}" class="bill-modal-btn bill-modal-settle" bindtap="onBillSettle" data-id="{{modalItem.id}}" data-from="{{modalFrom}}">结清</view>
+        <view wx:elif="{{modalItem.typeLabel === '垫付' && !modalItem.settleStatus && settleIsBoss}}" class="bill-modal-btn bill-modal-settle" bindtap="onBillSettle" data-id="{{modalItem.id}}" data-from="{{modalFrom}}">发起结清</view>
+        <view wx:if="{{!modalItem._readonly && !modalItem._voided}}" class="bill-modal-btn bill-modal-void" bindtap="onBillVoid" data-id="{{modalItem.id}}" data-from="{{modalFrom}}">作废</view>
+        <view wx:elif="{{!modalItem._readonly && modalItem._voided}}" class="bill-modal-btn bill-modal-unvoid" bindtap="onBillUnvoid" data-id="{{modalItem.id}}" data-from="{{modalFrom}}">恢复</view>
+        <view wx:if="{{!modalItem._readonly && modalItem.typeLabel !== '垫付' && modalIsPersonal}}" class="bill-modal-btn bill-modal-delete" bindtap="onBillDelete" data-id="{{modalItem.id}}" data-from="{{modalFrom}}">删除</view>
+      </view>
+    </view>
+  </view>

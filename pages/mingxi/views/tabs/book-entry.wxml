@@ -1,0 +1,15 @@
+    <!-- Tab 2: 记账 -->
+    <block wx:if="{{currentTab === 2}}">
+      <view class="card grid-span-1 book-entry-card" bindtap="onBookEntry" data-type="income">
+        <view class="book-entry-dot book-entry-dot--in"></view>
+        <text class="book-entry-text">收入</text>
+      </view>
+      <view class="card grid-span-1 book-entry-card" bindtap="onBookEntry" data-type="expense">
+        <view class="book-entry-dot book-entry-dot--out"></view>
+        <text class="book-entry-text">支出</text>
+      </view>
+      <view class="card grid-span-1 book-entry-card" bindtap="onBookEntry" data-type="transfer">
+        <view class="book-entry-dot book-entry-dot--transfer"></view>
+        <text class="book-entry-text">转账</text>
+      </view>
+    </block>

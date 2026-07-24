@@ -1,0 +1,249 @@
+    <!-- ===== 自定义简览页 ===== -->
+    <block wx:if="{{showCustomOverview && showOverview}}">
+      <view class="custom-overview-container">
+        <view class="card grid-span-3 my-card custom-edit-card">
+          <view class="custom-cat-header">
+            <view class="custom-cat-back" bindtap="onExitEditMode">
+              <view class="custom-cat-back-arrow"></view>
+            </view>
+            <text class="custom-cat-title">{{t.custom_overview_title}}</text>
+          </view>
+          <scroll-view class="custom-edit-canvas" scroll-y enhanced show-scrollbar="{{false}}">
+            <!-- 占1格卡片 -->
+            <view class="custom-section-label">占 1 格</view>
+            <view class="custom-card-row">
+              <block wx:for="{{span1Templates}}" wx:key="id">
+                <view class="custom-template-card custom-template-card--span1" bindtouchstart="onTemplateTouchStart" bindtouchmove="onDragOverlayMove" bindtouchend="onDragOverlayEnd" data-id="{{item.id}}">
+                  <view class="custom-glass-inner custom-glass-inner--s1">
+                    <view class="custom-tpl-card custom-tpl-card--span1">
+                      <view class="card-header">
+                        <image class="card-avatar" wx:if="{{item.hasAvatar && avatarDisplay}}" src="{{avatarDisplay}}" mode="aspectFill"></image>
+              <view class="card-avatar card-avatar--empty" wx:elif="{{item.hasAvatar}}"></view>
+                        <text class="card-title">{{item.name}}</text>
+                        <text class="card-subtitle">{{item.subtitle}}</text>
+                      </view>
+                      <view class="card-divider card-divider--down"></view>
+                      <!-- 折线图预览（参照报表页 stock chart：净值线 + 绿红块 + 图例） -->
+                      <view class="custom-tpl-chart-preview" wx:if="{{item.previewStyle === 'chart_line'}}">
+                        <view class="mini-chart mini-chart--line">
+                          <view class="mini-dot" style="left: 4%; bottom: 24%;"></view>
+                          <view class="mini-dot" style="left: 18%; bottom: 50%;"></view>
+                          <view class="mini-dot" style="left: 32%; bottom: 32%;"></view>
+                          <view class="mini-dot" style="left: 46%; bottom: 56%;"></view>
+                          <view class="mini-dot" style="left: 60%; bottom: 20%;"></view>
+                          <view class="mini-dot" style="left: 74%; bottom: 44%;"></view>
+                          <view class="mini-dot" style="left: 88%; bottom: 36%;"></view>
+                        </view>
+                        <view class="mini-legend">
+                          <view class="mini-legend-item">
+                            <view class="mini-legend-dot mini-legend-dot--green"></view>
+                            <text>收入</text>
+                          </view>
+                          <view class="mini-legend-item">
+                            <view class="mini-legend-dot mini-legend-dot--red"></view>
+                            <text>支出</text>
+                          </view>
+                        </view>
+                      </view>
+                      <!-- 柱状图预览（参照报表页 bar chart：绿红柱对 + 虚线分隔） -->
+                      <view class="custom-tpl-chart-preview" wx:if="{{item.previewStyle === 'chart_bar'}}">
+                        <view class="mini-chart mini-chart--bar">
+                          <view class="mini-bar-group">
+                            <view class="mini-bar mini-bar--green" style="height: 18rpx;"></view>
+                            <view class="mini-bar mini-bar--red" style="height: 24rpx;"></view>
+                          </view>
+                          <view class="mini-bar-sep"></view>
+                          <view class="mini-bar-group">
+                            <view class="mini-bar mini-bar--green" style="height: 30rpx;"></view>
+                            <view class="mini-bar mini-bar--red" style="height: 14rpx;"></view>
+                          </view>
+                          <view class="mini-bar-sep"></view>
+                          <view class="mini-bar-group">
+                            <view class="mini-bar mini-bar--green" style="height: 22rpx;"></view>
+                            <view class="mini-bar mini-bar--red" style="height: 20rpx;"></view>
+                          </view>
+                          <view class="mini-bar-sep"></view>
+                          <view class="mini-bar-group">
+                            <view class="mini-bar mini-bar--green" style="height: 14rpx;"></view>
+                            <view class="mini-bar mini-bar--red" style="height: 28rpx;"></view>
+                          </view>
+                          <view class="mini-bar-sep"></view>
+                          <view class="mini-bar-group">
+                            <view class="mini-bar mini-bar--green" style="height: 26rpx;"></view>
+                            <view class="mini-bar mini-bar--red" style="height: 18rpx;"></view>
+                          </view>
+                        </view>
+                        <view class="mini-legend">
+                          <view class="mini-legend-item">
+                            <view class="mini-legend-dot mini-legend-dot--green"></view>
+                            <text>收入</text>
+                          </view>
+                          <view class="mini-legend-item">
+                            <view class="mini-legend-dot mini-legend-dot--red"></view>
+                            <text>支出</text>
+                          </view>
+                        </view>
+                      </view>
+                      <!-- 饼状图预览（参照报表页 pie chart：多色分段圆） -->
+                      <view class="custom-tpl-chart-preview" wx:if="{{item.previewStyle === 'chart_pie'}}">
+                        <view class="mini-chart mini-chart--pie">
+                          <view class="mini-pie"></view>
+                        </view>
+                        <view class="mini-legend">
+                          <view class="mini-legend-item">
+                            <view class="mini-legend-dot mini-legend-dot--green"></view>
+                            <text>收入</text>
+                          </view>
+                          <view class="mini-legend-item">
+                            <view class="mini-legend-dot mini-legend-dot--red"></view>
+                            <text>支出</text>
+                          </view>
+                        </view>
+                      </view>
+                      <block wx:for="{{item.rows}}" wx:key="label" wx:for-item="row">
+                        <block wx:if="{{!row.threeCol}}">
+                          <view class="card-row">
+                            <text class="row-label">{{row.label}}</text>
+                            <view class="value-tag {{row.color}}">
+                              <text class="value-yen">¥</text>
+                              <text class="value-num">{{row.value}}</text>
+                            </view>
+                          </view>
+                        </block>
+                        <block wx:else>
+                          <view class="card-divider card-divider--tight"></view>
+                          <view class="card-row three-col">
+                            <text class="col-label" wx:for="{{row.labels}}" wx:key="*this" wx:for-item="lbl">{{lbl}}</text>
+                          </view>
+                          <view class="card-row three-col">
+                            <view class="value-tag {{row.colors[ci]}}" wx:for="{{row.values}}" wx:key="*this" wx:for-item="val" wx:for-index="ci">
+                              <text class="value-yen">¥</text>
+                              <text class="value-num">{{val}}</text>
+                            </view>
+                          </view>
+                        </block>
+                      </block>
+                    </view>
+                  </view>
+                </view>
+              </block>
+            </view>
+            <!-- 占2格卡片 -->
+            <view class="custom-section-label">占 2 格</view>
+            <view class="custom-card-row">
+              <block wx:for="{{span2Templates}}" wx:key="id">
+                <view class="custom-template-card custom-template-card--span2" bindtouchstart="onTemplateTouchStart" bindtouchmove="onDragOverlayMove" bindtouchend="onDragOverlayEnd" data-id="{{item.id}}">
+                  <view class="custom-glass-inner custom-glass-inner--s2">
+                    <!-- 明细页风格：交易流水列表截断 -->
+                    <view class="custom-tpl-card custom-tpl-card--span2" wx:if="{{item.previewStyle === 'detail'}}">
+                      <view class="custom-tpl-detail-head">
+                        <text class="custom-tpl-detail-title">{{item.name}}</text>
+                        <view class="custom-tpl-detail-toggle">
+                          <text class="custom-tpl-toggle-item custom-tpl-toggle-item--active">个人</text>
+                          <text class="custom-tpl-toggle-item">公司</text>
+                        </view>
+                      </view>
+                      <view class="custom-tpl-detail-period">
+                        <text class="custom-tpl-period-item custom-tpl-period-item--active">月度</text>
+                        <text class="custom-tpl-period-item">季度</text>
+                        <text class="custom-tpl-period-item">年度</text>
+                        <text class="custom-tpl-period-item">日度</text>
+                      </view>
+                      <view class="custom-tpl-detail-date-row">
+                        <text class="custom-tpl-detail-date-tag">2026年06月</text>
+                        <view class="custom-tpl-detail-inout">
+                          <text class="custom-tpl-inout-dot custom-tpl-inout-dot--in"></text>
+                          <text class="custom-tpl-inout-label">收入</text>
+                          <text class="custom-tpl-inout-dot custom-tpl-inout-dot--out"></text>
+                          <text class="custom-tpl-inout-label">支出</text>
+                        </view>
+                      </view>
+                      <view class="custom-tpl-detail-cols">
+                        <text class="custom-tpl-col-hd" style="width: 50rpx">分类</text>
+                        <text class="custom-tpl-col-hd" style="width: 44rpx">类型</text>
+                        <text class="custom-tpl-col-hd" style="flex: 1">备注</text>
+                        <text class="custom-tpl-col-hd" style="width: 56rpx; text-align: right">金额</text>
+                        <text class="custom-tpl-col-hd" style="width: 64rpx; text-align: right">日期</text>
+                      </view>
+                      <view class="custom-tpl-detail-bills">
+                        <view class="custom-tpl-bill-row" wx:for="{{item.rows}}" wx:key="label" wx:for-item="row">
+                          <view class="custom-tpl-bill-dot"></view>
+                          <text class="custom-tpl-bill-cat">{{row.label}}</text>
+                          <text class="custom-tpl-bill-type">收入</text>
+                          <text class="custom-tpl-bill-note">-</text>
+                          <text class="custom-tpl-bill-val {{row.color === 'green' ? 'custom-tpl-bill-val--in' : 'custom-tpl-bill-val--out'}}">¥{{row.value}}</text>
+                          <text class="custom-tpl-bill-date">06-10</text>
+                        </view>
+                      </view>
+                      <view class="custom-tpl-detail-cut">...</view>
+                    </view>
+                    <!-- 简览页风格：card rows -->
+                    <view class="custom-tpl-card custom-tpl-card--span2" wx:else>
+                      <view class="card-header">
+                        <text class="card-title">{{item.name}}</text>
+                        <text class="card-subtitle">{{item.subtitle}}</text>
+                      </view>
+                      <view class="card-divider card-divider--down"></view>
+                      <block wx:for="{{item.rows}}" wx:key="label" wx:for-item="row">
+                        <block wx:if="{{!row.threeCol}}">
+                          <view class="card-row">
+                            <text class="row-label">{{row.label}}</text>
+                            <view class="value-tag {{row.color}}">
+                              <text class="value-yen">¥</text>
+                              <text class="value-num">{{row.value}}</text>
+                            </view>
+                          </view>
+                        </block>
+                        <block wx:else>
+                          <view class="card-divider card-divider--tight"></view>
+                          <view class="card-row three-col">
+                            <text class="col-label" wx:for="{{row.labels}}" wx:key="*this" wx:for-item="lbl">{{lbl}}</text>
+                          </view>
+                          <view class="card-row three-col">
+                            <view class="value-tag {{row.colors[ci]}}" wx:for="{{row.values}}" wx:key="*this" wx:for-item="val" wx:for-index="ci">
+                              <text class="value-yen">¥</text>
+                              <text class="value-num">{{val}}</text>
+                            </view>
+                          </view>
+                        </block>
+                      </block>
+                    </view>
+                  </view>
+                </view>
+              </block>
+            </view>
+          </scroll-view>
+        </view>
+      </view>
+    </block>
+
+    <!-- ===== 拖放全屏遮罩（触摸模板卡片后出现，松手消失） ===== -->
+    <view class="drag-overlay" wx:if="{{dragFloat.visible}}">
+      <view class="drag-float-card" style="left: {{dragFloat.x}}px; top: {{dragFloat.y}}px;">
+        <text class="drag-float-name">{{dragFloat.name}}</text>
+        <text class="drag-float-sub" wx:if="{{dragFloat.subtitle}}">{{dragFloat.subtitle}}</text>
+      </view>
+    </view>
+    <!-- ===== 槽位弹窗（拖动浮现，松手后保留） ===== -->
+    <view class="slot-modal-mask" wx:if="{{showSlotModal}}" catchtap="">
+      <view class="slot-modal" id="slotModalContent">
+        <text class="slot-modal-title">拖放卡片到卡槽</text>
+        <view class="slot-list">
+          <view class="slot-item {{slotHover === item.index ? 'slot-item--hover' : ''}} {{item.card ? 'slot-item--filled' : ''}} slot-item--h{{item.height}}"
+                wx:for="{{slotLayout}}" wx:key="index" wx:for-item="item">
+            <block wx:if="{{item.card}}">
+              <text class="slot-card-name">{{item.card.name}}</text>
+              <text class="slot-card-sub">{{item.card.subtitle}}</text>
+              <text class="slot-card-span">占 {{item.card.span}} 格</text>
+            </block>
+            <block wx:else>
+              <text class="slot-placeholder">卡槽 {{item.index + 1}}</text>
+            </block>
+          </view>
+        </view>
+        <view class="slot-modal-btns">
+          <view class="slot-btn slot-btn--cancel" bindtap="onSlotCancel"><text>取消</text></view>
+          <view class="slot-btn slot-btn--confirm" bindtap="onSlotConfirm"><text>确认</text></view>
+        </view>
+      </view>
+    </view>

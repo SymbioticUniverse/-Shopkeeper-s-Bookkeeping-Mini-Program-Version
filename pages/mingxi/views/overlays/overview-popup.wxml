@@ -1,0 +1,24 @@
+  <!-- 自定义简览页 · 拖拽弹窗 -->
+  <view class="popup-mask" wx:if="{{showPopup}}" catchtouchstart="onPopupDragStart" catchtouchmove="onPopupDragMove" catchtouchend="onPopupDragEnd">
+    <view class="popup-card" catchtap="nop">
+      <view class="popup-card-header">
+        <text class="popup-card-title">拖入卡槽</text>
+        <text class="popup-card-drag-hint">拖拽下方卡片到目标槽位</text>
+      </view>
+      <view class="popup-slots">
+        <view class="popup-slot popup-slot--span{{item.span}} {{ghostDrag.slotHover === index ? 'popup-slot--hover' : ''}} {{item.isEmpty ? 'popup-slot--empty' : ''}}" wx:for="{{visibleSlots}}" wx:key="col" wx:for-item="item" data-col="{{item.col}}" data-span="{{item.span}}">
+          <block wx:if="{{!item.isEmpty}}">
+            <text class="popup-slot-name">{{item.card.name}}</text>
+            <text class="popup-slot-meta">占{{item.span}}格 · 将被替换</text>
+          </block>
+          <block wx:else>
+            <text class="popup-slot-empty-text">空槽位 · 占{{item.span}}格</text>
+          </block>
+        </view>
+      </view>
+    </view>
+    <view wx:if="{{ghostDrag.visible}}" class="ghost-card" style="left: {{ghostDrag.x}}px; top: {{ghostDrag.y}}px;">
+      <text class="ghost-card-title">{{ghostDrag.name}}</text>
+      <text class="ghost-card-hint">拖到槽位松手</text>
+    </view>
+  </view>

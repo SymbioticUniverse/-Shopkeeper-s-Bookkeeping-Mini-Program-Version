@@ -1,7 +1,3 @@
-Page({
-  onShow() {
-    if (typeof this.getTabBar === 'function' && this.getTabBar()) {
-      this.getTabBar().setData({ selected: 1 })
-    }
-  },
-})
+const createTabPage = require('../../utils/create-tab-page')
+
+Page(createTabPage(1))

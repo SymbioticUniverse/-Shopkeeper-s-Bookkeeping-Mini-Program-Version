@@ -1,0 +1,44 @@
+  <!-- 资料设置弹窗（新用户引导 + 我的页编辑共用） -->
+  <view class="profile-modal-mask" wx:if="{{showProfileModal}}" catchtap="onProfileMaskTap">
+    <view class="profile-modal" catchtap="nop">
+      <text class="profile-modal-title">{{profileEditMode ? '编辑资料' : '完善资料'}}</text>
+      <text class="profile-modal-subtitle">{{profileEditMode ? '修改你的昵称和头像' : '设置你的昵称和头像'}}</text>
+      <view class="profile-avatar-pick" catchtap="onChooseAvatar">
+        <image wx:if="{{profileAvatarLocal}}" class="profile-avatar-img" src="{{profileAvatarLocal}}" mode="aspectFill"></image>
+        <view wx:else class="profile-avatar-ph"><text class="my-avatar-plus">＋</text></view>
+        <view class="profile-avatar-badge"><text class="profile-avatar-badge-ico">＋</text></view>
+      </view>
+      <text class="profile-avatar-tip">{{profileUploading ? '上传中…' : '点击更换头像'}}</text>
+      <view class="profile-field">
+        <view class="profile-field-head">
+          <text class="profile-field-label">昵称</text>
+          <text class="profile-field-count">{{profileName.length}}/20</text>
+        </view>
+        <input class="profile-name-input" value="{{profileName}}" placeholder="请输入昵称" placeholder-class="profile-name-ph" maxlength="20" bindinput="onProfileNameInput"/>
+      </view>
+      <view class="profile-modal-btns">
+        <view wx:if="{{profileEditMode}}" class="profile-btn profile-btn--skip" catchtap="onProfileSkip">取消</view>
+        <view class="profile-btn profile-btn--save {{profileUploading ? 'is-disabled' : ''}}" catchtap="onProfileSave">完成</view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 测试版隐私声明 -->
+  <view class="privacy-notice-mask" wx:if="{{showPrivacyNotice}}" catchtap="">
+    <view class="privacy-notice" catchtap="">
+      <text class="privacy-notice-title">测试版隐私声明</text>
+      <text class="privacy-notice-desc">掌柜记账当前为公开测试版本，为优化算法将自动收集以下信息：</text>
+      <view class="privacy-notice-items">
+        <view class="privacy-notice-item">
+          <text class="privacy-notice-dot">·</text>
+          <text class="privacy-notice-text">语音输入记录及纠正数据</text>
+        </view>
+        <view class="privacy-notice-item">
+          <text class="privacy-notice-dot">·</text>
+          <text class="privacy-notice-text">凭证识别纠错数据</text>
+        </view>
+      </view>
+      <text class="privacy-notice-expire">测试期截止 2026 年 9 月 25 日，此后不再收集任何信息。</text>
+      <view class="privacy-notice-btn" catchtap="onPrivacyNoticeConfirm">我已知晓</view>
+    </view>
+  </view>

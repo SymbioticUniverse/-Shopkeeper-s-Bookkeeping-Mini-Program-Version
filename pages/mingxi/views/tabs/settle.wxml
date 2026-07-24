@@ -1,0 +1,51 @@
+    <!-- Tab 3: 结清 -->
+    <block wx:if="{{currentTab === 3}}">
+      <view class="card grid-span-3 settle-card">
+        <view class="settle-header">
+          <view>
+            <text class="settle-title">结清</text>
+            <view class="settle-subtitle">{{settleType === 0 ? '个人垫付 · 应付' : '公司垫付 · 应付'}}</view>
+          </view>
+          <view class="report-type-toggle" bindtap="switchSettleType">
+            <view class="report-type-bg"></view>
+            <view class="report-type-slider {{settleType === 1 ? 'report-type-slider--right' : ''}}"></view>
+            <text class="report-type-text {{settleType === 0 ? 'report-type-text--active' : ''}}">个人</text>
+            <text class="report-type-text {{settleType === 1 ? 'report-type-text--active' : ''}}">公司</text>
+          </view>
+        </view>
+        <view class="settle-divider"></view>
+        <scroll-view class="settle-list" scroll-y enhanced show-scrollbar="{{false}}">
+          <view wx:for="{{settleItems}}" wx:key="id" class="bill-row">
+            <view class="bill-actions">
+              <view wx:if="{{item.typeLabel === '垫付' && (item.settleStatus === 'pending_confirm' || item.settleStatus === 'company_settled')}}" class="bill-act-btn bill-act-confirm" catchtap="onBillSettle" data-id="{{item.id}}" data-from="settle">确认到账</view>
+              <view wx:elif="{{item.typeLabel === '应付' && (item.settleStatus === 'pending_confirm' || item.settleStatus === 'company_settled') && settleIsBoss}}" class="bill-act-btn bill-act-confirm" catchtap="onBillSettle" data-id="{{item.id}}" data-from="settle">确认收款</view>
+              <view wx:elif="{{item.typeLabel === '应付' && !item.settleStatus}}" class="bill-act-btn bill-act-settle" catchtap="onBillSettle" data-id="{{item.id}}" data-from="settle">结清</view>
+              <view wx:elif="{{item.typeLabel === '垫付' && !item.settleStatus && settleIsBoss}}" class="bill-act-btn bill-act-settle" catchtap="onBillSettle" data-id="{{item.id}}" data-from="settle">发起结清</view>
+              <view wx:if="{{item.scope !== 'company'}}" class="bill-act-btn bill-act-delete" catchtap="onBillDelete" data-id="{{item.id}}" data-from="settle">删除</view>
+              <view wx:if="{{!item._voided}}" class="bill-act-btn bill-act-void" catchtap="onBillVoid" data-id="{{item.id}}" data-from="settle">作废</view>
+              <view wx:else class="bill-act-btn bill-act-unvoid" catchtap="onBillUnvoid" data-id="{{item.id}}" data-from="settle">恢复</view>
+            </view>
+            <view class="bill-item {{item.typeLabel === '垫付' ? 'bill-item--advance' : ''}} {{item.typeLabel === '应付' ? 'bill-item--payable' : ''}} {{item._voided ? 'bill-item--voided' : ''}} {{(item.settleStatus === 'pending_confirm' || item.settleStatus === 'company_settled') ? 'bill-item--pending-confirm' : ''}}"
+                  bindtouchstart="onBillTouchStart"
+                  bindtouchmove="onBillTouchMove"
+                  bindtouchend="onBillTouchEnd"
+                  bindtap="onBillTap"
+                  data-id="{{item.id}}"
+                  data-from="settle">
+              <view class="bill-dot"></view>
+              <text class="bill-cat">{{item.category}}</text>
+              <text class="bill-type">{{item.typeLabel}}</text>
+              <text wx:if="{{item.settleStatus === 'pending_confirm' || item.settleStatus === 'company_settled'}}" class="bill-settle-tag bill-settle-tag--pending">待确认</text>
+              <text wx:if="{{item.target}}" class="bill-target {{item.targetType === 'internal' ? 'bill-target--internal' : 'bill-target--external'}}">{{item.target}}</text>
+              <text class="bill-note-inline">{{item.note || '-'}}</text>
+              <text class="bill-amount {{item.type === 'in' ? 'bill-amount--in' : 'bill-amount--out'}}">¥{{item.amount}}</text>
+              <text class="bill-date">{{item.date}}</text>
+            </view>
+          </view>
+        </scroll-view>
+        <view class="settle-btn" bindtap="onSettleAll">
+          <text class="settle-btn-text">一键全结清</text>
+        </view>
+        <text class="settle-warn">* 结清后相关收支将自动转为普通流水</text>
+      </view>
+    </block>

@@ -1,0 +1,30 @@
+  <!-- 自定义 Modal -->
+  <view class="cu-modal-mask" wx:if="{{showCustomModal}}" catchtap="onCustomModalCancel">
+    <view class="cu-modal" catchtap="noop">
+      <view class="cu-modal-title">{{customModalTitle}}</view>
+      <view class="cu-modal-body" wx:if="{{customModalContent}}">{{customModalContent}}</view>
+      <view class="cu-modal-input-wrap" wx:if="{{customModalShowInput}}">
+        <input class="cu-modal-input" placeholder="{{customModalPlaceholder}}" value="{{customModalInputValue}}" bindinput="onCustomModalInput" maxlength="28" placeholder-class="cu-modal-input-ph"/>
+      </view>
+      <view class="cu-modal-btns">
+        <view class="cu-modal-btn cu-modal-btn--cancel" bindtap="onCustomModalCancel">{{customModalCancel}}</view>
+        <view class="cu-modal-btn cu-modal-btn--confirm" bindtap="onCustomModalConfirm">{{customModalConfirm}}</view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 自定义加密操作面板 -->
+  <view class="cu-sheet-mask" wx:if="{{showEncryptionSheet}}" catchtap="onEncryptionSheetClose">
+    <view class="cu-sheet" catchtap="noop">
+      <view class="cu-sheet-handle"></view>
+      <view class="cu-sheet-title">数据加密</view>
+      <view class="cu-sheet-list">
+        <view class="cu-sheet-item {{index > 0 ? 'cu-sheet-item--bordered' : ''}}" wx:for="{{encryptionSheetItems}}" wx:key="*this" data-idx="{{index}}" catchtap="onEncryptionSheetTap">
+          <text class="cu-sheet-item-text">{{item}}</text>
+        </view>
+      </view>
+      <view class="cu-sheet-cancel" catchtap="onEncryptionSheetClose">
+        <text class="cu-sheet-cancel-text">取消</text>
+      </view>
+    </view>
+  </view>

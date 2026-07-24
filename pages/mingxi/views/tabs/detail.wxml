@@ -1,0 +1,125 @@
+    <!-- Tab 0: 明细 -->
+    <block wx:if="{{currentTab === 0}}">
+      <view class="card grid-span-3 detail-card">
+        <view class="detail-header">
+          <text class="detail-title">明细</text>
+          <view class="report-type-toggle" bindtap="switchDetailType">
+            <view class="report-type-bg"></view>
+            <view class="report-type-slider {{detailType === 1 ? 'report-type-slider--right' : ''}}"></view>
+            <text class="report-type-text {{detailType === 0 ? 'report-type-text--active' : ''}}">个人</text>
+            <text class="report-type-text {{detailType === 1 ? 'report-type-text--active' : ''}}">公司</text>
+          </view>
+        </view>
+        <view class="report-period-bar">
+          <view class="report-period-item {{detailPeriod === 0 ? 'report-period-item--active' : ''}}" bindtap="switchDetailPeriod" data-period="{{0}}">
+            <text class="report-period-text {{detailPeriod === 0 ? 'report-period-text--active' : ''}}">月度</text>
+          </view>
+          <view class="report-period-item {{detailPeriod === 1 ? 'report-period-item--active' : ''}}" bindtap="switchDetailPeriod" data-period="{{1}}">
+            <text class="report-period-text {{detailPeriod === 1 ? 'report-period-text--active' : ''}}">季度</text>
+          </view>
+          <view class="report-period-item {{detailPeriod === 2 ? 'report-period-item--active' : ''}}" bindtap="switchDetailPeriod" data-period="{{2}}">
+            <text class="report-period-text {{detailPeriod === 2 ? 'report-period-text--active' : ''}}">年度</text>
+          </view>
+          <view class="report-period-item {{detailPeriod === 3 ? 'report-period-item--active' : ''}}" bindtap="switchDetailPeriod" data-period="{{3}}">
+            <text class="report-period-text {{detailPeriod === 3 ? 'report-period-text--active' : ''}}">日度</text>
+          </view>
+        </view>
+        <view class="detail-list-area">
+          <view class="detail-date-row">
+            <picker wx:if="{{detailPeriod === 0}}" mode="date" fields="month" value="{{detailPickerDate}}" end="{{maxDate}}" bindchange="onDetailPickerChange">
+              <view class="detail-date-box">
+                <text class="report-date-text">{{detailDateText}}</text>
+                <view class="report-date-arrow"></view>
+              </view>
+            </picker>
+            <picker wx:elif="{{detailPeriod === 1}}" mode="multiSelector" range="{{reportQuarterRange}}" value="{{reportQuarterMultiIndex}}" bindchange="onDetailQuarterChange">
+              <view class="detail-date-box">
+                <text class="report-date-text">{{detailDateText}}</text>
+                <view class="report-date-arrow"></view>
+              </view>
+            </picker>
+            <picker wx:elif="{{detailPeriod === 2}}" mode="date" fields="year" value="{{detailPickerDate}}" end="{{maxDate}}" bindchange="onDetailPickerChange">
+              <view class="detail-date-box">
+                <text class="report-date-text">{{detailDateText}}</text>
+                <view class="report-date-arrow"></view>
+              </view>
+            </picker>
+            <picker wx:elif="{{detailPeriod === 3}}" mode="date" value="{{detailPickerDate}}" end="{{maxDate}}" bindchange="onDetailPickerChange">
+              <view class="detail-date-box">
+                <text class="report-date-text">{{detailDateText}}</text>
+                <view class="report-date-arrow"></view>
+              </view>
+            </picker>
+            <view class="detail-inout-box">
+              <view class="report-inout-item">
+                <view class="report-dot report-dot--green"></view>
+                <text class="report-inout-label">收入</text>
+              </view>
+              <view class="report-inout-item">
+                <view class="report-dot report-dot--red"></view>
+                <text class="report-inout-label">支出</text>
+              </view>
+            </view>
+          </view>
+          <scroll-view class="detail-list" scroll-y enhanced show-scrollbar="{{false}}">
+            <block wx:for="{{detailGroups}}" wx:key="dateLabel" wx:for-item="group">
+              <view class="date-group-header">
+                <text class="date-group-label">{{group.dateLabel}}</text>
+              </view>
+              <view wx:for="{{group.items}}" wx:key="id" wx:for-item="item" class="bill-row {{item.isMulti ? 'bill-row--multi' : ''}}">
+                <!-- 多笔记账：聚合卡片 -->
+                <view wx:if="{{item.isMulti}}" class="bill-item bill-item--multi {{item.type === 'in' ? 'bill-item--multi-income' : 'bill-item--multi-expense'}} {{(item._voided || item.settleStatus === 'settled') ? 'bill-item--voided' : ''}}"
+                      bindtap="onBillTap"
+                      data-id="{{item.id}}"
+                      data-from="detail">
+                  <view class="bill-multi-main">
+                    <view class="bill-multi-left">
+                      <text class="bill-multi-badge">多笔</text>
+                      <text class="bill-multi-count">{{item.multiCount}}笔</text>
+                      <text class="bill-type">{{item.typeLabel || '支出'}}</text>
+                      <text class="bill-note-inline">{{item.note || '-'}}</text>
+                    </view>
+                    <view class="bill-multi-right">
+                      <text class="bill-amount {{item.type === 'in' ? 'bill-amount--in' : 'bill-amount--out'}}">¥{{item.amount}}</text>
+                      <view class="bill-multi-date-info">
+                        <text class="bill-multi-date">{{item.multiDateStart}}</text>
+                        <text class="bill-multi-date-sep" wx:if="{{item.multiDateEnd}}">~</text>
+                        <text class="bill-multi-date" wx:if="{{item.multiDateEnd}}">{{item.multiDateEnd}}</text>
+                      </view>
+                    </view>
+                    <text class="bill-multi-arrow">›</text>
+                  </view>
+                </view>
+                <!-- 普通条目 -->
+                <block wx:else>
+                  <view class="bill-actions">
+                    <view wx:if="{{item.typeLabel === '垫付' && (item.settleStatus === 'pending_confirm' || item.settleStatus === 'company_settled')}}" class="bill-act-btn bill-act-confirm" catchtap="onBillSettle" data-id="{{item.id}}" data-from="detail">确认到账</view>
+                    <view wx:elif="{{item.typeLabel === '应付' && (item.settleStatus === 'pending_confirm' || item.settleStatus === 'company_settled') && settleIsBoss}}" class="bill-act-btn bill-act-confirm" catchtap="onBillSettle" data-id="{{item.id}}" data-from="detail">确认收款</view>
+                    <view wx:elif="{{item.typeLabel === '应付' && !item.settleStatus}}" class="bill-act-btn bill-act-settle" catchtap="onBillSettle" data-id="{{item.id}}" data-from="detail">结清</view>
+                    <view wx:elif="{{item.typeLabel === '垫付' && !item.settleStatus && settleIsBoss}}" class="bill-act-btn bill-act-settle" catchtap="onBillSettle" data-id="{{item.id}}" data-from="detail">发起结清</view>
+                    <view wx:if="{{!item._autoSettle && item.typeLabel !== '垫付' && item.settleStatus !== 'settled' && item.scope !== 'company'}}" class="bill-act-btn bill-act-delete" catchtap="onBillDelete" data-id="{{item.id}}" data-from="detail">删除</view>
+                    <view wx:if="{{!item._autoSettle && !item._voided && item.settleStatus !== 'settled'}}" class="bill-act-btn bill-act-void" catchtap="onBillVoid" data-id="{{item.id}}" data-from="detail">作废</view>
+                    <view wx:elif="{{!item._autoSettle && item._voided}}" class="bill-act-btn bill-act-unvoid" catchtap="onBillUnvoid" data-id="{{item.id}}" data-from="detail">恢复</view>
+                  </view>
+                  <view class="bill-item {{item.typeLabel === '垫付' ? 'bill-item--advance' : ''}} {{item.typeLabel === '应付' ? 'bill-item--payable' : ''}} {{(item._voided || item.settleStatus === 'settled') ? 'bill-item--voided' : ''}} {{(item.settleStatus === 'pending_confirm' || item.settleStatus === 'company_settled') ? 'bill-item--pending-confirm' : ''}}"
+                        bindtouchstart="onBillTouchStart"
+                        bindtouchmove="onBillTouchMove"
+                        bindtouchend="onBillTouchEnd"
+                        bindtap="onBillTap"
+                        data-id="{{item.id}}"
+                        data-from="detail">
+                    <text class="bill-icon">{{item._icon}}</text>
+                    <text class="bill-type">{{item.typeLabel}}</text>
+                    <text wx:if="{{item.settleStatus === 'pending_confirm' || item.settleStatus === 'company_settled'}}" class="bill-settle-tag bill-settle-tag--pending">待确认</text>
+                    <text wx:elif="{{item.settleStatus === 'settled'}}" class="bill-settle-tag bill-settle-tag--auto">结清</text>
+                    <text wx:if="{{item.target}}" class="bill-target {{item.targetType === 'internal' ? 'bill-target--internal' : 'bill-target--external'}}">{{item.target}}</text>
+                    <text class="bill-note-inline">{{item.note || '-'}}</text>
+                    <text class="bill-amount {{item.type === 'in' ? 'bill-amount--in' : 'bill-amount--out'}}">¥{{item.amount}}</text>
+                  </view>
+                </block>
+              </view>
+            </block>
+          </scroll-view>
+        </view>
+      </view>
+    </block>
