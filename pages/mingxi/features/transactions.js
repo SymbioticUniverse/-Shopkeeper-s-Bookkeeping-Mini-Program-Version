@@ -66,10 +66,14 @@ function createMethods(dependencies) {
             failed++
           }
         }
-        await api.refreshItems()
-        this.initSettleItems()
-        this.initDetailItems()
-        this._calcOverviewData()
+        try {
+          await api.refreshItems()
+          this.initSettleItems()
+          this.initDetailItems()
+          this._calcOverviewData()
+        } catch (e) {
+          // 刷新失败不影响结算结果
+        }
         wx.showToast({
           title: failed ? `完成，${failed} 笔失败` : '已全部处理',
           icon: failed ? 'none' : 'success',
@@ -80,14 +84,18 @@ function createMethods(dependencies) {
 
   // ---- 清单项交互 ----
   onBillTouchStart(e) {
-    this._touchStartX = e.touches[0].clientX
-    this._touchStartY = e.touches[0].clientY
+    var t0 = (e.touches && e.touches[0]) || (e.changedTouches && e.changedTouches[0])
+    if (!t0) return
+    this._touchStartX = t0.clientX
+    this._touchStartY = t0.clientY
     this._touchMoved = false
   },
 
   onBillTouchMove(e) {
-    const dx = e.touches[0].clientX - this._touchStartX
-    const dy = e.touches[0].clientY - this._touchStartY
+    var t0 = (e.touches && e.touches[0]) || (e.changedTouches && e.changedTouches[0])
+    if (!t0) return
+    const dx = t0.clientX - this._touchStartX
+    const dy = t0.clientY - this._touchStartY
     if (Math.abs(dx) > 10 && Math.abs(dx) > Math.abs(dy)) {
       this._touchMoved = true
     }
@@ -1059,12 +1067,16 @@ function createMethods(dependencies) {
     }
 
     if (!skipRefresh) {
-      await api.refreshItems()
-      this.initSettleItems()
-      this.initDetailItems()
-      this.setData({ modalItem: null })
-      this._calcOverviewData()
-      wx.showToast({ title: '已发起结清，等待对方确认', icon: 'success' })
+      try {
+        await api.refreshItems()
+        this.initSettleItems()
+        this.initDetailItems()
+        this.setData({ modalItem: null })
+        this._calcOverviewData()
+        wx.showToast({ title: '已发起结清，等待对方确认', icon: 'success' })
+      } catch (e) {
+        wx.showToast({ title: '刷新失败，请下拉重试', icon: 'none' })
+      }
     }
     return true
   },
@@ -1100,12 +1112,16 @@ function createMethods(dependencies) {
           wx.showToast({ title: '确认失败，请重试', icon: 'none' })
           return
         }
-        await api.refreshItems()
-        this.initSettleItems()
-        this.initDetailItems()
-        this.setData({ modalItem: null })
-        this._calcOverviewData()
-        wx.showToast({ title: '已确认结清', icon: 'success' })
+        try {
+          await api.refreshItems()
+          this.initSettleItems()
+          this.initDetailItems()
+          this.setData({ modalItem: null })
+          this._calcOverviewData()
+          wx.showToast({ title: '已确认结清', icon: 'success' })
+        } catch (e) {
+          wx.showToast({ title: '刷新失败，请下拉重试', icon: 'none' })
+        }
       },
     })
   },
