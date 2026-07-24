@@ -218,6 +218,11 @@ function createMethods(dependencies) {
 
   // ---- 槽位拖放对话框（长按 300ms 触发，短滑正常滚动） ----
   onTemplateTouchStart(e) {
+    // 清除上一次未触发的长按计时器
+    if (this._dragPending && this._dragPending.timer) {
+      clearTimeout(this._dragPending.timer)
+      this._dragPending = null
+    }
     const templateId = e.currentTarget.dataset.id
     const template = this.data.customTemplates.find(t => t.id === templateId)
     if (!template) return

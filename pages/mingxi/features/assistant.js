@@ -175,7 +175,8 @@ function createMethods(dependencies) {
     // 每笔 OCR 结果构造为一张待确认卡片
     for (var i = 0; i < items.length; i++) {
       var it = items[i]
-      var absAmt = parseFloat(it.amount).toFixed(2) || '0.00'
+      var amt = parseFloat(it.amount)
+      var absAmt = (isNaN(amt) ? 0 : Math.abs(amt)).toFixed(2)
       var isIncome = it.type === 'income'
       var cat = it.category || '其他'
       var catIdx = this.data.catOptions.indexOf(cat)
@@ -279,6 +280,8 @@ function createMethods(dependencies) {
     clearTimeout(this._recordTimeout)
     this._recordTimeout = 0
     clearTimeout(this._stopFallback)
+    // 兜底超时已触发，_chatRecognizeFor 已被清理，不再继续
+    if (!this._chatRecognizeFor) { this._recorderBusy = false; return }
     // 防重复调用
     if (this._asrPending) return
     if (!tempFilePath) {

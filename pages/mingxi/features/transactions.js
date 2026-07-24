@@ -337,7 +337,7 @@ function createMethods(dependencies) {
     if (/^[\d\s+*/.\-]+$/.test(t) && /[\+\-]/.test(t) && (t.match(/\d+/g) || []).length >= 2) {
       var clean = t.replace(/\s+/g, '').replace(/[*\/]/g, '+')
       // 前导负号 → 全用 + 连接
-      if (leadingNeg) clean = clean.replace(/\-/g, '+')
+      if (leadingNeg) clean = '-' + clean
       if (/[\+\-]/.test(clean)) return clean
     }
 
