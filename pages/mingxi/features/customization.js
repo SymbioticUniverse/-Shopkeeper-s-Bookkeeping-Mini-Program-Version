@@ -6,8 +6,6 @@ function createMethods(dependencies) {
     setVolume,
     getTLang,
     getLangLabel,
-    _encryptWithMasterKey,
-    _decryptWithMasterKey,
   } = dependencies
 
   return {

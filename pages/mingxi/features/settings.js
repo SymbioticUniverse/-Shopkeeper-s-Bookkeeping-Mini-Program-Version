@@ -6,8 +6,6 @@ function createMethods(dependencies) {
     setVolume,
     getTLang,
     getLangLabel,
-    _encryptWithMasterKey,
-    _decryptWithMasterKey,
   } = dependencies
 
   return {
@@ -39,6 +37,8 @@ function createMethods(dependencies) {
     const cacheSize = (storageInfo.currentSize / 1024).toFixed(1) + 'MB'
     this._applyLanguage(lang)
     this.setData({ showSettingsPage: true, settingsLedgerRole: ledgerRole, settingsCompanyStatus: companyStatus, settingsPhone: phoneNumber, settingsLanguage: lang, settingsLanguageLabel: langLabel, settingsDarkMode: darkMode, settingsDarkModeLabel: darkLabel, cacheSize })
+    // 打开设置页时刷新公司加密状态（员工可能拿到 boss 新开启的公钥）
+    if (ledgerRole !== 'personal') this._syncCompanyKeys()
   },
 
   onSettingsBack() {
@@ -157,7 +157,7 @@ function createMethods(dependencies) {
           for (let start = 0; start < ids.length; start += 500) {
             const recovered = await api.claimOrphanCompanyItems(
               ids.slice(start, start + 500),
-              result.companyUid
+              result.companyUid || (api.getCompanyInfo() || {}).companyUid
             )
             recoveredCount += Number(recovered && recovered.recovered) || 0
           }
@@ -177,7 +177,7 @@ function createMethods(dependencies) {
               this.initDetailItems()
               this.initSettleItems()
               this.updateReportDate()
-            } catch (_) {}
+            } catch (_) { console.warn('[恢复] 刷新失败', _) }
           }
           wx.hideLoading()
           wx.showToast({
@@ -229,7 +229,8 @@ function createMethods(dependencies) {
         })
         break
       case 'security':
-        this._onEncryptionTap()
+        // 非 VIP 用户点击加密入口 → 引导升级
+        this.setData({ showSettingsPage: false, showVipPage: true })
         break
       case 'recoverCompanyItems':
         this._recoverOrphanCompanyItems()
@@ -260,6 +261,10 @@ function createMethods(dependencies) {
               wx.showLoading({ title: '处理中...' })
               try {
                 await api.removeCompanyInfo()
+                this._syncCompanyDisplayData()
+                this._syncOverviewCards()
+                this.initDetailItems()
+                this.initSettleItems()
                 this.setData({ showSettingsPage: false, showCompanyShare: true, companyShareStep: 1, companyRole: 'employee', employeeUid: '' })
                 wx.showToast({ title: '请重新选择公司', icon: 'none' })
               } catch (e) {
@@ -281,6 +286,10 @@ function createMethods(dependencies) {
               try {
                 await api.removeCompanyInfo()
                 api.removeAuditList()
+                this._syncCompanyDisplayData()
+                this._syncOverviewCards()
+                this.initDetailItems()
+                this.initSettleItems()
                 this.setData({ settingsLedgerRole: 'personal', showSettingsPage: false, hasPendingAudit: false })
                 wx.showToast({ title: '公司已解散', icon: 'success' })
               } catch (e) {
@@ -310,26 +319,14 @@ function createMethods(dependencies) {
               const privacyCrash = api.getSetting('privacy_allowCrashReport')
               const authToken = wx.getStorageSync('authToken')
               const refreshToken = wx.getStorageSync('refreshToken')
-              const masterKey = wx.getStorageSync('e2e_master_key')
-              const e2eEnabled = wx.getStorageSync('e2e_enabled')
-              const e2eAdvanced = wx.getStorageSync('e2e_advanced')
-              const e2eAdvancedDowngraded = wx.getStorageSync('e2e_advanced_downgraded')
-              const e2eRequired = wx.getStorageSync('e2e_required')
-              const e2eBackupPending = wx.getStorageSync('e2e_backup_pending')
               const companyPriv = wx.getStorageSync('e2e_company_private_key')
               const companyPub = wx.getStorageSync('e2e_company_public_key')
               const companyKeyId = wx.getStorageSync('e2e_company_key_id')
               const vipStatus = wx.getStorageSync('vipStatus')
               wx.clearStorageSync()
-              // 先恢复身份与加密保护状态，再触发任何后台设置同步。
+              // 先恢复身份与企业加密密钥，再触发任何后台设置同步。
               if (authToken) wx.setStorageSync('authToken', authToken)
               if (refreshToken) wx.setStorageSync('refreshToken', refreshToken)
-              if (masterKey) wx.setStorageSync('e2e_master_key', masterKey)
-              if (e2eEnabled) wx.setStorageSync('e2e_enabled', e2eEnabled)
-              if (e2eAdvanced) wx.setStorageSync('e2e_advanced', e2eAdvanced)
-              if (e2eAdvancedDowngraded) wx.setStorageSync('e2e_advanced_downgraded', e2eAdvancedDowngraded)
-              if (e2eRequired) wx.setStorageSync('e2e_required', e2eRequired)
-              if (e2eBackupPending) wx.setStorageSync('e2e_backup_pending', e2eBackupPending)
               if (companyPriv) wx.setStorageSync('e2e_company_private_key', companyPriv)
               if (companyPub) wx.setStorageSync('e2e_company_public_key', companyPub)
               if (companyKeyId) wx.setStorageSync('e2e_company_key_id', companyKeyId)
@@ -362,8 +359,8 @@ function createMethods(dependencies) {
         wx.showModal({
           title: '注销账本',
           content: isBoss
-            ? '将清除公司密钥、个人密钥、登录状态和所有本地数据。公司将被解散。\n\n适用于：丢失高级安全密钥、重置公司账本等场景。\n\n此操作不可撤销，确定继续吗？'
-            : '将清除个人密钥、登录状态和本地个人数据。' + (isEmployee ? '公司关系保留。' : '') + '\n\n适用于：丢失高级安全密钥、重置个人账本等场景。\n\n此操作不可撤销，确定继续吗？',
+            ? '将清除公司密钥、登录状态和所有本地数据。公司将被解散。\n\n适用于：重置公司账本等场景。\n\n此操作不可撤销，确定继续吗？'
+            : '将清除登录状态和本地个人数据。' + (isEmployee ? '公司关系保留。' : '') + '\n\n适用于：重置个人账本等场景。\n\n此操作不可撤销，确定继续吗？',
           confirmText: '确定注销',
           confirmColor: '#fa5151',
           success: async (res) => {
@@ -381,12 +378,8 @@ function createMethods(dependencies) {
               }
               const companyWasDissolved = !!(deactivateResult && deactivateResult.companyDissolved)
               const retainCompany = !!(deactivateResult && deactivateResult.companyRetained)
-              // 3. 清空加密密钥（员工只清个人，不动公司）
-              if (companyWasDissolved) { try { require('../../utils/crypto.js').clearCompanyKeys() } catch (_) {} }
-              try { wx.removeStorageSync('e2e_master_key') } catch (_) {}
-              try { wx.removeStorageSync('e2e_enabled') } catch (_) {}
-              try { wx.removeStorageSync('e2e_advanced') } catch (_) {}
-              try { wx.removeStorageSync('e2e_advanced_downgraded') } catch (_) {}
+              // 3. 清空企业加密密钥（仅公司解散时）
+              if (companyWasDissolved) { try { require('../../../utils/crypto.js').clearCompanyKeys() } catch (_) {} }
               // 4. 保留用户设置 + 公司信息（员工保公司关系）
               const lang = api.getSetting('appLanguage')
               const darkMode = api.getSetting('appDarkMode')
@@ -409,13 +402,9 @@ function createMethods(dependencies) {
                 showGuide: true,
                 guideStep: 0,
                 settingsLedgerRole: retainCompany ? 'employee' : 'personal',
-                encryptionEnabled: false,
-                encryptionAdvancedEnabled: false,
-                encryptionTier: '',
                 encryptionCompanyIsBoss: false,
                 encryptionCompanyKeyReady: false,
-                hasPendingAudit: false,
-                settingsHasAdvancedBlob: false
+                hasPendingAudit: false
               })
               this.initDetailItems()
               wx.hideLoading()
@@ -667,7 +656,6 @@ function createMethods(dependencies) {
     try {
       await api.createCompany(info)
       this._syncOverviewCards()
-      await this._setupBossCompanyKeys()
       wx.showToast({ title: '创建成功', icon: 'success' })
       this.setData({ companyShareStep: 2, companyName: info.companyName, companyBossTitle: info.companyBossTitle, companyUid: info.companyUid })
     } catch (e) {
@@ -689,6 +677,81 @@ function createMethods(dependencies) {
       data: uid,
       success: () => wx.showToast({ title: 'UID 已复制，发给同事即可加入', icon: 'none' }),
       fail: () => wx.showToast({ title: '复制失败', icon: 'none' })
+    })
+  },
+
+  /** 员工点击刷新加密状态 */
+  onRefreshCompanyEncryption() {
+    var that = this
+    wx.showLoading({ title: '刷新中...' })
+    this._syncCompanyKeys().then(function () {
+      wx.hideLoading()
+      if (that.data.encryptionCompanyKeyReady) {
+        wx.showToast({ title: '企业加密已就绪', icon: 'success' })
+      } else {
+        wx.showToast({ title: '暂未开启，请稍后再试', icon: 'none' })
+      }
+    }).catch(function () {
+      wx.hideLoading()
+      wx.showToast({ title: '刷新失败', icon: 'none' })
+    })
+  },
+
+  /** 老板主动开启企业加密 */
+  onEnableCompanyEncryption() {
+    var that = this
+    wx.showModal({
+      title: '开启企业端到端加密',
+      content: '将生成 secp256k1 密钥对，公司账单在传输和存储时全程加密，仅持有私钥的设备可解密。\n\n开启后将生成 28 位恢复密钥，请务必妥善保存。',
+      confirmText: '立即开启',
+      success: function (res) {
+        if (res.confirm) {
+          wx.showLoading({ title: '生成密钥中...' })
+          that._setupBossCompanyKeys().then(function () {
+            wx.hideLoading()
+          }).catch(function (e) {
+            wx.hideLoading()
+            wx.showToast({ title: (e && e.message) || '密钥生成失败', icon: 'none' })
+          })
+        }
+      }
+    })
+  },
+
+  /** 换设备恢复公司私钥 */
+  onRecoverCompanyKeys() {
+    var that = this
+    wx.showModal({
+      title: '恢复公司密钥',
+      content: '请输入 28 位公司恢复密钥',
+      editable: true,
+      placeholderText: '输入恢复密钥',
+      confirmText: '恢复',
+      success: function (res) {
+        if (res.confirm && res.content) {
+          var key = res.content.trim()
+          if (key.length < 20) {
+            wx.showToast({ title: '恢复密钥格式不正确', icon: 'none' })
+            return
+          }
+          wx.showLoading({ title: '恢复中...' })
+          that._recoverCompanyKeys(key).then(function () {
+            wx.hideLoading()
+          }).catch(function (e) {
+            wx.hideLoading()
+            wx.showToast({ title: (e && e.message) || '恢复失败', icon: 'none' })
+          })
+        }
+      }
+    })
+  },
+
+  _showCompanyEncryptionInfo() {
+    wx.showModal({
+      title: '企业数据加密',
+      content: '企业版专属功能。创建或加入公司后，公司账本数据将通过 secp256k1 ECIES 端到端加密保护。\n\n个人账单数据通过 HTTPS 明文传输，不加密存储。',
+      showCancel: false,
+      confirmText: '知道了'
     })
   },
 

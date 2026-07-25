@@ -254,7 +254,10 @@ async function _replayQueue() {
       await _request(op.action, op.path, securedData)
       _markQueuedItemsClean(op)
     } catch (e) {
-      if (e && e.statusCode === 401) return
+      if (e && e.statusCode === 401) {
+        remaining.push(op)
+        break
+      }
       if (e && e.message && e.message.indexOf('加密') >= 0) {
         _showEncryptionBlocked(e)
       }
@@ -418,6 +421,10 @@ function _request(method, path, data) {
                 _handleAuthExpired()
                 reject(_responseError(res))
               }
+            }).catch(err => {
+              console.error('[API] 换证过程异常', method, path, err)
+              _handleAuthExpired()
+              reject(_responseError(res))
             })
           } else if (res.statusCode === 401 && token && path !== '/auth/logout' && path === '/auth/refresh') {
             // refresh 接口本身返回 401 → 直接踢下线
@@ -447,7 +454,11 @@ function _pushBackend(method, path, data) {
     // 仅网络错误入队列（业务错误如 400/401 不入队，避免反复失败）
     if (_isTransientError(err)) {
       console.warn('[API] 离线：操作已入队列', method, path)
+      var wasEmpty = _getQueue().length === 0
       _enqueue(method, path, data)
+      if (wasEmpty && typeof wx !== 'undefined' && wx.showToast) {
+        wx.showToast({ title: '网络异常，数据将在恢复后同步', icon: 'none', duration: 2000 })
+      }
       return { queued: true }
     } else {
       console.warn('[API] 后台推送失败（非网络原因，不入队）', path, err)
@@ -478,11 +489,7 @@ function getItemsIncludingVoided(scope) {
 
 function _prepareItemForUpload(item) {
   var crypto = _getCrypto()
-  var encryptionRequired = !!wx.getStorageSync('e2e_required')
-  if (!crypto || !crypto.isEncryptionEnabled()) {
-    if (encryptionRequired) throw new Error('加密密钥尚未恢复')
-    return item
-  }
+  if (!crypto) return item
   return crypto.encryptItem(item)
 }
 
@@ -504,24 +511,21 @@ function _findStoredItem(id) {
 }
 
 function _secureQueuedItemPayload(op) {
-  var crypto = _getCrypto()
   if (!op || !op.path) return op && op.data
-  if (!crypto || !crypto.isEncryptionEnabled()) {
-    if (wx.getStorageSync('e2e_required')) throw new Error('加密密钥尚未恢复')
-    return op.data
-  }
+  var crypto = _getCrypto()
+  if (!crypto) return op.data
 
   var data = op.data || {}
   if (op.action === 'POST' && op.path === '/items' && data.item) {
     var localItem = _findStoredItem(data.item.id)
-    if (!localItem) throw new Error('加密队列缺少本地账单，已停止上传')
+    if (!localItem) throw new Error('离线队列缺少本地账单，已停止上传')
     return { ...data, item: _prepareItemForUpload(localItem) }
   }
 
   if (op.action === 'POST' && op.path === '/items/linked' && data.item && data.mirrorItem) {
     var firstLocal = _findStoredItem(data.item.id)
     var secondLocal = _findStoredItem(data.mirrorItem.id)
-    if (!firstLocal || !secondLocal) throw new Error('加密队列缺少联动账单，已停止上传')
+    if (!firstLocal || !secondLocal) throw new Error('离线队列缺少联动账单，已停止上传')
     var first = _prepareItemForUpload(firstLocal)
     var second = _prepareItemForUpload(secondLocal)
     return { ...data, item: first, mirrorItem: second }
@@ -546,7 +550,7 @@ function _secureQueuedItemPayload(op) {
 
   // 普通条目更新需要用本地完整记录重建密文。结清端点和仅软删除请求
   // 不包含敏感字段，可以按原样重放。
-  var updateMatch = op.action === 'PUT' && op.path.match(/^\/items\/([^/?]+)/)
+  var updateMatch = op.action === 'PUT' && op.path.match(/^\/items\/([^/?]+)$/)
   if (updateMatch) {
     var keys = Object.keys(data)
     if (keys.length === 1 && keys[0] === '_voided') return data
@@ -834,10 +838,6 @@ function settleConfirm(id, settleInfo) {
 /** 结清后轻量重拉：只覆盖两个 scope 的账单本地缓存（比整包 syncFromCloud 省） */
 async function refreshItems() {
   if (!_getToken()) return
-  var crypto = _getCrypto()
-  if (wx.getStorageSync('e2e_required') && (!crypto || !crypto.isEncryptionEnabled())) {
-    throw new Error('加密密钥尚未恢复')
-  }
   const results = await Promise.allSettled([
     _request('GET', '/items?scope=personal&includeVoided=1'),
     _request('GET', '/items?scope=company&includeVoided=1'),
@@ -955,8 +955,9 @@ async function joinCompany(info) {
   return result
 }
 
-async function removeCompanyInfo() {
-  if (_getToken()) await _request('DELETE', '/company')
+async function removeCompanyInfo(options) {
+  var voidItems = !!(options && options.voidItems)
+  if (_getToken()) await _request('DELETE', '/company' + (voidItems ? '?void_items=1' : ''))
   _clearCompanyScopedLocalData()
   wx.removeStorageSync('companyInfo')
 }
@@ -1004,11 +1005,12 @@ function uploadCompanyEncryptedPrivateKey(encryptedPrivateKey, keyId) {
 }
 
 /** 老板原子上传同一代公司公钥与加密私钥 */
-function uploadCompanyKeys(publicKey, encryptedPrivateKey, keyId) {
+function uploadCompanyKeys(publicKey, encryptedPrivateKey, keyId, salt) {
   return _request('PUT', '/company/keys', {
     public_key: publicKey,
     encrypted_private_key: encryptedPrivateKey,
-    key_id: keyId
+    key_id: keyId,
+    key_salt: salt || ''
   })
 }
 
@@ -1087,9 +1089,7 @@ function _activateLoginAccount(result) {
   if (userId === undefined || userId === null || userId === '') {
     throw new Error('登录响应缺少用户标识，已阻止登录')
   }
-  const crypto = _getCrypto()
-  if (!crypto) throw new Error('加密模块不可用，已阻止登录')
-  crypto.activateAccount(userId)
+  wx.setStorageSync('authUserId', String(userId))
   return String(userId)
 }
 
@@ -1208,11 +1208,9 @@ async function bootstrapAuthenticatedAccount() {
   if (!_getToken()) throw new Error('未登录，无法确认加密账号')
   const result = await _request('GET', '/auth/user-info')
   if (!result || result.userId === undefined || result.userId === null || result.userId === '') {
-    throw new Error('服务端未返回用户标识，已阻止加密迁移')
+    throw new Error('服务端未返回用户标识')
   }
-  const crypto = _getCrypto()
-  if (!crypto) throw new Error('加密模块不可用，已阻止加密迁移')
-  crypto.activateAccount(result.userId, { verifiedBootstrap: true })
+  wx.setStorageSync('authUserId', String(result.userId))
 
   const current = getUserInfo() || {}
   _save('userInfo', {
@@ -1321,41 +1319,19 @@ async function _pushDirtyItems() {
     // 老板可读取员工公司账单，但不能代替员工改写其密文或同步元数据。
     if (item._ownedByMe === false) continue
     if (item._syncBlocked) continue
-    var crypto = _getCrypto()
-    var needsEncryptionMigration = !!(
-      crypto
-      && crypto.isEncryptionEnabled()
-      && !item.encrypted_data
-      && !item.encryptedData
-    )
-    if (!item._dirty && !needsEncryptionMigration) continue
+    if (!item._dirty) continue
 
     if (!item._syncedAt) {
       // 新建条目 → POST
+      var encryptedNew
       try {
-        var encryptedNew = _prepareItemForUpload(item)
+        encryptedNew = _prepareItemForUpload(item)
         await _request('POST', '/items', { scope: scope, item: encryptedNew })
         _markClean(item.id, scope)
       } catch (e) {
         if (e && e.message && e.message.indexOf('加密') >= 0) _showEncryptionBlocked(e)
         if (e && e.existingItem) {
-          // 旧云端记录可能仍是明文。账号启用加密后，409 不能直接当作
-          // 已完成，必须用同一 ID 的密文覆盖一次。
-          if (needsEncryptionMigration) {
-            try {
-              await _request('PUT', '/items/' + item.id, encryptedNew)
-              _markClean(item.id, scope)
-            } catch (migrationError) {
-              if (_isTransientError(migrationError)) {
-                failures.push({ id: item.id, error: migrationError })
-              } else {
-                _markSyncBlocked(item.id, scope, migrationError)
-                wx.showToast({ title: _syncErrorMessage(migrationError), icon: 'none' })
-              }
-            }
-          } else {
-            _markClean(item.id, scope)
-          }
+          _markClean(item.id, scope)
         } else if (_isTransientError(e) || (e && e.message && e.message.indexOf('加密') >= 0)) {
           failures.push({ id: item.id, error: e })
         } else {
@@ -1410,18 +1386,13 @@ async function _pushAllItemsOnce() {
         if (e && e.message && e.message.indexOf('加密') >= 0) _showEncryptionBlocked(e)
         // 409：服务端已有 → 也清脏
         if (e && e.existingItem) {
-          var crypto = _getCrypto()
-          if (crypto && crypto.isEncryptionEnabled()) {
-            try {
-              await _request('PUT', '/items/' + items[i].id, _prepareItemUpdateForUpload(items[i], true, items[i]._voided))
-              _markClean(items[i].id, scope)
-            } catch (_) {
-              // 保持本地记录，后续增量同步继续迁移。
-            }
-          } else {
+          try {
+            await _request('PUT', '/items/' + items[i].id, _prepareItemUpdateForUpload(items[i], true, items[i]._voided))
+            _markClean(items[i].id, scope)
+          } catch (_) {
             _markClean(items[i].id, scope)
           }
-        } else if (!_isTransientError(e) && !(e && e.message && e.message.indexOf('加密') >= 0)) {
+        } else if (!_isTransientError(e)) {
           _markSyncBlocked(items[i].id, scope, e)
           wx.showToast({ title: _syncErrorMessage(e), icon: 'none' })
         }
@@ -1514,9 +1485,19 @@ function _mergeItems(key, remoteItems) {
     })
   }
 
+  function _stillEncrypted(it) {
+    if (!(it.encrypted_data || it.encryptedData)) return false
+    // amount 非正数（0 / null / NaN / undefined）说明解密未生效
+    // category / typeLabel 为占位符也说明解密未生效
+    var num = Number(it.amount)
+    return (Number.isNaN(num) || it.amount === null || it.amount === undefined) || it.category === '[encrypted]' || it.typeLabel === '[encrypted]'
+  }
+
   if (localItems.length === 0) {
-    // 本地空 → 服务端数据为准
-    _save(key, remoteItems.map(function (it) {
+    // 本地空 → 服务端数据为准（跳过无法解密的本人条目，保留他人加密条目作为占位）
+    _save(key, remoteItems.filter(function (it) {
+      return !_stillEncrypted(it) || (scope === 'company' && it._ownedByMe === false)
+    }).map(function (it) {
       return { ...it, _dirty: false, _syncedAt: Date.now(), _lastKnownHash: _hashItemFields(it) }
     }))
     return { conflicts: [] }
@@ -1545,14 +1526,7 @@ function _mergeItems(key, remoteItems) {
     var it = localItems[i]
     if (conflictIds[it.id]) continue
     var remote = serverMap[it.id]
-    var remoteStillEncrypted = remote
-      && (remote.encrypted_data || remote.encryptedData)
-      && (
-        remote.amount === '[encrypted]'
-        || remote.category === '[encrypted]'
-        || remote.typeLabel === '[encrypted]'
-      )
-    if (remote && !it._dirty && !remoteStillEncrypted) {
+    if (remote && !it._dirty && !_stillEncrypted(remote)) {
       merged.push({
         ...remote,
         _updatedAt: remote.updatedAt || it._updatedAt || 0,
@@ -1567,11 +1541,13 @@ function _mergeItems(key, remoteItems) {
     seenIds[it.id] = true
   }
 
-  // Pass 2：服务端有而本地没有 → 追加（排除墓碑和冲突）
+  // Pass 2：服务端有而本地没有 → 追加（排除墓碑、冲突和解密失败的本人条目）
   for (var j = 0; j < remoteItems.length; j++) {
     var rIt = remoteItems[j]
     if (seenIds[rIt.id]) continue
     if (conflictIds[rIt.id]) continue
+    // 解密失败的本人条目不写入本地（公司 scope 下他人的加密条目保留为占位）
+    if (_stillEncrypted(rIt) && (scope === 'personal' || rIt._ownedByMe !== false)) continue
     merged.push({
       ...rIt,
       _updatedAt: rIt.updatedAt || 0,
@@ -1673,10 +1649,6 @@ function _finalizeNonItemMerge(results) {
  */
 async function syncFromCloud() {
   if (!_getToken()) return { synced: false }
-  var crypto = _getCrypto()
-  if (wx.getStorageSync('e2e_required') && (!crypto || !crypto.isEncryptionEnabled())) {
-    return { synced: false, encryptionLocked: true }
-  }
 
   var meta = _getSyncMeta()
 
@@ -1997,7 +1969,7 @@ function downloadAuthedImage(url) {
           if (res.statusCode === 401 && !retryToken && _getRefreshToken()) {
             _tryRefreshAccessToken().then(function (newToken) {
               if (newToken) { _download(u, newToken) }
-              else { reject(res) }
+              else { reject({ error: '登录已过期' }) }
             })
             return
           }
@@ -2110,34 +2082,44 @@ function learnUpload(type, records) {
 
 // 方式二：CSV 文件上传（推荐）
 function learnUploadCsv(filePath) {
-  var token = _getToken()
   return new Promise(function (resolve, reject) {
-    wx.uploadFile({
-      url: BASE_URL + '/learn/upload-csv',
-      filePath: filePath,
-      name: 'file',
-      header: { 'Authorization': 'Bearer ' + token },
-      formData: { type: 'asr_structured' },
-      success: function (res) {
-        try {
-          var data = JSON.parse(res.data)
-          if (data && data.ok) {
-            resolve({
-              totalRows: data.totalRows || 0,
-              correctionsAdded: data.correctionsAdded || 0,
-              itemCategoryMappingsAdded: data.itemCategoryMappingsAdded || 0,
-              patternsLearned: data.patternsLearned || 0
+    _doUpload(filePath)
+    function _doUpload(path, retryToken) {
+      var token = retryToken || _getToken()
+      wx.uploadFile({
+        url: BASE_URL + '/learn/upload-csv',
+        filePath: path,
+        name: 'file',
+        header: { 'Authorization': 'Bearer ' + token },
+        formData: { type: 'asr_structured' },
+        success: function (res) {
+          if (res.statusCode === 401 && !retryToken && _getRefreshToken()) {
+            _tryRefreshAccessToken().then(function (newToken) {
+              if (newToken) { _doUpload(path, newToken) }
+              else { reject({ error: '登录已过期' }) }
             })
-          } else {
-            reject(data)
+            return
           }
-        } catch (e) { reject(res) }
-      },
-      fail: function (err) {
-        console.error('[API] learnUploadCsv 失败', err)
-        reject(err)
-      }
-    })
+          try {
+            var data = JSON.parse(res.data)
+            if (data && data.ok) {
+              resolve({
+                totalRows: data.totalRows || 0,
+                correctionsAdded: data.correctionsAdded || 0,
+                itemCategoryMappingsAdded: data.itemCategoryMappingsAdded || 0,
+                patternsLearned: data.patternsLearned || 0
+              })
+            } else {
+              reject(data)
+            }
+          } catch (e) { reject(res) }
+        },
+        fail: function (err) {
+          console.error('[API] learnUploadCsv 失败', err)
+          reject(err)
+        }
+      })
+    }
   })
 }
 

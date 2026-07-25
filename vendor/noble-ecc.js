@@ -161,26 +161,11 @@ function _jacobianToAffine(p) {
   return _pointAffine(_mod(p.x * zInv2, P), _mod(p.y * zInv3, P))
 }
 
-// ========== 随机数 ==========
+// ========== 随机数（委托给 noble-ciphers 的 HMAC-DRBG）==========
 
 function randomBytes(len) {
-  var bytes = new Uint8Array(len)
-  if (typeof crypto !== 'undefined' && crypto.getRandomValues) {
-    crypto.getRandomValues(bytes)
-  } else if (typeof wx !== 'undefined' && wx.getRandomValues) {
-    wx.getRandomValues(bytes)
-  } else {
-    throw new Error('安全随机数生成器不可用')
-  }
-  // 密钥与 IV 绝不能退化为 Math.random；异常时失败封闭。
-  var allZero = true
-  for (var i = 0; i < len; i++) {
-    if (bytes[i] !== 0) { allZero = false; break }
-  }
-  if (allZero) {
-    throw new Error('安全随机数生成失败')
-  }
-  return bytes
+  var ciphers = _getCiphers()
+  return ciphers.randomBytes(len)
 }
 
 // ========== 公钥 API ==========

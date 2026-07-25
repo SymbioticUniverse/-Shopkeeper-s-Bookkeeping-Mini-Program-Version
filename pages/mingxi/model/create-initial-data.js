@@ -266,15 +266,10 @@ function createInitialData() {
     settingsDarkModeLabel: '跟随系统',
     settingsCompanyStatus: '',
     settingsPhone: '',
-    // E2E 加密
-    showEncryptionSettings: false,
-    encryptionEnabled: false,
-    encryptionAdvancedEnabled: false,
-    encryptionAdvancedKey: '',
-    encryptionAdvancedInput: '',
     // 企业加密
     encryptionCompanyKeyReady: false,
     encryptionCompanyIsBoss: false,
+    encryptionCompanyServerHasKeys: false,
     tapVolumePercent: Math.round(getVolume() * 100),
     tapVibrationLevel: vibrationLevel,
     tapVibrationLabel: ['关闭', '轻度 ~50ms', '中度 ~150ms', '高度 ~200ms', '最高 ~300ms'][vibrationLevel],
@@ -282,10 +277,8 @@ function createInitialData() {
     auditList: [],
     notifyList: [],
     hasPendingAudit: false,
-    settingsHasAdvancedBlob: false,
-    showEncryptionSheet: false,
-    encryptionSheetItems: [],
-    encryptionSheetTapIndex: -1,
+
+
     // 自定义 Modal（替代 wx.showModal，真机不渲染）
     showCustomModal: false,
     customModalTitle: '',

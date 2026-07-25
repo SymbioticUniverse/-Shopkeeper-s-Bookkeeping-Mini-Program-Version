@@ -6,8 +6,6 @@ function createMethods(dependencies) {
     setVolume,
     getTLang,
     getLangLabel,
-    _encryptWithMasterKey,
-    _decryptWithMasterKey,
   } = dependencies
 
   return {
@@ -571,6 +569,8 @@ function createMethods(dependencies) {
 
   onMultiSave() {
     try { playTap() } catch (_) {}
+    if (this._saving) return
+    this._saving = true
 
     var self = this
     var multiExpression = this.data.multiExpression
@@ -585,10 +585,12 @@ function createMethods(dependencies) {
 
     if (!multiCount || parseFloat(multiResult) <= 0) {
       wx.showToast({ title: '请输入金额', icon: 'none' })
+      this._saving = false
       return
     }
     if (parseFloat(multiResult) >= 10000000) {
       wx.showToast({ title: '合计金额不能超过千万', icon: 'none' })
+      this._saving = false
       return
     }
     var clean = multiExpression.replace(/[+\-]+$/, '')
@@ -604,6 +606,7 @@ function createMethods(dependencies) {
     var validAmounts = amounts.filter(function (a) { return a > 0 })
     if (!validAmounts.length) {
       wx.showToast({ title: '请输入有效金额', icon: 'none' })
+      this._saving = false
       return
     }
 
@@ -630,6 +633,30 @@ function createMethods(dependencies) {
         multiDateStart: multiStartDate,
         multiDateEnd: multiUseDateRange ? multiEndDate : '',
       }
+
+      // 公司记账前检查加密状态：boss 刚开启加密时，员工需刷新公钥
+      if (multiScope === 'company' && !self.data.encryptionCompanyKeyReady && !self.__encryptionChecked) {
+        self.__encryptionChecked = true
+        self._saving = false
+        self._syncCompanyKeys().then(function () {
+          self.__encryptionChecked = false
+          if (self.data.encryptionCompanyKeyReady) {
+            wx.showModal({
+              title: '企业加密已开启',
+              content: '老板已开启端到端加密，请重新保存，系统将自动加密保护公司账单。',
+              showCancel: false,
+              confirmText: '知道了'
+            })
+          } else {
+            self.onMultiSave()
+          }
+        }).catch(function () {
+          self.__encryptionChecked = false
+          self.onMultiSave()
+        })
+        return
+      }
+
       api.addItem(multiScope, item)
 
       this.initDetailItems()
@@ -660,9 +687,11 @@ function createMethods(dependencies) {
               multiNote: '',
             })
           }
+          self._saving = false
         }
       })
     } catch (err) {
+      self._saving = false
       wx.showModal({
         title: '保存失败',
         content: err.message || '未知错误',
@@ -825,6 +854,8 @@ function createMethods(dependencies) {
 
   onBookSave() {
     try { playTap() } catch (_) {}
+    if (this._saving) return
+    this._saving = true
 
     var self = this
     var form = this.data.bookForm || {}
@@ -838,18 +869,22 @@ function createMethods(dependencies) {
 
     if (!amount || parseFloat(amount) <= 0) {
       wx.showToast({ title: '请输入金额', icon: 'none' })
+      this._saving = false
       return
     }
     if (parseFloat(amount) >= 10000000) {
       wx.showToast({ title: '单笔金额不能超过千万', icon: 'none' })
+      this._saving = false
       return
     }
     if (!category) {
       wx.showToast({ title: '请选择分类', icon: 'none' })
+      this._saving = false
       return
     }
     if ((type === 'payForward' || type === 'payable') && !target) {
       wx.showToast({ title: '请选择对象', icon: 'none' })
+      this._saving = false
       return
     }
 
@@ -875,6 +910,29 @@ function createMethods(dependencies) {
         voucher: voucher,
       }
       var scope = this.data.bookScope
+
+      // 公司记账前检查加密状态：boss 刚开启加密时，员工需刷新公钥
+      if (scope === 'company' && !self.data.encryptionCompanyKeyReady && !self.__encryptionChecked) {
+        self.__encryptionChecked = true
+        self._saving = false
+        self._syncCompanyKeys().then(function () {
+          self.__encryptionChecked = false
+          if (self.data.encryptionCompanyKeyReady) {
+            wx.showModal({
+              title: '企业加密已开启',
+              content: '老板已开启端到端加密，请重新保存，系统将自动加密保护公司账单。',
+              showCancel: false,
+              confirmText: '知道了'
+            })
+          } else {
+            self.onBookSave()
+          }
+        }).catch(function () {
+          self.__encryptionChecked = false
+          self.onBookSave()
+        })
+        return
+      }
 
       if (targetType === 'internal' && (type === 'payForward' || type === 'payable')) {
         var mirrorScope = scope === 'personal' ? 'company' : 'personal'
@@ -923,9 +981,11 @@ function createMethods(dependencies) {
               bookPhoto: '',
             })
           }
+          self._saving = false
         }
       })
     } catch (err) {
+      self._saving = false
       wx.showModal({
         title: '保存失败',
         content: err.message || '未知错误',
@@ -1031,9 +1091,11 @@ function createMethods(dependencies) {
         wx.showToast({ title: '仅公司管理员可发起垫付结清', icon: 'none' })
         return
       }
+      // 自己的垫付（mirror 也是自己的）→ 直接结清；他人的垫付 → 两步确认
+      var ownItem = found._ownedByMe !== false
       wx.showModal({
         title: '发起结清',
-        content: '发起后需等待对方确认到账，确定吗？',
+        content: ownItem ? '确定直接结清该笔垫付款吗？' : '发起后需等待对方确认到账，确定吗？',
         success: async (res) => {
           if (!res.confirm) return
           await this._doSettle(found, from)
@@ -1073,7 +1135,7 @@ function createMethods(dependencies) {
         this.initDetailItems()
         this.setData({ modalItem: null })
         this._calcOverviewData()
-        wx.showToast({ title: '已发起结清，等待对方确认', icon: 'success' })
+        wx.showToast({ title: '结清操作已处理', icon: 'success' })
       } catch (e) {
         wx.showToast({ title: '刷新失败，请下拉重试', icon: 'none' })
       }

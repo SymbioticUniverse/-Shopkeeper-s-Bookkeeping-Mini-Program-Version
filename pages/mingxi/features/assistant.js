@@ -6,8 +6,6 @@ function createMethods(dependencies) {
     setVolume,
     getTLang,
     getLangLabel,
-    _encryptWithMasterKey,
-    _decryptWithMasterKey,
   } = dependencies
 
   return {
@@ -138,7 +136,8 @@ function createMethods(dependencies) {
       }
       // 单笔（兼容旧格式或 items[0]）：走原有弹窗流程
       var item = result.items ? result.items[0] : result
-      this.onBookEntry({ currentTarget: { dataset: { type: 'expense' } } })
+      var ocrType = (item.type === 'income') ? 'income' : 'expense'
+      this.onBookEntry({ currentTarget: { dataset: { type: ocrType } } })
       this.setData({
         bookPhoto: photo,
         'bookForm.amount': item.amount || '',
@@ -1304,7 +1303,7 @@ function createMethods(dependencies) {
   _syncChatCatOptions() {
     var defaults = ['餐饮', '交通', '购物', '饮品', '人情', '通讯', '医疗', '住房', '工资', '办公', '金融', '服饰', '娱乐', '数码', '其他']
     try {
-      var cats = require('../../utils/api.js').getCategories('personal') || []
+      var cats = require('../../../utils/api.js').getCategories('personal') || []
       if (cats && cats.length) {
         var names = cats.map(function (c) { return c.name }).filter(Boolean)
         // 合并去重：用户自定义在前，默认兜底在后
@@ -1314,7 +1313,7 @@ function createMethods(dependencies) {
         }
         this.setData({ catOptions: merged })
       }
-    } catch (_) {}
+    } catch (_) { console.warn('[AI] 同步分类选项失败', _) }
   },
 
   // ---- VIP 升级 ----

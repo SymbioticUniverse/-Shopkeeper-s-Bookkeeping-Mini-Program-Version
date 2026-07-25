@@ -572,27 +572,47 @@
               <text class="settings-item-label">{{t.settings_privacy_item}}</text>
               <text class="settings-item-arrow">〉</text>
             </view>
-            <view class="settings-item" bindtap="onSettingsTap" data-action="security">
+            <!-- 企业加密：仅企业 VIP 可见（vipLevel >= 2） -->
+            <block wx:if="{{vipStatus && vipStatus.vipLevel >= 2}}">
+              <!-- 老板：未开启加密 -->
+              <view class="settings-item" wx:if="{{settingsLedgerRole === 'boss' && !encryptionCompanyServerHasKeys}}" bindtap="onEnableCompanyEncryption">
+                <text class="settings-item-label">企业数据加密</text>
+                <text class="settings-item-value" style="color:#fa9d3c">点击开启端到端加密</text>
+                <text class="settings-item-arrow">〉</text>
+              </view>
+              <!-- 老板：服务端有密钥但本地缺失（换设备） -->
+              <view class="settings-item" wx:elif="{{settingsLedgerRole === 'boss' && encryptionCompanyServerHasKeys && !encryptionCompanyKeyReady}}" bindtap="onRecoverCompanyKeys">
+                <text class="settings-item-label">企业数据加密</text>
+                <text class="settings-item-value" style="color:#fa5151">私钥缺失！输入恢复密钥</text>
+                <text class="settings-item-arrow">〉</text>
+              </view>
+              <!-- 老板：加密已就绪 -->
+              <view class="settings-item" wx:elif="{{settingsLedgerRole === 'boss' && encryptionCompanyKeyReady}}">
+                <text class="settings-item-label">企业数据加密</text>
+                <text class="settings-item-value" style="color:#07c160">端到端加密已就绪 ✓</text>
+              </view>
+              <!-- 员工：公钥已获取 -->
+              <view class="settings-item" wx:elif="{{settingsLedgerRole === 'employee' && encryptionCompanyKeyReady}}">
+                <text class="settings-item-label">企业数据加密</text>
+                <text class="settings-item-value" style="color:#07c160">端到端加密已就绪</text>
+              </view>
+              <!-- 员工：公司未开启加密，点击刷新 -->
+              <view class="settings-item" wx:elif="{{settingsLedgerRole === 'employee' && !encryptionCompanyKeyReady}}" bindtap="onRefreshCompanyEncryption">
+                <text class="settings-item-label">企业数据加密</text>
+                <text class="settings-item-value" style="color:#999">等待老板开启 · 点击刷新</text>
+                <text class="settings-item-arrow">〉</text>
+              </view>
+              <!-- VIP 但未加入公司 -->
+              <view class="settings-item" wx:else bindtap="onSettingsTap" data-action="registerOrJoin">
+                <text class="settings-item-label">企业数据加密</text>
+                <text class="settings-item-value" style="color:#999">加入企业后可使用</text>
+                <text class="settings-item-arrow">〉</text>
+              </view>
+            </block>
+            <!-- 非 VIP / 未登录 -->
+            <view class="settings-item" wx:else bindtap="onSettingsTap" data-action="security">
               <text class="settings-item-label">数据加密</text>
-              <text class="settings-item-value">{{encryptionAdvancedEnabled ? '高级安全' : '已加密'}}<text wx:if="{{!encryptionEnabled}}" style="color:#fa5151;font-size:22rpx">（未就绪）</text></text>
-              <text class="settings-item-arrow">〉</text>
-            </view>
-            <view class="settings-item" wx:if="{{encryptionCompanyIsBoss && !encryptionCompanyKeyReady}}" bindtap="onRegenerateCompanyKeys">
-              <text class="settings-item-label">公司加密状态</text>
-              <text class="settings-item-value" style="color:#fa5151">私钥缺失！点击重试</text>
-              <text class="settings-item-arrow">〉</text>
-            </view>
-            <view class="settings-item" wx:elif="{{encryptionCompanyIsBoss && encryptionCompanyKeyReady}}">
-              <text class="settings-item-label">公司加密状态</text>
-              <text class="settings-item-value" style="color:#07c160">私钥已就绪 ✓</text>
-            </view>
-            <view class="settings-item" wx:if="{{!encryptionCompanyIsBoss && encryptionCompanyKeyReady}}">
-              <text class="settings-item-label">公司加密状态</text>
-              <text class="settings-item-value" style="color:#07c160">公钥已获取</text>
-            </view>
-            <view class="settings-item" wx:if="{{encryptionEnabled && !encryptionAdvancedEnabled && settingsHasAdvancedBlob}}" bindtap="promptAdvancedKeyRecovery">
-              <text class="settings-item-label">恢复高级安全</text>
-              <text class="settings-item-value" style="color:#f0a000">需要28位密钥</text>
+              <text class="settings-item-value" style="color:#999">企业版专属功能</text>
               <text class="settings-item-arrow">〉</text>
             </view>
             <view class="settings-item">

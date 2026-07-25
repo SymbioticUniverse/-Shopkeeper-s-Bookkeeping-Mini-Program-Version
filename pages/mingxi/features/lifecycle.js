@@ -6,8 +6,7 @@ function createMethods(dependencies) {
     setVolume,
     getTLang,
     getLangLabel,
-    _encryptWithMasterKey,
-    _decryptWithMasterKey,
+
   } = dependencies
 
   return {
@@ -68,9 +67,6 @@ function createMethods(dependencies) {
       this.setData({ _isNewUser: true, showGuide: false })
       this._startSpotlight('tutorial')
     }
-
-    // E2E 加密初始化：检测本地密钥状态 + 尝试从服务端恢复
-    await this._initCrypto()
 
     // 同步公司显示数据到「我的」页
     this._syncCompanyDisplayData()
@@ -152,7 +148,7 @@ function createMethods(dependencies) {
     this._refreshAvatarDisplay(su)
     this._syncCompanyDisplayData()
     // 静默刷新 VIP 状态
-    api.getVipStatus().then(function (s) { this.setData({ vipStatus: s, vipTrialDays: this._computeTrialDays(s), vipExpiresText: this._formatVipExpiry(s) }); this._checkEncryptionTierAlignment() }.bind(this)).catch(function () {})
+    api.getVipStatus().then(function (s) { this.setData({ vipStatus: s, vipTrialDays: this._computeTrialDays(s), vipExpiresText: this._formatVipExpiry(s) }) }.bind(this)).catch(function () {})
     // 公司可见性可能因云端同步到的 companyInfo 改变 → 仅变化时重建简览卡（避免每次重绘图表）
     const ci = api.getCompanyInfo()
     const canSeeCompany = !!(ci && ci.companyRole === 'boss' && ci.companyUid)
@@ -505,8 +501,9 @@ function createMethods(dependencies) {
     const inMonth = (it) => !ym || (typeof it.date === 'string' && it.date.slice(0, 7) === ym)
     const personalItems = api.getItems('personal').filter(inMonth)
     const companyItems = this.data.canSeeCompanyLedger ? api.getItems('company').filter(inMonth) : []
-    const sum = (items, fn) => items.filter(fn).reduce((s, it) => s + parseFloat(it.amount || 0), 0)
+    const sum = (items, fn) => items.filter(fn).reduce((s, it) => s + (parseFloat(it.amount) || 0), 0)
     const fmt = (n) => {
+      if (!isFinite(n)) return '0.00'
       const abs = Math.abs(n)
       const sign = n < 0 ? -1 : 1
       if (abs >= 10000) return (sign * Math.floor(abs / 1000) / 10).toFixed(1) + 'W'

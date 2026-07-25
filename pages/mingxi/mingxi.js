@@ -4,7 +4,6 @@ const xlsx = require('../../utils/xlsx')
 const { playTap, setVolume } = require('../../utils/tapSound')
 const { getTLang, getLangLabel } = require('../../utils/i18n')
 const { createInitialData } = require('./model/create-initial-data')
-const companyCrypto = require('./services/company-crypto')
 
 const featureFactories = [
   require('./features/lifecycle'),
@@ -19,14 +18,14 @@ const featureFactories = [
   require('./features/vip'),
 ]
 
-const dependencies = Object.assign({
+const dependencies = {
   api,
   xlsx,
   playTap,
   setVolume,
   getTLang,
   getLangLabel,
-}, companyCrypto)
+}
 
 const pageDefinition = featureFactories.reduce((definition, createMethods) => {
   return Object.assign(definition, createMethods(dependencies))

@@ -6,8 +6,6 @@ function createMethods(dependencies) {
     setVolume,
     getTLang,
     getLangLabel,
-    _encryptWithMasterKey,
-    _decryptWithMasterKey,
   } = dependencies
 
   return {
@@ -237,23 +235,18 @@ function createMethods(dependencies) {
             that._refreshAvatarDisplay(userInfo)
           }
           wx.showToast({ title: '登录成功（开发模式）', icon: 'success' })
-          // 登录后立即确保主密钥存在且有效，完成后再同步
-          that._ensureCryptoReady().then(function () {
-            return that._initCrypto()
-          }).then(function () {
-            return api.syncFromCloud()
-          }).then(function(syncResult) {
+          api.syncFromCloud().then(function(syncResult) {
             if (syncResult && syncResult.hasConflicts) { that._handleSyncResult(syncResult); return }
             that.initDetailItems()
             that._syncOverviewCards()
             var su = api.getUserInfo()
             if (su) that.setData({ userInfo: su })
             that._refreshAvatarDisplay(su)
-            api.getVipStatus().then(function(s) { that.setData({ vipStatus: s, vipTrialDays: that._computeTrialDays(s), vipExpiresText: that._formatVipExpiry(s) }); that._checkEncryptionTierAlignment() }).catch(function() {})
+            api.getVipStatus().then(function(s) { that.setData({ vipStatus: s, vipTrialDays: that._computeTrialDays(s), vipExpiresText: that._formatVipExpiry(s) }) }).catch(function() {})
             that.updateNotifyBadge()
             that.updateAuditBadge()
           }).catch(function(err) {
-            console.error('[登录] 加密/同步失败:', err)
+            console.error('[登录] 同步失败:', err)
           })
         }).catch(function(err) {
           console.error('[微信登录] 开发模式登录失败:', JSON.stringify(err))
@@ -298,23 +291,18 @@ function createMethods(dependencies) {
             that._refreshAvatarDisplay(userInfo)
           }
           wx.showToast({ title: '登录成功', icon: 'success' })
-          // 登录后立即确保主密钥存在且有效（非全零），完成后再同步
-          that._ensureCryptoReady().then(function () {
-            return that._initCrypto()
-          }).then(function () {
-            return api.syncFromCloud()
-          }).then(function(syncResult) {
+          api.syncFromCloud().then(function(syncResult) {
             if (syncResult && syncResult.hasConflicts) { that._handleSyncResult(syncResult); return }
             that.initDetailItems()
             that._syncOverviewCards()
             var su = api.getUserInfo()
             if (su) that.setData({ userInfo: su })
             that._refreshAvatarDisplay(su)
-            api.getVipStatus().then(function(s) { that.setData({ vipStatus: s, vipTrialDays: that._computeTrialDays(s), vipExpiresText: that._formatVipExpiry(s) }); that._checkEncryptionTierAlignment() }).catch(function() {})
+            api.getVipStatus().then(function(s) { that.setData({ vipStatus: s, vipTrialDays: that._computeTrialDays(s), vipExpiresText: that._formatVipExpiry(s) }) }).catch(function() {})
             that.updateNotifyBadge()
             that.updateAuditBadge()
           }).catch(function(err) {
-            console.error('[登录] 加密/同步失败:', err)
+            console.error('[登录] 同步失败:', err)
           })
         }).catch(function(err) {
           console.error('[微信手机号] 登录请求失败:', JSON.stringify(err))
@@ -349,7 +337,6 @@ function createMethods(dependencies) {
     wx.showLoading({ title: '创建中...' })
     try {
       await api.createCompany(info)
-      await this._setupBossCompanyKeys()
       wx.showToast({ title: '创建成功', icon: 'success' })
       this.onGuideComplete()
     } catch (e) {

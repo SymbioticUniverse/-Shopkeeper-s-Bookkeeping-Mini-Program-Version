@@ -6,8 +6,6 @@ function createMethods(dependencies) {
     setVolume,
     getTLang,
     getLangLabel,
-    _encryptWithMasterKey,
-    _decryptWithMasterKey,
   } = dependencies
 
   return {
@@ -42,7 +40,6 @@ function createMethods(dependencies) {
           // 刷新状态
           api.getVipStatus().then(function (status) {
             that.setData({ vipStatus: status, showTrialBanner: false, vipTrialDays: that._computeTrialDays(status), vipExpiresText: that._formatVipExpiry(status) })
-            that._checkEncryptionTierAlignment()
           }).catch(function () {})
         }).catch(function (err) {
           wx.hideLoading()
@@ -138,7 +135,6 @@ function createMethods(dependencies) {
             // 刷新页面级 VIP 状态
             api.getVipStatus().then(function (s) {
               that.setData({ showVipPage: false, vipDetailId: -1, vipSelected: -1, vipEnterpriseSeats: 4, vipStatus: s, vipTrialDays: that._computeTrialDays(s), vipExpiresText: that._formatVipExpiry(s) })
-              that._checkEncryptionTierAlignment()
             }).catch(function () {
               that.setData({ showVipPage: false, vipDetailId: -1, vipSelected: -1, vipEnterpriseSeats: 4 })
             })
